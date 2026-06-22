@@ -1,0 +1,11 @@
+# Optional — nur für UPnP-Portweiterleitung (Admin → Netzwerk)
+#
+# Unter Windows gibt es fertige Wheels nur für Python 3.9–3.13 (cp39–cp313).
+# Python 3.14: kein Wheel → pip versucht Quellcode zu kompilieren → scheitert
+# ohne „Microsoft C++ Build Tools“ (WinError 2).
+#
+# Lösung für UPnP: Python 3.12 oder 3.13 parallel installieren und dort:
+#   py -3.12 -m pip install miniupnpc
+#
+# Ohne miniupnpc: App und Installer funktionieren normal; UPnP-Button zeigt Hinweis.
+miniupnpc>=2.2.0; platform_system != "Linux" and python_version < "3.14"

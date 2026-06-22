@@ -1,0 +1,7 @@
+{
+  "terminal.integrated.commandsToSkipShell": [
+    "workbench.action.tasks.build",
+    "workbench.action.tasks.runTask",
+    "workbench.action.debug.start"
+  ]
+}

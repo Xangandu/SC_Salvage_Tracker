@@ -1,0 +1,727 @@
+from PySide6.QtWidgets import (
+    QWidget,
+    QLabel,
+    QVBoxLayout,
+    QHBoxLayout,
+    QFrame,
+    QGridLayout,
+    QPushButton,
+    QScrollArea,
+    QMessageBox,
+    QDialog,
+    QSizePolicy,
+)
+from PySide6.QtCore import Qt, QTimer
+
+from database.access import get_database, get_dashboard_layout_repository
+from config.strings_de import status_label, format_number_de
+from config.materials import material_total_label, material_label
+from config.debug import debug_log
+from config.permissions import apply_widget_permissions
+from ui.page_layout import (
+    page_title,
+    subsection_title,
+    hud_divider,
+    primary_button,
+)
+from ui.dashboard_grid_canvas import DashboardGridCanvas
+from ui.dashboard_catalog_panel import DashboardCatalogPanel
+from ui.dashboard_preset_dialog import DashboardPresetDialog
+from ui.dashboard_grid_utils import default_classic_layout
+from ui.theme_manager import ThemeManager
+import auth.session as user_session
+
+
+class DashboardPage(QWidget):
+
+    def __init__(self):
+        super().__init__()
+        self.setObjectName("dashboardPage")
+
+        self.db = get_database()
+        self._current_user = None
+        self._edit_mode = False
+        self._saved_layout_snapshot = None
+
+        self.dashboard_mode = "EMBEDDED"
+        self.dashboard_detached = False
+        self.parent_window = None
+        self.detached_window = None
+
+        self._widget_pool: dict[str, QFrame] = {}
+        self._build_widget_pool()
+
+        root = QVBoxLayout(self)
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(0)
+
+        header_host = QWidget()
+        header_host.setObjectName("dashboardHeader")
+        header_layout = QHBoxLayout(header_host)
+        header_layout.setContentsMargins(20, 14, 20, 6)
+
+        self._title = page_title("SALVAGE-ÜBERSICHT")
+        header_layout.addWidget(self._title)
+        header_layout.addStretch()
+
+        self.preset_button = QPushButton("Presets")
+        self.preset_button.setObjectName("secondaryAction")
+        self.preset_button.clicked.connect(self._open_presets)
+
+        self.edit_toggle_button = QPushButton("Dashboard anpassen")
+        self.edit_toggle_button.setObjectName("secondaryAction")
+        self.edit_toggle_button.clicked.connect(
+            self._toggle_edit_mode
+        )
+
+        self.save_layout_button = primary_button("Speichern")
+        self.save_layout_button.clicked.connect(
+            self._save_layout
+        )
+        self.save_layout_button.hide()
+
+        self.cancel_layout_button = QPushButton("Abbrechen")
+        self.cancel_layout_button.setObjectName("secondaryAction")
+        self.cancel_layout_button.clicked.connect(
+            self._cancel_edit
+        )
+        self.cancel_layout_button.hide()
+
+        header_layout.addWidget(self.preset_button)
+        header_layout.addWidget(self.edit_toggle_button)
+        header_layout.addWidget(self.cancel_layout_button)
+        header_layout.addWidget(self.save_layout_button)
+        root.addWidget(header_host)
+        root.addLayout(hud_divider())
+
+        body = QHBoxLayout()
+        body.setContentsMargins(0, 0, 0, 0)
+        body.setSpacing(0)
+
+        scroll = QScrollArea()
+        scroll.setObjectName("dashboardScroll")
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
+        scroll.setHorizontalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+        )
+        scroll.viewport().setObjectName("dashboardScrollViewport")
+        scroll.viewport().setAutoFillBackground(False)
+
+        self.canvas = DashboardGridCanvas()
+        self.canvas.set_widget_pool(self._widget_pool)
+        scroll.setWidget(self.canvas)
+
+        self.catalog = DashboardCatalogPanel()
+        self.catalog.hide()
+        self.catalog.widget_returned.connect(
+            self.canvas.remove_widget
+        )
+        self.canvas.layout_changed.connect(
+            self._sync_catalog
+        )
+
+        body.addWidget(scroll, 1)
+        body.addWidget(self.catalog)
+        root.addLayout(body, 1)
+
+        self._refresh_timer = QTimer(self)
+        self._refresh_timer.setInterval(3000)
+        self._refresh_timer.timeout.connect(
+            self.refresh_dashboard
+        )
+
+        self._load_initial_layout()
+        self.refresh_dashboard()
+        ThemeManager.refresh_dashboard_font_scale()
+
+    def apply_font_scale(self, scales=None):
+        ThemeManager.apply_dashboard_fonts(self, scales)
+
+    def _refresh_refinery_stats(self):
+        stats = self.db.get_refinery_statistics()
+        if not stats.get("job_count"):
+            self.refinery_stats_label.setText(
+                "Noch keine abgeschlossenen Raffinerieaufträge."
+            )
+            return
+
+        avg = stats.get("avg_efficiency_percent")
+        avg_text = f"{avg:.1f} %" if avg is not None else "—"
+
+        lines = [
+            f"Aufträge: {stats['job_count']}",
+            (
+                f"Input: {format_number_de(stats['total_input'])} SCU · "
+                f"Output: {format_number_de(stats['total_output'])} SCU"
+            ),
+            f"Ø Effizienz: {avg_text}",
+        ]
+
+        if stats.get("by_material"):
+            lines.append("")
+            lines.append("Nach Material:")
+            for row in stats["by_material"]:
+                eff = row.get("efficiency_percent")
+                eff_label = f"{eff:.1f} %" if eff is not None else "—"
+                lines.append(
+                    f"  {material_label(row['material_code'])}: "
+                    f"{eff_label} ({row['job_count']}×)"
+                )
+
+        if stats.get("by_method"):
+            lines.append("")
+            lines.append("Nach Methode:")
+            for row in stats["by_method"]:
+                eff = row.get("efficiency_percent")
+                eff_label = f"{eff:.1f} %" if eff is not None else "—"
+                lines.append(
+                    f"  {row['refinery_method']}: "
+                    f"{eff_label} ({row['job_count']}×)"
+                )
+
+        self.refinery_stats_label.setText("\n".join(lines))
+
+    def _build_widget_pool(self):
+        self.status_value = QLabel("LEERLAUF")
+        self.crew_value = QLabel("0")
+        self.rmc_value = QLabel("0 SCU")
+        self.cm_value = QLabel("0 SCU")
+        self.rubble_value = QLabel("0 SCU")
+        self.scraps_value = QLabel("0 SCU")
+        self.salvage_value = QLabel("0 SCU")
+        self.active_sessions_value = QLabel("0")
+        self.total_sessions_value = QLabel("0")
+        self.sold_sessions_value = QLabel("0")
+        self.ready_sessions_value = QLabel("0")
+        self.refinery_jobs_value = QLabel("0")
+        self.total_sales_value = QLabel("0")
+        self.total_profit_value = QLabel("0")
+
+        kpi_specs = [
+            ("status", "STATUS", self.status_value),
+            ("crew", "CREW", self.crew_value),
+            ("rmc", material_total_label("RMC"), self.rmc_value),
+            ("cm", material_total_label("CM"), self.cm_value),
+            (
+                "rubble",
+                material_total_label("CM_RUBBLE"),
+                self.rubble_value,
+            ),
+            (
+                "scraps",
+                material_total_label("CM_SCRAPS"),
+                self.scraps_value,
+            ),
+            (
+                "salvage",
+                material_total_label("CM_SALVAGE"),
+                self.salvage_value,
+            ),
+            ("refinery_jobs", "RAFFINERIE", self.refinery_jobs_value),
+            ("active_sessions", "AKTIV", self.active_sessions_value),
+            (
+                "total_sessions",
+                "SITZUNGEN",
+                self.total_sessions_value,
+            ),
+            ("sold_sessions", "VERKÄUFE", self.sold_sessions_value),
+            (
+                "ready_sessions",
+                "LAGER (SCU)",
+                self.ready_sessions_value,
+            ),
+            ("total_sales", "UMSATZ", self.total_sales_value),
+            ("total_profit", "GEWINN", self.total_profit_value),
+        ]
+
+        for card_id, title, value in kpi_specs:
+            accent = card_id == "total_profit"
+            self._widget_pool[card_id] = self._create_card(
+                title,
+                value,
+                accent=accent,
+            )
+
+        self.session_label = QLabel("KEINE SITZUNG")
+        self.crew_info_label = QLabel("0")
+        self.status_info_label = QLabel("LEERLAUF")
+        self.rmc_info_label = QLabel("0 SCU")
+        self.cm_info_label = QLabel("0 SCU")
+        self.refinery_info_label = QLabel("0")
+        self.session_rubble_info_label = QLabel("0 SCU")
+        self.session_scraps_info_label = QLabel("0 SCU")
+        self.session_salvage_info_label = QLabel("0 SCU")
+
+        self.refinery_stats_label = QLabel("Noch keine abgeschlossenen Aufträge.")
+        self.refinery_stats_label.setWordWrap(True)
+        self.refinery_stats_label.setObjectName("dashboardStatValue")
+
+        session_panel = QFrame(self)
+        session_panel.setObjectName("dashboardSessionPanel")
+        session_panel.setMinimumSize(0, 0)
+        session_panel.setSizePolicy(
+            QSizePolicy.Policy.Preferred,
+            QSizePolicy.Policy.Minimum,
+        )
+        session_layout = QGridLayout(session_panel)
+        session_layout.setContentsMargins(3, 3, 3, 3)
+        session_layout.setHorizontalSpacing(6)
+        session_layout.setVerticalSpacing(2)
+
+        session_heading = QLabel("AKTIVE SITZUNG")
+        session_heading.setObjectName("dashboardSessionHeading")
+        session_layout.addWidget(session_heading, 0, 0, 1, 2)
+
+        session_fields = [
+            ("Schiff", self.session_label),
+            ("Crew", self.crew_info_label),
+            ("Status", self.status_info_label),
+            (material_label("RMC"), self.rmc_info_label),
+            (material_label("CM"), self.cm_info_label),
+            (
+                material_label("CM_RUBBLE"),
+                self.session_rubble_info_label,
+            ),
+            (
+                material_label("CM_SCRAPS"),
+                self.session_scraps_info_label,
+            ),
+            (
+                material_label("CM_SALVAGE"),
+                self.session_salvage_info_label,
+            ),
+            ("Raffinerie", self.refinery_info_label),
+        ]
+
+        for row, (field_title, value_label) in enumerate(
+            session_fields,
+            start=1,
+        ):
+            field_label = QLabel(f"{field_title}:")
+            field_label.setObjectName("dashboardStatLabel")
+            value_label.setObjectName("dashboardStatValue")
+            value_label.setWordWrap(True)
+            session_layout.addWidget(field_label, row, 0)
+            session_layout.addWidget(value_label, row, 1)
+
+        session_layout.setColumnStretch(0, 0)
+        session_layout.setColumnStretch(1, 1)
+        self._widget_pool["session"] = session_panel
+
+        refinery_stats_panel = QFrame(self)
+        refinery_stats_panel.setObjectName("dashboardSessionPanel")
+        refinery_stats_layout = QVBoxLayout(refinery_stats_panel)
+        refinery_stats_layout.setContentsMargins(8, 8, 8, 8)
+        refinery_heading = QLabel("RAFFINERIE-STATISTIK")
+        refinery_heading.setObjectName("dashboardSessionHeading")
+        refinery_stats_layout.addWidget(refinery_heading)
+        refinery_stats_layout.addWidget(self.refinery_stats_label)
+        self._widget_pool["refinery_stats"] = refinery_stats_panel
+
+    def _layout_repo(self):
+        return get_dashboard_layout_repository(self.db)
+
+    def _user_id(self):
+        user = self._current_user or user_session.get_user()
+        if not user:
+            return None
+        return user.get("id")
+
+    def _load_initial_layout(self):
+        user_id = self._user_id()
+        layout = None
+        if user_id is not None:
+            layout = self._layout_repo().get_active_layout(
+                user_id
+            )
+        if layout is None:
+            layout = default_classic_layout()
+        self.canvas.load_layout_data(layout)
+        self._sync_catalog()
+
+    def _sync_catalog(self):
+        self.catalog.sync_availability(
+            self.canvas.widgets_on_canvas()
+        )
+
+    def _toggle_edit_mode(self):
+        if self._edit_mode:
+            return
+        self._enter_edit_mode()
+
+    def _enter_edit_mode(self):
+        self._edit_mode = True
+        self._saved_layout_snapshot = (
+            self.canvas.get_layout_data()
+        )
+        self.canvas.set_edit_mode(True)
+        self.catalog.show()
+        self.edit_toggle_button.hide()
+        self.save_layout_button.show()
+        self.cancel_layout_button.show()
+        self.preset_button.setEnabled(True)
+
+    def _leave_edit_mode(self):
+        self._edit_mode = False
+        self.canvas.set_edit_mode(False)
+        self.catalog.hide()
+        self.edit_toggle_button.show()
+        self.edit_toggle_button.setText("Dashboard anpassen")
+        self.save_layout_button.hide()
+        self.cancel_layout_button.hide()
+
+    def _save_layout(self):
+        user_id = self._user_id()
+        if user_id is None:
+            QMessageBox.warning(
+                self,
+                "Dashboard",
+                "Kein Benutzer angemeldet.",
+            )
+            return
+
+        layout = self.canvas.get_layout_data()
+        self._layout_repo().save_active_layout(
+            user_id,
+            layout,
+        )
+        self._saved_layout_snapshot = layout
+        self._leave_edit_mode()
+        QMessageBox.information(
+            self,
+            "Dashboard",
+            "Dashboard-Layout wurde gespeichert.",
+        )
+
+    def _cancel_edit(self):
+        if self._saved_layout_snapshot is not None:
+            self.canvas.load_layout_data(
+                self._saved_layout_snapshot
+            )
+        self._leave_edit_mode()
+        self._sync_catalog()
+
+    def _open_presets(self):
+        user_id = self._user_id()
+        if user_id is None:
+            return
+
+        if not self._edit_mode:
+            self._enter_edit_mode()
+
+        dialog = DashboardPresetDialog(
+            self,
+            self._layout_repo(),
+            user_id,
+            current_layout=self.canvas.get_layout_data(),
+        )
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+        if dialog.selected_layout is None:
+            return
+
+        self.canvas.load_layout_data(dialog.selected_layout)
+        self._sync_catalog()
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        self.refresh_dashboard()
+        self._refresh_timer.start()
+
+    def hideEvent(self, event):
+        self._refresh_timer.stop()
+        super().hideEvent(event)
+
+    def apply_permissions(self, user, page_name="dashboard"):
+        self._current_user = user
+        apply_widget_permissions(self, user, page_name)
+
+        can_use = bool(user)
+        for button in (
+            self.preset_button,
+            self.edit_toggle_button,
+            self.save_layout_button,
+            self.cancel_layout_button,
+        ):
+            button.setEnabled(can_use)
+
+        if user and not self._edit_mode:
+            saved = self._layout_repo().get_active_layout(
+                user["id"]
+            )
+            if saved:
+                self.canvas.load_layout_data(saved)
+                self._sync_catalog()
+
+    def apply_dashboard_layout(self, layout_id=None):
+        """Legacy-Hook — Presets über Preset-Dialog."""
+        debug_log(
+            "apply_dashboard_layout (legacy)",
+            layout_id,
+        )
+
+    def _create_card(self, title, value, *, accent=False):
+        card = QFrame(self)
+        card.setMinimumSize(0, 0)
+        card.setSizePolicy(
+            QSizePolicy.Policy.Preferred,
+            QSizePolicy.Policy.Minimum,
+        )
+        card.setObjectName("dashboardKpiCard")
+
+        layout = QVBoxLayout(card)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+
+        title_label = QLabel(title.upper())
+        title_label.setObjectName("dashboardKpiTitle")
+        title_label.setAlignment(
+            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop
+        )
+        title_label.setWordWrap(True)
+        title_label.setSizePolicy(
+            QSizePolicy.Policy.Preferred,
+            QSizePolicy.Policy.Minimum,
+        )
+
+        divider = QFrame()
+        divider.setObjectName("dashboardKpiDivider")
+        divider.setFixedHeight(1)
+
+        value.setObjectName(
+            "dashboardKpiValueAccent" if accent else "dashboardKpiValue"
+        )
+        value.setAlignment(
+            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop
+        )
+        value.setWordWrap(True)
+        value.setSizePolicy(
+            QSizePolicy.Policy.Preferred,
+            QSizePolicy.Policy.Minimum,
+        )
+
+        layout.addWidget(title_label)
+        layout.addWidget(divider)
+        layout.addWidget(
+            value,
+            0,
+            Qt.AlignmentFlag.AlignTop,
+        )
+        return card
+
+    def refresh_dashboard(self):
+        debug_log("REFRESH_DASHBOARD WIRD AUSGEFÜHRT")
+
+        open_refinery_jobs = self.db.get_open_refinery_jobs()
+        sold_sessions = self.db.get_sales_count()
+        active_sessions = self.db.get_active_session_count()
+        total_sessions = self.db.get_total_session_count()
+        storage_scu = self.db.get_sellable_storage_total_scu()
+        total_sales = self.db.get_total_sales_value()
+        total_profit = self.db.get_total_profit()
+
+        rmc_storage = self.db.get_storage_balance("RMC")
+        cm_storage = self.db.get_storage_balance("CM")
+
+        lifetime_rubble = self.db.get_global_batch_available(
+            "CM_RUBBLE"
+        )
+        lifetime_scraps = self.db.get_global_batch_available(
+            "CM_SCRAPS"
+        )
+        lifetime_salvage = self.db.get_global_batch_available(
+            "CM_SALVAGE"
+        )
+
+        self.rmc_value.setText(
+            f"{format_number_de(rmc_storage)} SCU"
+        )
+        self.cm_value.setText(
+            f"{format_number_de(cm_storage)} SCU"
+        )
+        self.rubble_value.setText(
+            f"{format_number_de(lifetime_rubble)} SCU"
+        )
+        self.scraps_value.setText(
+            f"{format_number_de(lifetime_scraps)} SCU"
+        )
+        self.salvage_value.setText(
+            f"{format_number_de(lifetime_salvage)} SCU"
+        )
+        self.sold_sessions_value.setText(str(sold_sessions))
+        self.active_sessions_value.setText(str(active_sessions))
+        self.total_sessions_value.setText(str(total_sessions))
+        self.ready_sessions_value.setText(
+            format_number_de(storage_scu)
+        )
+        self.refinery_jobs_value.setText(str(open_refinery_jobs))
+        self.total_sales_value.setText(
+            f"{format_number_de(total_sales)} aUEC"
+        )
+        self.total_profit_value.setText(
+            f"{format_number_de(total_profit)} aUEC"
+        )
+
+        self._refresh_refinery_stats()
+
+        session = self.db.get_dashboard_session()
+
+        if not session:
+            self.status_value.setText("LEERLAUF")
+            self.crew_value.setText("0")
+            self.session_label.setText("KEINE SITZUNG")
+            self.crew_info_label.setText("0")
+            self.status_info_label.setText("LEERLAUF")
+            self.rmc_info_label.setText("0 SCU")
+            self.cm_info_label.setText("0 SCU")
+            self.session_rubble_info_label.setText("0 SCU")
+            self.session_scraps_info_label.setText("0 SCU")
+            self.session_salvage_info_label.setText("0 SCU")
+            self.refinery_info_label.setText(
+                f"{open_refinery_jobs} offen"
+            )
+            self.canvas.reflow_content_sizes()
+            return
+
+        session_id = session[0]
+        ship_name = session[1]
+        status = session[2]
+        status_text = status_label(status)
+
+        session_rmc = self.db.get_session_captured_total(
+            session_id,
+            "RMC",
+        )
+        session_cm = self.db.get_refined_cm_total(session_id)
+        session_rubble = self.db.get_session_batch_available(
+            session_id,
+            "CM_RUBBLE",
+        )
+        session_scraps = self.db.get_session_batch_available(
+            session_id,
+            "CM_SCRAPS",
+        )
+        session_salvage = self.db.get_session_batch_available(
+            session_id,
+            "CM_SALVAGE",
+        )
+        crew = self.db.get_crew_members(session_id)
+
+        self.status_value.setText(status_text)
+        self.crew_value.setText(str(len(crew)))
+        self.session_label.setText(ship_name)
+        self.crew_info_label.setText(str(len(crew)))
+        self.status_info_label.setText(status_text)
+        self.rmc_info_label.setText(
+            f"{format_number_de(session_rmc, 1)} SCU"
+        )
+        self.cm_info_label.setText(
+            f"{format_number_de(session_cm, 1)} SCU"
+        )
+        self.session_rubble_info_label.setText(
+            f"{format_number_de(session_rubble, 1)} SCU"
+        )
+        self.session_scraps_info_label.setText(
+            f"{format_number_de(session_scraps, 1)} SCU"
+        )
+        self.session_salvage_info_label.setText(
+            f"{format_number_de(session_salvage, 1)} SCU"
+        )
+        self.refinery_info_label.setText(
+            f"{open_refinery_jobs} offen"
+        )
+        self.canvas.reflow_content_sizes()
+
+    def detach_dashboard(self):
+        self.dashboard_mode = "DETACHED"
+        self.dashboard_detached = True
+
+    def attach_dashboard(self):
+        self.dashboard_mode = "EMBEDDED"
+        self.dashboard_detached = False
+
+    def is_dashboard_detached(self):
+        return self.dashboard_detached
+
+    def set_parent_window(self, parent_window):
+        self.parent_window = parent_window
+
+    def get_parent_window(self):
+        return self.parent_window
+
+    def can_detach(self):
+        return self.parent_window is not None
+
+    def can_attach(self):
+        return self.is_detached
+
+    def get_dashboard_mode(self):
+        return self.dashboard_mode
+
+    def has_parent_window(self):
+        return self.parent_window is not None
+
+    def get_detached_window(self):
+        return self.detached_window
+
+    def set_detached_window(self, window):
+        self.detached_window = window
+
+    def clear_detached_window(self):
+        self.detached_window = None
+
+    def has_detached_window(self):
+        return self.detached_window is not None
+
+    def mark_as_detached(self):
+        self.detach_dashboard()
+
+    def mark_as_embedded(self):
+        self.attach_dashboard()
+
+    def is_embedded(self):
+        return self.dashboard_mode == "EMBEDDED"
+
+    def is_detached(self):
+        return self.dashboard_mode == "DETACHED"
+
+    def toggle_dashboard_mode(self):
+        if self.is_detached():
+            self.attach_dashboard()
+        else:
+            self.detach_dashboard()
+
+    def reset_dashboard_mode(self):
+        self.dashboard_mode = "EMBEDDED"
+        self.dashboard_detached = False
+
+    def has_valid_parent(self):
+        return self.parent_window is not None
+
+    def has_valid_dashboard_window(self):
+        return self.detached_window is not None
+
+    def can_toggle_dashboard(self):
+        return self.has_valid_parent()
+
+    def is_ready_for_detach(self):
+        return self.has_valid_parent() and not self.is_detached()
+
+    def is_ready_for_attach(self):
+        return (
+            self.has_valid_dashboard_window()
+            and self.is_detached()
+        )
+
+    def get_dashboard_state(self):
+        return {
+            "mode": self.dashboard_mode,
+            "detached": self.is_detached(),
+            "has_parent": self.has_valid_parent(),
+            "has_window": self.has_valid_dashboard_window(),
+        }
+
+    def reset_window_references(self):
+        self.detached_window = None
+        self.parent_window = None

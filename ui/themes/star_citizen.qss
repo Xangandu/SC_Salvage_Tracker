@@ -1,0 +1,1985 @@
+/* ==========================================================
+   01. GLOBAL APPLICATION — RSI Launcher Polish (0.14)
+   ========================================================== */
+
+QMainWindow {
+    background: qlineargradient(
+        x1: 0, y1: 0, x2: 1, y2: 1,
+        stop: 0 #0A0D12,
+        stop: 0.45 #101620,
+        stop: 1 #07090D
+    );
+}
+
+#mainCentral,
+#contentStack {
+    background: transparent;
+}
+
+QStackedWidget#contentStack > QWidget {
+    background: transparent;
+}
+
+QWidget {
+    color: #E6EEF5;
+    font-family: "Rajdhani";
+    font-size: 15px;
+    font-weight: 600;
+}
+
+
+/* ==========================================================
+   02. NAVIGATION PANEL
+   ========================================================== */
+
+#navPanel {
+    background: qlineargradient(
+        x1: 0, y1: 0, x2: 1, y2: 0,
+        stop: 0 #0D1218,
+        stop: 1 #111820
+    );
+    border-right: 1px solid #1E2A38;
+}
+
+QWidget#navBrandBlock {
+    background: transparent;
+}
+
+QFrame#navBrandCard {
+    background: qlineargradient(
+        x1: 0, y1: 0, x2: 0, y2: 1,
+        stop: 0 #151D28,
+        stop: 1 #101820
+    );
+    border: 1px solid #263545;
+    border-left: 3px solid #E07A2A;
+    border-radius: 8px;
+}
+
+QLabel#navTitlePrimary {
+    color: #F2F7FB;
+    font-family: "Orbitron";
+    font-size: 14px;
+    font-weight: bold;
+    letter-spacing: 4px;
+    padding: 0;
+    margin: 0;
+}
+
+QLabel#navTitleSecondary {
+    color: #42D4F5;
+    font-family: "Orbitron";
+    font-size: 11px;
+    font-weight: bold;
+    letter-spacing: 5px;
+    padding: 2px 0 0 0;
+    margin: 0;
+}
+
+QFrame#navBrandCard QFrame#hudLine {
+    background: #2A3848;
+    color: #2A3848;
+    max-height: 1px;
+}
+
+QFrame#navBrandCard QLabel#hudMarker {
+    color: #42D4F5;
+    font-size: 10px;
+}
+
+QFrame#navUserPanel {
+    background: qlineargradient(
+        x1: 0, y1: 0, x2: 0, y2: 1,
+        stop: 0 #121820,
+        stop: 1 #0E141C
+    );
+    border: 1px solid #1E2A38;
+    border-radius: 6px;
+}
+
+QLabel#navUserHeading {
+    color: #E07A2A;
+    font-family: "Orbitron";
+    font-size: 9px;
+    font-weight: bold;
+    letter-spacing: 2px;
+    padding: 0;
+}
+
+QLabel#navUserName {
+    color: #E8F2FA;
+    font-family: "Rajdhani";
+    font-size: 17px;
+    font-weight: 700;
+    padding: 2px 0 0 0;
+}
+
+QLabel#navRoleBadge {
+    color: #8FA3B8;
+    background-color: #1A2430;
+    border: 1px solid #2A3848;
+    border-radius: 4px;
+    font-family: "Rajdhani";
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    padding: 4px 10px;
+    margin-top: 2px;
+}
+
+QLabel#navNetworkBadge {
+    color: #42D4F5;
+    background-color: rgba(66, 212, 245, 12);
+    border: 1px solid rgba(66, 212, 245, 35);
+    border-radius: 4px;
+    font-family: "Rajdhani";
+    font-size: 10px;
+    font-weight: 600;
+    padding: 6px 8px;
+    margin-top: 6px;
+}
+
+
+/* ==========================================================
+   03. NAVIGATION BUTTONS — Launcher rail
+   ========================================================== */
+
+#navButton {
+    background: transparent;
+    border: none;
+    border-left: 3px solid transparent;
+    border-radius: 0;
+    color: #8FA3B8;
+    padding: 12px 16px 12px 14px;
+    min-height: 42px;
+    text-align: left;
+    font-family: "Rajdhani";
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+#navButton:hover {
+    background: #151D27;
+    color: #D8E4EF;
+}
+
+#navButton:pressed {
+    background: #1A2430;
+}
+
+#navButton[active=true] {
+    background: qlineargradient(
+        x1: 0, y1: 0, x2: 1, y2: 0,
+        stop: 0 #1A2838,
+        stop: 1 transparent
+    );
+    border-left: 3px solid #E07A2A;
+    color: #F4F8FC;
+}
+
+
+/* ==========================================================
+   04. STANDARD BUTTONS
+   ========================================================== */
+
+QPushButton {
+    background-color: #141C26;
+    color: #C5D6E6;
+    border: 1px solid #33485C;
+    border-radius: 6px;
+    padding: 10px 18px;
+    text-align: left;
+    min-height: 26px;
+}
+
+QPushButton:hover {
+    background-color: #1A2430;
+    border: 1px solid #42D4F5;
+    color: #E8F2FA;
+}
+
+QPushButton:pressed {
+    background-color: #0F161E;
+}
+
+QPushButton:disabled {
+    color: #506070;
+    border: 1px solid #243040;
+}
+
+
+/* ==========================================================
+   05. PAGE HEADERS
+   ========================================================== */
+
+#pageTitle {
+    color: #F2F7FB;
+    font-family: "Orbitron";
+    font-size: 30px;
+    font-weight: bold;
+    letter-spacing: 3px;
+    padding-bottom: 8px;
+}
+
+QLabel#sectionTitle {
+    color: #E6EEF5;
+    font-family: Orbitron;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 2px;
+}
+
+QLabel#subSectionTitle {
+    color: #93A8BC;
+    font-family: Orbitron;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+}
+
+
+/* ==========================================================
+   06. PANELS & CONTAINERS
+   ========================================================== */
+
+#infoPanel {
+    background: qlineargradient(
+        x1: 0, y1: 0, x2: 0, y2: 1,
+        stop: 0 #171E28,
+        stop: 1 #121820
+    );
+    border: 1px solid #263545;
+    border-radius: 8px;
+    padding: 18px;
+}
+
+QFrame#infoPanel {
+    background: qlineargradient(
+        x1: 0, y1: 0, x2: 0, y2: 1,
+        stop: 0 #171E28,
+        stop: 1 #121820
+    );
+    border: 1px solid #263545;
+    border-radius: 8px;
+    padding: 18px;
+}
+
+
+/* ==========================================================
+   07. REFINERY PAGE
+   ========================================================== */
+
+
+/* ----------------------------------
+   Page scroll & content (alle Seiten)
+---------------------------------- */
+
+QScrollArea#pageScroll {
+    background: transparent;
+
+    border: none;
+}
+
+QScrollArea#pageScroll > QWidget {
+    background: transparent;
+}
+
+QWidget#pageContent {
+    background: transparent;
+}
+
+
+/* ----------------------------------
+   Refinery / Payout Status Panel
+---------------------------------- */
+
+QLabel#refineryStatusPanel,
+QLabel#payoutStatusPanel {
+    background: qlineargradient(
+        x1: 0, y1: 0, x2: 0, y2: 1,
+        stop: 0 #171E28,
+        stop: 1 #121820
+    );
+    border: 1px solid #263545;
+    border-left: 3px solid #42D4F5;
+    border-radius: 8px;
+    padding: 16px;
+    color: #C5D6E6;
+    font-family: "Rajdhani";
+    font-size: 15px;
+    font-weight: 600;
+}
+
+
+/* ----------------------------------
+   Refinery Job Cards
+---------------------------------- */
+
+QFrame#jobCard {
+    background-color: #141C26;
+    border-left: 3px solid #42D4F5;
+    border-radius: 6px;
+    padding: 10px;
+}
+
+QFrame#jobCardReady {
+    background-color: #141C26;
+    border-left: 3px solid #4AD4A0;
+    border-radius: 6px;
+    padding: 10px;
+}
+
+
+/* ----------------------------------
+   Refinery Job Status
+---------------------------------- */
+
+QLabel#jobStatusIcon,
+QSvgWidget#jobStatusIcon {
+    min-width: 36px;
+
+    min-height: 36px;
+
+    background: transparent;
+
+    border: none;
+}
+
+QLabel#jobStatusLabel {
+    color: #42D4F5;
+    font-family: Orbitron;
+    font-size: 18px;
+    font-weight: 700;
+}
+
+QLabel#jobStatusLabelReady {
+    color: #4AD4A0;
+    font-family: Orbitron;
+    font-size: 18px;
+    font-weight: 700;
+}
+
+
+/* ----------------------------------
+   Refinery Empty Information
+---------------------------------- */
+
+QWidget#emptyInfoPanel {
+    background-color: #141C26;
+    border-left: 3px solid #33485C;
+    border-radius: 6px;
+    padding: 10px;
+}
+
+QLabel#emptyInfo {
+    color: #8FA3B8;
+    background: transparent;
+    border: none;
+    font-style: italic;
+}
+
+QLabel#cardDetailLabel {
+    color: #D9F4FF;
+
+    font-family: "Rajdhani";
+
+    font-size: 16px;
+
+    font-weight: bold;
+
+    padding: 2px 0;
+}
+
+
+/* ----------------------------------
+   Primary action buttons
+---------------------------------- */
+
+QPushButton#primaryAction {
+    background: qlineargradient(
+        x1: 0, y1: 0, x2: 0, y2: 1,
+        stop: 0 #E8893A,
+        stop: 1 #C86218
+    );
+    color: #FFF8F2;
+    border: 1px solid #F0A060;
+    border-radius: 6px;
+    font-family: "Orbitron";
+    font-size: 12px;
+    font-weight: bold;
+    letter-spacing: 2px;
+    text-align: center;
+    min-height: 32px;
+    padding: 12px 20px;
+}
+
+QPushButton#primaryAction:hover {
+    background: qlineargradient(
+        x1: 0, y1: 0, x2: 0, y2: 1,
+        stop: 0 #F09848,
+        stop: 1 #D46E22
+    );
+    border: 1px solid #FFC088;
+}
+
+QPushButton#primaryAction:pressed {
+    background: #A84E12;
+}
+
+QPushButton#secondaryAction {
+    background-color: #141C26;
+    color: #C5D6E6;
+    border: 1px solid #33485C;
+    border-radius: 6px;
+    text-align: center;
+}
+
+QPushButton#secondaryAction:hover {
+    background-color: #1A2430;
+    border-color: #42D4F5;
+    color: #E8F2FA;
+}
+
+
+/* ==========================================================
+   08. INPUT FIELDS
+   ========================================================== */
+
+QLineEdit,
+QTextEdit,
+QPlainTextEdit {
+    background: #0A1016;
+    border: 1px solid #243040;
+    border-radius: 6px;
+    padding: 10px 14px;
+    color: #E8F0F6;
+    selection-background-color: #1E5A72;
+}
+
+QLineEdit:focus,
+QTextEdit:focus,
+QPlainTextEdit:focus {
+    border: 1px solid #42D4F5;
+    background: #0C131A;
+}
+
+QSpinBox {
+    background: #0A1016;
+    border: 1px solid #243040;
+
+    border-radius: 12px;
+
+    padding: 6px 8px;
+
+    color: #D9F4FF;
+
+    min-height: 24px;
+}
+
+QSpinBox:focus {
+    border: 1px solid #42D4F5;
+}
+
+QSpinBox::up-button,
+QSpinBox::down-button {
+    background-color: #1A2430;
+    border: none;
+    width: 18px;
+}
+
+QSpinBox::up-button:hover,
+QSpinBox::down-button:hover {
+    background-color: #243040;
+}
+
+
+/* ==========================================================
+   09. COMBOBOXES
+   ========================================================== */
+
+QComboBox {
+    background-color: #0A1016;
+    border: 1px solid #243040;
+    border-radius: 6px;
+    padding: 8px 12px;
+    min-height: 24px;
+    color: #E8F0F6;
+}
+
+QComboBox:hover {
+    border: 1px solid #42D4F5;
+}
+
+QComboBox::drop-down {
+    border: none;
+    width: 30px;
+}
+
+QComboBox QAbstractItemView {
+    background-color: #121820;
+    color: #E6EEF5;
+    border: 1px solid #33485C;
+    selection-background-color: #1A3348;
+    selection-color: #F4F8FC;
+}
+
+
+/* ==========================================================
+   09b. CHECKBOXES
+   ========================================================== */
+
+QCheckBox {
+    color: #C5D6E6;
+    font-family: "Rajdhani";
+    font-size: 15px;
+    font-weight: 600;
+    spacing: 8px;
+}
+
+QCheckBox::indicator {
+    width: 18px;
+    height: 18px;
+    border: 1px solid #33485C;
+    border-radius: 4px;
+    background-color: #0A1016;
+}
+
+QCheckBox::indicator:hover {
+    border: 1px solid #42D4F5;
+}
+
+QCheckBox::indicator:checked {
+    background-color: #E07A2A;
+    border: 1px solid #F0A060;
+}
+
+
+/* ==========================================================
+   10. LABELS
+   ========================================================== */
+
+QLabel {
+    color: #D9F4FF;
+}
+
+
+/* ==========================================================
+   11. SCROLLBARS
+   ========================================================== */
+
+QScrollBar:vertical {
+    background: #08131C;
+
+    width: 10px;
+}
+
+QScrollBar::handle:vertical {
+    background: #2A3848;
+    border-radius: 4px;
+}
+
+QScrollBar::add-line:vertical,
+QScrollBar::sub-line:vertical {
+    height: 0px;
+}
+
+
+/* ==========================================================
+   12. MESSAGE BOXES
+   ========================================================== */
+
+QMessageBox {
+    background-color: #08131C;
+}
+
+QMessageBox QPushButton {
+    min-width: 100px;
+}
+
+
+/* ==========================================================
+   13. SESSION PAGE
+   ========================================================== */
+
+QLineEdit:disabled {
+    background-color: #030507;
+
+    color: #4D6B78;
+
+    border: 1px solid #29414D;
+}
+
+QSpinBox:disabled {
+    background-color: #030507;
+
+    color: #4D6B78;
+
+    border: 1px solid #29414D;
+}
+
+
+
+/* ==========================================================
+   14. SALES PAGE
+   ========================================================== */
+
+QFrame#financeSummaryPanel {
+    background: qlineargradient(
+        x1: 0, y1: 0, x2: 0, y2: 1,
+        stop: 0 #171E28,
+        stop: 1 #121820
+    );
+    border: 1px solid #263545;
+    border-top: 2px solid #E07A2A;
+    border-radius: 8px;
+    padding: 20px;
+}
+
+QFrame#financeSummaryPanel QLabel#statValue {
+    color: #FFFFFF;
+
+    font-size: 20px;
+}
+
+QFrame#financeSummaryPanel QLabel#profitLabel {
+    font-size: 26px;
+
+    padding-top: 4px;
+}
+
+
+/* ==========================================================
+   15. DASHBOARD PAGE
+   ========================================================== */
+
+
+
+/* ==========================================================
+   16. STATISTICS / PAYOUT PAGE
+   ========================================================== */
+
+QTableWidget#editableTable {
+    background-color: #0E141C;
+    color: #D8E4EF;
+    border: 1px solid #263545;
+    border-radius: 8px;
+    gridline-color: #1E2A38;
+    selection-background-color: #1A3348;
+    selection-color: #F4F8FC;
+    alternate-background-color: #121820;
+}
+
+QTableWidget#editableTable::item {
+    padding: 8px;
+    background-color: transparent;
+    border: none;
+}
+
+QTableWidget#editableTable::item:selected {
+    background-color: #1A3348;
+    color: #F4F8FC;
+}
+
+
+/* ==========================================================
+   17. HISTORY PAGE
+   ========================================================== */
+
+/* Tabellen-Styling siehe Abschnitt 22 (dataTable) */
+
+
+/* ==========================================================
+   18. DIALOGS
+   ========================================================== */
+
+QDialog#mobiglasDialog {
+    background: qlineargradient(
+        x1: 0, y1: 0, x2: 1, y2: 1,
+        stop: 0 #0A0D12,
+        stop: 0.45 #101620,
+        stop: 1 #07090D
+    );
+    border: 1px solid #243040;
+}
+
+QDialog#mobiglasDialog QLabel#pageTitle {
+    font-size: 16px;
+    padding-bottom: 6px;
+}
+
+QDialog#mobiglasDialog QScrollArea#rolePermissionsScroll {
+    background: transparent;
+    border: none;
+    min-height: 520px;
+}
+
+QWidget#rolePermissionsViewport {
+    background: transparent;
+}
+
+QWidget#rolePermissionsContent {
+    background: transparent;
+}
+
+QFrame#rolePermissionGroup {
+    background-color: rgba(0, 217, 255, 8);
+
+    border: 1px solid rgba(0, 217, 255, 35);
+
+    border-radius: 4px;
+}
+
+QDialog#mobiglasDialog QFrame#rolePermissionGroup QCheckBox {
+    color: #D9F4FF;
+
+    font-family: "Rajdhani";
+
+    font-size: 16px;
+
+    font-weight: bold;
+
+    spacing: 8px;
+
+    padding: 2px 0;
+}
+
+QDialog#mobiglasDialog QFrame#rolePermissionGroup QLabel#subSectionTitle {
+    color: #55E8FF;
+
+    margin-top: 0;
+}
+
+QDialog#mobiglasDialog QFrame#pagePanel QCheckBox {
+    color: #D9F4FF;
+    font-family: "Rajdhani";
+    font-size: 16px;
+    font-weight: bold;
+    spacing: 8px;
+    padding: 2px 0;
+}
+
+QDialog#mobiglasDialog QFrame#pagePanel QLabel#subSectionTitle {
+    color: #55E8FF;
+    margin-top: 4px;
+}
+
+QDialog#mobiglasDialog QLabel#subSectionTitle {
+    color: #55E8FF;
+    margin-top: 2px;
+}
+
+QDialog#mobiglasDialog QLabel#mutedLabel {
+    color: rgba(85, 232, 255, 0.62);
+    font-family: "Rajdhani";
+    font-size: 14px;
+    font-weight: bold;
+}
+
+QDialog#mobiglasDialog QListWidget#dashboardPresetList {
+    background-color: #0E141C;
+    border: 1px solid #263545;
+    border-radius: 8px;
+    padding: 6px;
+    color: #D8E4EF;
+    font-family: "Rajdhani";
+    font-size: 15px;
+    font-weight: 600;
+    outline: none;
+}
+
+QDialog#mobiglasDialog QListWidget#dashboardPresetList::item {
+    padding: 10px 12px;
+    border-radius: 8px;
+    margin: 2px 0;
+}
+
+QDialog#mobiglasDialog QListWidget#dashboardPresetList::item:hover {
+    background-color: rgba(0, 217, 255, 0.12);
+    color: #55E8FF;
+}
+
+QDialog#mobiglasDialog QListWidget#dashboardPresetList::item:selected {
+    background-color: rgba(10, 156, 192, 0.55);
+    color: #FFFFFF;
+    border: 1px solid #55E8FF;
+}
+
+QDialog#mobiglasDialog QFrame#pagePanel QLineEdit,
+QDialog#mobiglasDialog QFrame#pagePanel QComboBox {
+    min-height: 36px;
+}
+
+/* MobiGlas custom title bar — RSI Launcher style */
+QMainWindow QWidget#mobiglasTitleBar,
+QDialog QWidget#mobiglasTitleBar,
+QWidget#mobiglasTitleBar {
+    background: qlineargradient(
+        x1: 0, y1: 0, x2: 0, y2: 1,
+        stop: 0 #161C26,
+        stop: 1 #0E131A
+    );
+    border-bottom: 1px solid #243040;
+}
+
+QFrame#mobiglasTitleBevelTop {
+    background: #E07A2A;
+    border: none;
+    max-height: 2px;
+    min-height: 2px;
+}
+
+QWidget#mobiglasTitleRow {
+    background: transparent;
+}
+
+QLabel#mobiglasTitleMarker {
+    color: #42D4F5;
+    font-family: "Orbitron";
+    font-size: 10px;
+    padding: 0;
+    margin: 0;
+}
+
+QLabel#mobiglasTitleLabel {
+    color: #F4F8FC;
+    font-family: "Orbitron";
+    font-size: 11px;
+    font-weight: bold;
+    letter-spacing: 2px;
+    padding: 0;
+    margin: 0;
+}
+
+QWidget#mobiglasTitleActions {
+    background: transparent;
+}
+
+QFrame#mobiglasTitleControls {
+    background: #141C26;
+    border: 1px solid #33485C;
+    border-radius: 4px;
+    min-height: 26px;
+    max-height: 26px;
+}
+
+QPushButton#mobiglasTitleMin,
+QPushButton#mobiglasTitleMax,
+QPushButton#mobiglasTitleClose {
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    min-width: 26px;
+    max-width: 26px;
+    min-height: 22px;
+    max-height: 22px;
+    padding: 0;
+    margin: 0;
+}
+
+QPushButton#mobiglasTitleMin:hover,
+QPushButton#mobiglasTitleMax:hover {
+    background: #1E2835;
+    border: 1px solid #334155;
+}
+
+QPushButton#mobiglasTitleClose:hover {
+    background: #8B2635;
+    border: 1px solid #B83244;
+}
+
+QPushButton#mobiglasTitleMin:pressed,
+QPushButton#mobiglasTitleMax:pressed,
+QPushButton#mobiglasTitleClose:pressed {
+    background: #0F161E;
+}
+
+QPushButton#mobiglasTitleAction {
+    background: #141C26;
+    color: #C5D6E6;
+    border: 1px solid #33485C;
+    border-radius: 4px;
+    font-family: "Rajdhani";
+    font-size: 13px;
+    font-weight: 600;
+    padding: 2px 12px;
+    min-height: 24px;
+    max-height: 24px;
+}
+
+QPushButton#mobiglasTitleAction:hover {
+    background: #1A2430;
+    border: 1px solid #42D4F5;
+    color: #E8F2FA;
+}
+
+QWidget#mobiglasWindowRoot {
+    background: qlineargradient(
+        x1: 0, y1: 0, x2: 1, y2: 1,
+        stop: 0 #0A0D12,
+        stop: 0.45 #101620,
+        stop: 1 #07090D
+    );
+    border: 1px solid #243040;
+}
+
+QWidget#mobiglasDialogContent {
+    background: transparent;
+}
+
+/* MobiGlas color picker (embedded QColorDialog) */
+QDialog#mobiglasDialog QColorDialog#mobiglasColorPicker {
+    background: transparent;
+    border: none;
+}
+
+QDialog#mobiglasDialog QColorDialog#mobiglasColorPicker QLabel {
+    color: #D9F4FF;
+    font-family: "Rajdhani";
+    font-size: 14px;
+    font-weight: bold;
+    background: transparent;
+}
+
+QDialog#mobiglasDialog QColorDialog#mobiglasColorPicker QLineEdit,
+QDialog#mobiglasDialog QColorDialog#mobiglasColorPicker QSpinBox {
+    background-color: #0D1A24;
+    color: #D9F4FF;
+    border: 1px solid rgba(0, 217, 255, 0.45);
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-family: "Rajdhani";
+    font-size: 14px;
+    min-height: 24px;
+}
+
+QDialog#mobiglasDialog QColorDialog#mobiglasColorPicker QSpinBox::up-button,
+QDialog#mobiglasDialog QColorDialog#mobiglasColorPicker QSpinBox::down-button {
+    background-color: rgba(0, 217, 255, 0.12);
+    border: none;
+    width: 16px;
+}
+
+QDialog#mobiglasDialog QColorDialog#mobiglasColorPicker QSpinBox::up-button:hover,
+QDialog#mobiglasDialog QColorDialog#mobiglasColorPicker QSpinBox::down-button:hover {
+    background-color: rgba(0, 217, 255, 0.28);
+}
+
+QDialog#mobiglasDialog QColorDialog#mobiglasColorPicker QPushButton {
+    background: qlineargradient(
+        x1: 0, y1: 0, x2: 0, y2: 1,
+        stop: 0 rgba(24, 48, 64, 0.72),
+        stop: 1 rgba(8, 18, 28, 0.92)
+    );
+    color: #55E8FF;
+    border: 1px solid rgba(0, 217, 255, 0.42);
+    border-top-color: rgba(130, 235, 255, 0.28);
+    border-bottom-color: rgba(0, 70, 95, 0.82);
+    border-radius: 10px;
+    font-family: "Rajdhani";
+    font-size: 13px;
+    font-weight: bold;
+    padding: 6px 14px;
+    min-height: 28px;
+    text-align: center;
+}
+
+QDialog#mobiglasDialog QColorDialog#mobiglasColorPicker QPushButton:hover {
+    background: qlineargradient(
+        x1: 0, y1: 0, x2: 0, y2: 1,
+        stop: 0 rgba(0, 217, 255, 0.28),
+        stop: 1 rgba(0, 120, 160, 0.22)
+    );
+    border: 1px solid #55E8FF;
+    color: #FFFFFF;
+}
+
+QDialog#mobiglasDialog QColorDialog#mobiglasColorPicker QFrame,
+QDialog#mobiglasDialog QColorDialog#mobiglasColorPicker QWidget {
+    background: transparent;
+}
+
+QMenuBar#mobiglasMenuBar {
+    background-color: #0E1A25;
+    color: #D9F4FF;
+    border-bottom: 1px solid rgba(0, 217, 255, 0.35);
+    font-family: "Rajdhani";
+    font-size: 14px;
+    font-weight: bold;
+    padding: 2px 8px;
+}
+
+QMenuBar#mobiglasMenuBar::item {
+    background: transparent;
+    padding: 4px 12px;
+    border-radius: 6px;
+}
+
+QMenuBar#mobiglasMenuBar::item:selected {
+    background-color: rgba(0, 217, 255, 0.16);
+    color: #55E8FF;
+}
+
+QMainWindow#mainWindow,
+QMainWindow#dashboardWindow {
+    background: qlineargradient(
+        x1: 0, y1: 0, x2: 0, y2: 1,
+        stop: 0 #1B2A38,
+        stop: 0.35 #121E29,
+        stop: 1 #030608
+    );
+    border: 1px solid #00D9FF;
+}
+
+
+/* ==========================================================
+   19. MENU BAR
+   ========================================================== */
+
+QMenuBar {
+    background: qlineargradient(
+        x1: 0, y1: 0, x2: 0, y2: 1,
+        stop: 0 #162433,
+        stop: 1 #0A131C
+    );
+
+    color: #D9F4FF;
+
+    border-bottom: 1px solid #00D9FF;
+
+    font-family: "Rajdhani";
+
+    font-size: 16px;
+
+    font-weight: bold;
+
+    padding: 4px;
+}
+
+QMenuBar::item {
+    background: transparent;
+
+    padding: 6px 14px;
+
+    border-radius: 8px;
+}
+
+QMenuBar::item:selected {
+    background-color: #123042;
+
+    color: #55E8FF;
+}
+
+QMenu {
+    background-color: #08131C;
+
+    color: #D9F4FF;
+
+    border: 1px solid #00D9FF;
+
+    border-radius: 8px;
+
+    padding: 6px;
+}
+
+QMenu::item {
+    padding: 8px 24px;
+
+    border-radius: 6px;
+}
+
+QMenu::item:selected {
+    background-color: #0A9CC0;
+
+    color: #FFFFFF;
+}
+
+
+/* ==========================================================
+   20. LABEL VARIANTS
+   ========================================================== */
+
+QLabel#mutedLabel {
+    color: #708696;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+QLabel#hintLabel {
+    color: #4D6B78;
+
+    font-size: 11px;
+
+    font-weight: bold;
+}
+
+QLabel#displayValue {
+    color: #D9F4FF;
+
+    background: transparent;
+
+    font-family: "Rajdhani";
+
+    font-size: 14px;
+
+    font-weight: bold;
+
+    padding: 6px 0;
+}
+
+QLabel#warningBanner {
+    color: #FFE8A3;
+
+    background-color: #3D2A00;
+
+    border: 2px solid #C9A227;
+
+    border-radius: 8px;
+
+    font-size: 15px;
+
+    font-weight: bold;
+
+    padding: 14px 16px;
+}
+
+QLabel#warningBannerTitle {
+    color: #FFC857;
+
+    font-family: "Orbitron";
+
+    font-size: 18px;
+
+    font-weight: bold;
+
+    padding-bottom: 4px;
+}
+
+QLabel#userLabel {
+    color: #D8E4EF;
+    font-family: "Rajdhani";
+    font-size: 15px;
+    font-weight: 600;
+    padding: 2px 4px;
+}
+
+QLabel#roleLabel {
+    color: #8FA3B8;
+    font-family: "Rajdhani";
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+QLabel#versionLabel {
+    color: #4D6B78;
+
+    font-family: "Rajdhani";
+
+    font-size: 11px;
+
+    font-weight: bold;
+}
+
+QLabel#versionLabel a {
+    color: #C9A227;
+
+    text-decoration: none;
+}
+
+QLabel#sectionAccent {
+    color: #E07A2A;
+    font-family: "Orbitron";
+    font-size: 14px;
+    font-weight: bold;
+    letter-spacing: 2px;
+}
+
+QLabel#panelTitle {
+    color: #F2F7FB;
+    font-family: "Orbitron";
+    font-size: 18px;
+    font-weight: bold;
+    letter-spacing: 2px;
+}
+
+QLabel#infoValue {
+    color: #FFFFFF;
+
+    font-family: "Rajdhani";
+
+    font-size: 20px;
+
+    font-weight: bold;
+}
+
+QLabel#cardTitle {
+    color: #93A8BC;
+    font-family: "Orbitron";
+    font-size: 11px;
+    font-weight: bold;
+    letter-spacing: 2px;
+}
+
+QLabel#cardValue {
+    color: #FFFFFF;
+
+    font-family: "Rajdhani";
+
+    font-size: 26px;
+
+    font-weight: bold;
+}
+
+QLabel#statLabel {
+    color: #8FA3B8;
+    font-family: "Rajdhani";
+    font-size: 16px;
+    font-weight: 600;
+}
+
+QLabel#statValue {
+    color: #FFFFFF;
+
+    font-family: "Rajdhani";
+
+    font-size: 18px;
+
+    font-weight: bold;
+}
+
+QLabel#profitLabel {
+    color: #F0A848;
+    font-family: "Orbitron";
+
+    font-size: 22px;
+
+    font-weight: bold;
+}
+
+QLabel#formLabel {
+    color: #7C92A8;
+    font-family: "Rajdhani";
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    padding-top: 4px;
+}
+
+
+/* ==========================================================
+   21. DASHBOARD
+   ========================================================== */
+
+QLabel#dashboardSection {
+    color: #F2F7FB;
+    font-family: "Orbitron";
+    font-size: 14px;
+    font-weight: bold;
+    letter-spacing: 3px;
+    padding-top: 6px;
+    padding-bottom: 8px;
+}
+
+QScrollArea#dashboardScroll {
+    background: transparent;
+    border: none;
+}
+
+QScrollArea#dashboardScroll > QWidget {
+    background: transparent;
+}
+
+QWidget#dashboardScrollViewport {
+    background: transparent;
+}
+
+QWidget#dashboardPage {
+    background: transparent;
+}
+
+QWidget#dashboardContent {
+    background: transparent;
+}
+
+QFrame#dashboardCard {
+    background: qlineargradient(
+        x1: 0, y1: 0, x2: 0, y2: 1,
+        stop: 0 #171E28,
+        stop: 1 #121820
+    );
+    border: 1px solid #263545;
+    border-radius: 8px;
+    padding: 18px;
+    min-height: 120px;
+}
+
+QFrame#hudLine {
+    background: #33485C;
+    color: #33485C;
+    max-height: 1px;
+    border: none;
+}
+
+QLabel#hudMarker {
+    color: #E07A2A;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+QMainWindow#dashboardWindow {
+    background: qlineargradient(
+        x1: 0, y1: 0, x2: 1, y2: 1,
+        stop: 0 #0A0D12,
+        stop: 0.45 #101620,
+        stop: 1 #07090D
+    );
+}
+
+QWidget#dashboardWindowCentral {
+    background: transparent;
+}
+
+
+/* ==========================================================
+   22. DATA TABLES
+   ========================================================== */
+
+QTableWidget#dataTable,
+QTableWidget#historyTable {
+    background-color: #0E141C;
+    color: #D8E4EF;
+    border: 1px solid #263545;
+    border-radius: 8px;
+    gridline-color: #1E2A38;
+    selection-background-color: #1A3348;
+    selection-color: #F4F8FC;
+    alternate-background-color: #121820;
+    outline: none;
+}
+
+QTableWidget#dataTable::item,
+QTableWidget#historyTable::item {
+    padding: 8px 10px;
+    background-color: transparent;
+    border: none;
+}
+
+QTableWidget#dataTable::item:alternate,
+QTableWidget#historyTable::item:alternate {
+    background-color: #121820;
+}
+
+QTableWidget#dataTable::item:selected,
+QTableWidget#historyTable::item:selected {
+    background-color: #1A3348;
+    color: #F4F8FC;
+}
+
+QTableWidget#dataTable QHeaderView,
+QTableWidget#historyTable QHeaderView,
+QTableWidget#editableTable QHeaderView {
+    background-color: #141C26;
+    border: none;
+    border-bottom: 1px solid #263545;
+}
+
+QTableWidget#dataTable QHeaderView::section,
+QTableWidget#historyTable QHeaderView::section,
+QTableWidget#editableTable QHeaderView::section {
+    background-color: #141C26;
+    color: #8FA3B8;
+    border: none;
+    border-bottom: 1px solid #263545;
+    border-right: 1px solid #1A2430;
+    padding: 10px 12px;
+    font-family: "Orbitron";
+    font-size: 10px;
+    font-weight: bold;
+    letter-spacing: 2px;
+}
+
+QTableWidget#dataTable QHeaderView::section:last,
+QTableWidget#historyTable QHeaderView::section:last,
+QTableWidget#editableTable QHeaderView::section:last {
+
+    border-right: none;
+}
+
+QTableWidget#dataTable QTableCornerButton::section,
+QTableWidget#historyTable QTableCornerButton::section,
+QTableWidget#editableTable QTableCornerButton::section {
+    background-color: #141C26;
+    border: none;
+    border-bottom: 1px solid #263545;
+}
+
+QTableWidget#dataTable QScrollBar:vertical,
+QTableWidget#historyTable QScrollBar:vertical,
+QTableWidget#editableTable QScrollBar:vertical,
+QTableWidget#dataTable QScrollBar:horizontal,
+QTableWidget#historyTable QScrollBar:horizontal,
+QTableWidget#editableTable QScrollBar:horizontal {
+    background: #0C1016;
+    border: none;
+}
+
+QTableWidget#dataTable QScrollBar::handle:vertical,
+QTableWidget#historyTable QScrollBar::handle:vertical,
+QTableWidget#editableTable QScrollBar::handle:vertical,
+QTableWidget#dataTable QScrollBar::handle:horizontal,
+QTableWidget#historyTable QScrollBar::handle:horizontal,
+QTableWidget#editableTable QScrollBar::handle:horizontal {
+    background: #2A3848;
+    border-radius: 4px;
+    min-height: 20px;
+    min-width: 20px;
+}
+
+
+/* ==========================================================
+   23. CHANGELOG & READ-ONLY VIEWS
+   ========================================================== */
+
+QTextEdit#changelogView,
+QTextEdit#readOnlyPanel {
+    background-color: #0E141C;
+    color: #D8E4EF;
+    border: 1px solid #263545;
+    border-radius: 8px;
+    padding: 14px;
+    font-family: "Rajdhani";
+    font-size: 14px;
+    font-weight: 600;
+}
+
+
+/* ==========================================================
+   23b. AAA TAB SYSTEM (Einstellungen, Changelog, global)
+   ========================================================== */
+
+QTabWidget {
+    background: transparent;
+}
+
+QTabWidget::pane {
+    border: 1px solid #33485C;
+    border-top: 1px solid #33485C;
+    border-radius: 0 0 8px 8px;
+    background: qlineargradient(
+        x1: 0, y1: 0, x2: 0, y2: 1,
+        stop: 0 #171E28,
+        stop: 1 #121820
+    );
+    top: 0;
+    padding: 4px;
+}
+
+QTabWidget::tab-bar {
+    alignment: left;
+}
+
+QTabWidget QTabBar::tab {
+    background: #0D1218;
+    color: #7C92A8;
+    border: 1px solid #243040;
+    border-bottom: 1px solid #243040;
+    border-top: 2px solid transparent;
+    border-top-left-radius: 6px;
+    border-top-right-radius: 6px;
+    padding: 12px 28px 10px 28px;
+    margin-right: 3px;
+    margin-top: 4px;
+    font-family: "Orbitron";
+    font-size: 10px;
+    font-weight: bold;
+    letter-spacing: 2px;
+    min-width: 72px;
+}
+
+QTabWidget QTabBar::tab:selected {
+    background: qlineargradient(
+        x1: 0, y1: 0, x2: 0, y2: 1,
+        stop: 0 #1B2430,
+        stop: 1 #141C26
+    );
+    color: #F4F8FC;
+    border-color: #33485C;
+    border-bottom: 1px solid #141C26;
+    border-top: 2px solid #E07A2A;
+    margin-top: 0;
+    padding-top: 14px;
+}
+
+QTabWidget QTabBar::tab:hover:!selected {
+    background: #151D27;
+    color: #C5D6E6;
+    border-color: #3A5168;
+}
+
+QTabWidget QTabBar::tab:selected:hover {
+    border-top: 2px solid #F09848;
+}
+
+QTabWidget#changelogTabs,
+QTabWidget#settingsTabs {
+    background: transparent;
+}
+
+QWidget#settingsTabContent {
+    background: transparent;
+}
+
+
+/* ==========================================================
+   24. INPUT DIALOGS
+   ========================================================== */
+
+QInputDialog {
+    background: qlineargradient(
+        x1: 0, y1: 0, x2: 0, y2: 1,
+        stop: 0 #1B2A38,
+        stop: 0.35 #121E29,
+        stop: 1 #030608
+    );
+}
+
+QInputDialog QLabel {
+    color: #D9F4FF;
+}
+
+
+/* ==========================================================
+   25. PAGE CONTENT PANELS
+   ========================================================== */
+
+QFrame#pagePanel {
+    background: qlineargradient(
+        x1: 0, y1: 0, x2: 0, y2: 1,
+        stop: 0 #171E28,
+        stop: 1 #121820
+    );
+    border: 1px solid #263545;
+    border-radius: 8px;
+    padding: 20px;
+}
+
+QFrame#loginCard {
+    background: qlineargradient(
+        x1: 0, y1: 0, x2: 0, y2: 1,
+        stop: 0 #171E28,
+        stop: 1 #10161E
+    );
+    border: 1px solid #2A3848;
+    border-radius: 10px;
+}
+
+QLabel#loginLogo {
+    color: #F2F7FB;
+    font-family: "Orbitron";
+    font-size: 26px;
+    font-weight: bold;
+    letter-spacing: 6px;
+}
+
+QLabel#loginTagline {
+    color: #6F8599;
+    font-size: 12px;
+    letter-spacing: 3px;
+}
+
+QLabel#setupStepIndicator {
+    color: #E07A2A;
+    font-family: "Orbitron";
+    font-size: 11px;
+    font-weight: bold;
+    letter-spacing: 2px;
+    padding: 2px 0 6px 0;
+}
+
+QStackedWidget#setupWizardStack {
+    background: transparent;
+    border: none;
+    min-height: 280px;
+}
+
+QDialog#mobiglasDialog QStackedWidget#setupWizardStack QLineEdit {
+    min-height: 34px;
+}
+
+QLabel#setupVersionFooter {
+    color: #4A6070;
+    font-family: "Rajdhani";
+    font-size: 12px;
+    letter-spacing: 1px;
+}
+
+QLabel#setupSuccessLabel {
+    color: #42D4F5;
+    font-family: "Orbitron";
+    font-size: 13px;
+    font-weight: bold;
+    letter-spacing: 2px;
+    padding: 8px 0 4px 0;
+}
+
+QFrame#navDivider {
+    background: #1E2A38;
+    border: none;
+    min-height: 1px;
+    max-height: 1px;
+    margin: 0 16px;
+}
+
+QFrame#pagePanel QLabel#statLabel {
+    margin-top: 6px;
+}
+
+
+/* ==========================================================
+   26. STATISTICS PLACEHOLDER
+   ========================================================== */
+
+QLabel#placeholderLabel {
+    color: #4D6B78;
+
+    font-family: "Rajdhani";
+
+    font-size: 18px;
+
+    font-weight: bold;
+
+    font-style: italic;
+
+    padding: 40px;
+}
+
+
+/* ==========================================================
+   27. START SPLASH
+   ========================================================== */
+
+#splashScreen {
+    background: qlineargradient(
+        x1: 0, y1: 0, x2: 0, y2: 1,
+        stop: 0 #1B2A38,
+        stop: 1 #030608
+    );
+}
+
+QFrame#splashHudLine {
+    color: #E07A2A;
+    background-color: #E07A2A;
+    max-height: 2px;
+}
+
+QLabel#splashHudMarker {
+    color: #E07A2A;
+    font-family: "Rajdhani";
+    font-size: 16px;
+    font-weight: bold;
+    padding: 0 2px;
+}
+
+QLabel#splashStatus {
+    color: #42D4F5;
+    font-family: "Rajdhani";
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 1px;
+}
+
+QLabel#splashFooter {
+    color: #4D6B78;
+
+    font-family: "Rajdhani";
+
+    font-size: 11px;
+
+    font-weight: bold;
+
+    letter-spacing: 0.5px;
+}
+
+QLabel#splashVersion {
+    color: #C9A227;
+
+    background: transparent;
+
+    background-color: transparent;
+
+    font-family: "Rajdhani";
+
+    font-size: 11px;
+
+    font-weight: bold;
+
+    padding: 2px 6px;
+}
+
+QLabel#splashDeveloper {
+    color: #C9A227;
+
+    background: transparent;
+
+    background-color: transparent;
+
+    font-family: "Rajdhani";
+
+    font-size: 11px;
+
+    font-weight: bold;
+
+    letter-spacing: 0.4px;
+
+    padding: 0;
+}
+
+/* ==========================================================
+   28. MODULARES DASHBOARD (kompakt / filigran)
+   ========================================================== */
+
+QWidget#dashboardGridCanvas {
+    background: transparent;
+}
+
+QWidget#dashboardGridHost {
+    background: transparent;
+}
+
+QFrame#dashboardPlacedWidget {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: 0;
+}
+
+QFrame#dashboardKpiCard,
+QFrame#dashboardSessionPanel {
+    background: rgba(8, 16, 24, 0.68);
+    border: 1px solid rgba(0, 217, 255, 0.22);
+    border-radius: 6px;
+    min-height: 0;
+    min-width: 0;
+    padding: 6px 10px;
+}
+
+QWidget#dashboardPage QLabel#hudMarker {
+    font-size: 18px;
+}
+
+QLabel#dashboardKpiTitle {
+    color: rgba(0, 217, 255, 0.68);
+    font-family: "Orbitron";
+    font-size: 10px;
+    font-weight: bold;
+    letter-spacing: 0.8px;
+    padding: 0;
+    margin: 0;
+}
+
+QFrame#dashboardKpiDivider {
+    min-height: 1px;
+    max-height: 1px;
+    margin-top: 2px;
+    margin-bottom: 3px;
+    background: qlineargradient(
+        x1: 0, y1: 0, x2: 1, y2: 0,
+        stop: 0 transparent,
+        stop: 0.15 rgba(0, 217, 255, 0.08),
+        stop: 0.5 rgba(0, 217, 255, 0.55),
+        stop: 0.85 rgba(0, 217, 255, 0.08),
+        stop: 1 transparent
+    );
+    border: none;
+}
+
+QLabel#dashboardKpiValue {
+    color: #E6F2F8;
+    font-family: "Rajdhani";
+    font-size: 16px;
+    font-weight: bold;
+    padding: 0;
+    margin: 0;
+}
+
+QLabel#dashboardKpiValueAccent {
+    color: #C9A227;
+    font-family: "Rajdhani";
+    font-size: 16px;
+    font-weight: bold;
+    padding: 0;
+    margin: 0;
+}
+
+QLabel#dashboardSessionHeading {
+    color: rgba(0, 217, 255, 0.78);
+    font-family: "Orbitron";
+    font-size: 10px;
+    font-weight: bold;
+    letter-spacing: 1.2px;
+    padding-bottom: 0;
+    border-bottom: 1px solid rgba(0, 217, 255, 0.25);
+    margin-bottom: 3px;
+}
+
+QLabel#dashboardStatLabel {
+    color: rgba(85, 232, 255, 0.55);
+    font-family: "Rajdhani";
+    font-size: 11px;
+    font-weight: bold;
+}
+
+QLabel#dashboardStatValue {
+    color: #DCE8EF;
+    font-family: "Rajdhani";
+    font-size: 12px;
+    font-weight: bold;
+}
+
+QWidget#dashboardCatalogPanel {
+    background: qlineargradient(
+        x1: 0, y1: 0, x2: 0, y2: 1,
+        stop: 0 #162433,
+        stop: 0.45 #0E1822,
+        stop: 1 #060B10
+    );
+    border-left: 1px solid #263545;
+}
+
+QLabel#dashboardCatalogTitle {
+    color: #93A8BC;
+    font-family: "Orbitron";
+    font-size: 11px;
+    font-weight: bold;
+    letter-spacing: 2px;
+    padding: 0;
+    margin: 0;
+}
+
+QLabel#dashboardCatalogHint {
+    color: rgba(85, 232, 255, 0.58);
+    font-family: "Rajdhani";
+    font-size: 11px;
+    font-weight: bold;
+    line-height: 1.3;
+    padding: 0 2px;
+    margin: 0;
+}
+
+QWidget#dashboardCatalogPanel QFrame#hudLine {
+    background: qlineargradient(
+        x1: 0, y1: 0, x2: 1, y2: 0,
+        stop: 0 transparent,
+        stop: 0.2 rgba(0, 217, 255, 0.15),
+        stop: 0.5 rgba(0, 217, 255, 0.55),
+        stop: 0.8 rgba(0, 217, 255, 0.15),
+        stop: 1 transparent
+    );
+    min-height: 1px;
+    max-height: 1px;
+    border: none;
+}
+
+QWidget#dashboardCatalogPanel QLabel#hudMarker {
+    color: rgba(0, 217, 255, 0.75);
+    font-size: 10px;
+}
+
+QFrame#dashboardCatalogDrop {
+    background-color: rgba(0, 217, 255, 0.05);
+    border: 1px dashed rgba(0, 217, 255, 0.38);
+    border-radius: 8px;
+    min-height: 44px;
+}
+
+QFrame#dashboardCatalogDrop[dragActive="true"] {
+    background-color: rgba(0, 217, 255, 0.14);
+    border: 1px solid rgba(0, 217, 255, 0.72);
+}
+
+QLabel#dashboardCatalogDropLabel {
+    color: rgba(85, 232, 255, 0.78);
+    font-family: "Rajdhani";
+    font-size: 10px;
+    font-weight: bold;
+    font-style: italic;
+    background: transparent;
+    border: none;
+    padding: 0;
+    margin: 0;
+}
+
+QFrame#dashboardCatalogItem {
+    background-color: rgba(11, 23, 33, 0.92);
+    border: 1px solid rgba(0, 217, 255, 0.32);
+    border-radius: 10px;
+    min-height: 30px;
+}
+
+QFrame#dashboardCatalogItem:hover {
+    border: 1px solid rgba(0, 217, 255, 0.68);
+    background-color: rgba(14, 32, 44, 0.96);
+}
+
+QFrame#dashboardCatalogItem:disabled {
+    background-color: rgba(8, 14, 20, 0.55);
+    border: 1px solid rgba(0, 217, 255, 0.12);
+}
+
+QLabel#dashboardCatalogLabel {
+    color: rgba(217, 244, 255, 0.92);
+    font-family: "Rajdhani";
+    font-size: 12px;
+    font-weight: bold;
+    letter-spacing: 0.8px;
+    padding: 0;
+    margin: 0;
+}
+
+QFrame#dashboardCatalogItem:disabled QLabel#dashboardCatalogLabel {
+    color: rgba(217, 244, 255, 0.32);
+}
+
+QWidget#dashboardCatalogList {
+    background: transparent;
+}
+
+QPushButton#dashboardWidgetRemove {
+    background-color: rgba(30, 81, 103, 0.88);
+    color: #FFFFFF;
+    border: 1px solid rgba(0, 217, 255, 0.5);
+    border-radius: 9px;
+    min-width: 18px;
+    max-width: 18px;
+    min-height: 18px;
+    max-height: 18px;
+    font-family: "Segoe UI";
+    font-size: 11px;
+    font-weight: bold;
+    padding: 0;
+    padding-bottom: 1px;
+}
+
+QPushButton#dashboardWidgetRemove:hover {
+    background-color: rgba(0, 217, 255, 0.45);
+    color: #041018;
+    border: 1px solid rgba(0, 217, 255, 0.85);
+}
+
+QWidget#dashboardHeader {
+    background: transparent;
+}
+
+QScrollArea#dashboardCatalogScroll {
+    background: transparent;
+    border: none;
+}
+
+QScrollArea#dashboardCatalogScroll > QWidget {
+    background: transparent;
+}
+
+QWidget#dashboardCatalogScrollViewport {
+    background: transparent;
+}

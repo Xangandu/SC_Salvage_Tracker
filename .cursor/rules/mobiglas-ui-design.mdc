@@ -1,0 +1,74 @@
+---
+description: MobiGlas-Design für neue UI-Seiten, Tabs und Dialoge
+globs: ui/**/*.py
+alwaysApply: false
+---
+
+# MobiGlas UI — Pflicht für neue Seiten & Unterseiten
+
+Neue Hauptseiten, Tabs, Unterseiten und Dialoge **immer** im bestehenden MobiGlas-Design umsetzen. Keine ad-hoc-Layouts ohne die gemeinsamen Helfer.
+
+## Referenz-Implementierungen
+
+Vor dem Bauen kurz ansehen: `ui/sales_page.py`, `ui/refinery_page.py`, `ui/admin_page.py`
+
+## Hauptseiten (Navigation)
+
+```python
+from ui.page_layout import (
+    build_page_scroll, page_content_widget, page_title,
+    section_accent, subsection_title, add_form_field,
+    info_panel, page_panel, primary_button, empty_info_panel, hud_divider,
+)
+
+content, layout = page_content_widget()
+layout.addWidget(page_title("SEITENTITEL"))
+layout.addWidget(section_accent("◆ BEREICH"))
+# … Inhalt …
+outer = QVBoxLayout(self)
+outer.setContentsMargins(0, 0, 0, 0)
+outer.addWidget(build_page_scroll(content))
+```
+
+- Scroll: immer `build_page_scroll` / `page_content_widget` — keine flache Seite ohne `#pageScroll`
+- Überschriften: `page_title` → `section_accent` / `subsection_title` — keine freien `QLabel`-Styles
+- Formulare: Felder in `info_panel()` oder `page_panel()`; Labels via `form_label` / `add_form_field`
+- Primäre Aktion: `primary_button("…")` → `#primaryAction`
+- Leerzustände: `empty_info_panel("…", "assets/images/icons/info.svg")`
+
+## Tab-Unterseiten (z. B. Einstellungen)
+
+Tabs sind **Teil** der Seite — gleiche Helfer, gleiche `objectName`s. Kein „rohes“ Tab-Widget ohne Panel/Scroll-Struktur.
+
+## Tabellen
+
+```python
+from ui.table_utils import configure_mobiglas_table, finalize_table_columns
+configure_mobiglas_table(table)          # oder "dataTable" / "editableTable"
+# nach dem Befüllen:
+finalize_table_columns(table)
+```
+
+Bearbeitbare Tabellen: `configure_editable_table` + `#editableTable` in QSS.
+
+## Dialoge
+
+```python
+self.setObjectName("mobiglasDialog")
+# Titel: pageTitle, Formular: pagePanel, Speichern: primaryAction
+```
+
+## Rechte
+
+Jede schreibbare Seite braucht `apply_permissions(self, user, page_name)` und ruft `apply_widget_permissions` oder granulare `has_permission`-Checks auf.
+
+## Styles
+
+Farben/Schriften **nicht** inline setzen. Styling über `objectName` in `assets/styles/mobiglas.qss`. Neue UI-Komponenten nur mit passendem QSS-Eintrag.
+
+## Verboten
+
+- Eigene Margins/Fonts/Farben pro Seite
+- Tabellen ohne `configure_mobiglas_table`
+- Neue Navigationsseiten ohne `can_access` / `PAGE_PERMISSIONS`
+- Windows-Standard-Look ohne MobiGlas-Klassen

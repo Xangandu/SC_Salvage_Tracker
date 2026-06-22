@@ -1,0 +1,28 @@
+[
+    {
+        "manufacturer": "RSI",
+        "name": "Salvation",
+        "class": "Light Salvage",
+        "cargo_scu": 6
+    },
+    {
+        "manufacturer": "MISC",
+        "name": "Fortune",
+        "class": "Light Salvage"
+    },
+    {
+        "manufacturer": "Drake",
+        "name": "Vulture",
+        "class": "Light Salvage"
+    },
+    {
+        "manufacturer": "ARGO",
+        "name": "MOTH",
+        "class": "Medium Salvage"
+    },
+    {
+        "manufacturer": "Aegis",
+        "name": "Reclaimer",
+        "class": "Heavy Salvage"
+    }
+]

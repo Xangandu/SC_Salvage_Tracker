@@ -1,0 +1,434 @@
+import sys
+
+import PySide6.QtSvg  # SVG-Plugin für Icon-Dateien
+from PySide6.QtWidgets import QApplication, QDialog, QMessageBox
+from PySide6.QtGui import QFontDatabase
+
+from ui.splash_screen import run_startup_splash
+from ui.main_window import MainWindow
+from ui.login_dialog import LoginDialog
+from ui.connection_assistant_dialog import ConnectionAssistantDialog
+from ui.change_password_dialog import (
+    ChangePasswordDialog
+)
+from ui.initial_setup_wizard import InitialSetupWizard
+from ui.super_admin_recovery_dialog import (
+    SuperAdminRecoveryDialog,
+)
+from config.permissions import is_super_administrator
+from config.paths import asset_path
+from database.database import Database
+from database.access import (
+    get_database,
+    get_client_connection,
+    get_host_server,
+    set_client_connection,
+    set_database,
+    set_host_server,
+)
+from network.host_relay import start_host_relay_if_enabled, stop_host_relay
+from ui.theme_manager import ThemeManager
+from ui.wheel_guard import install_wheel_guard
+import auth.session as user_session
+from auth.remember_me import (
+    load_remember_data,
+    clear_remember_data,
+)
+from network.constants import (
+    NETWORK_MODE_CLIENT,
+    NETWORK_MODE_HOST,
+    NETWORK_MODE_STANDALONE,
+)
+from network.host_server import HostServer
+from network.network_state import get_network_state
+from network.client_connect import restore_saved_client_connection
+
+
+class SalvageTrackerApp:
+
+    def __init__(self):
+        self.app = QApplication(sys.argv)
+        install_wheel_guard(self.app)
+        self.db = None
+        self.main_window = None
+        self._network_mode = NETWORK_MODE_STANDALONE
+        self._skip_client_restore = False
+        self._initial_setup_created_username = None
+
+    def _initialize_backend(self, splash):
+        def schema_progress(current, total, name):
+            splash.set_status(
+                f"DATENBANK: {name} ({current}/{total})"
+            )
+
+        splash.set_status("DATENBANK WIRD VORBEREITET...")
+        self.db = Database(
+            schema_progress=schema_progress,
+        )
+        set_database(self.db)
+
+        splash.set_status("SCHRIFTPAKETE WERDEN GELADEN...")
+        self._load_fonts()
+
+        splash.set_status("OBERFLÄCHE WIRD VORBEREITET...")
+        ThemeManager.ensure_derived_themes()
+        self._load_default_theme()
+
+    def _load_fonts(self):
+        for font_file in (
+            "assets/fonts/Orbitron-Bold.ttf",
+            "assets/fonts/Rajdhani-Regular.ttf",
+            "assets/fonts/Rajdhani-Bold.ttf",
+        ):
+            font_path = asset_path(font_file)
+            if font_path.exists():
+                QFontDatabase.addApplicationFont(
+                    str(font_path)
+                )
+
+    def _load_default_theme(self):
+        settings = self.db.settings.get_app_settings()
+        ThemeManager.apply_settings(settings)
+
+    def _apply_user_theme(self, user):
+        ThemeManager.apply_for_user(self.db, user["id"])
+
+    def _load_saved_network_mode(self):
+        settings = self.db.settings.get_app_settings()
+        saved_mode = settings.get(
+            "network_mode",
+            NETWORK_MODE_STANDALONE,
+        )
+        get_network_state().mode = saved_mode
+        self._network_mode = saved_mode
+
+    def _offer_connection_assistant(self):
+        """Optional nach der Anmeldung — Standard: überspringen (Solo-Spiel)."""
+        settings = self.db.settings.get_app_settings()
+        if settings.get("network_show_assistant", "0") == "0":
+            self._load_saved_network_mode()
+            return True
+
+        dialog = ConnectionAssistantDialog(self.db)
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return False
+
+        self._network_mode = dialog.selected_mode
+        get_network_state().mode = self._network_mode
+
+        if self._network_mode == NETWORK_MODE_CLIENT:
+            set_client_connection(dialog.client_connection)
+            set_database(get_database())
+            host_user = dialog.client_user
+            if host_user:
+                user_session.set_session(host_user, 0)
+            return True
+
+        self.db = get_database()
+        return True
+
+    def _try_restore_client_connection(self):
+        """Gespeicherte Gast-Verbindung still wiederherstellen (ohne Assistent)."""
+        if self._skip_client_restore:
+            self._skip_client_restore = False
+            return
+
+        if self._network_mode != NETWORK_MODE_CLIENT:
+            return
+
+        if get_client_connection() is not None:
+            return
+
+        result = restore_saved_client_connection(self.db)
+        if not result:
+            return
+
+        _connection, host_user = result
+        if host_user:
+            user_session.set_session(host_user, 0)
+        self.db = get_database()
+
+    def _start_host_server(self):
+        if self._network_mode != NETWORK_MODE_HOST:
+            return
+
+        state = get_network_state()
+        port = int(
+            self.db.settings.get_app_setting(
+                "network_host_port",
+                str(state.host_port),
+            )
+        )
+        join_code = self.db.settings.get_app_setting(
+            "network_join_code",
+            state.join_code,
+        )
+        use_tls = self.db.settings.get_app_setting(
+            "network_use_tls",
+            "1",
+        ) == "1"
+
+        server = HostServer(self.db)
+        set_host_server(server)
+
+        if not server.start(
+            port=port,
+            join_code=join_code or None,
+            use_tls=use_tls,
+        ):
+            QMessageBox.warning(
+                None,
+                "Host-Server",
+                "Der Host-Server konnte nicht gestartet werden.",
+            )
+            return
+
+        start_host_relay_if_enabled(self.db, server)
+
+    def run(self):
+        run_startup_splash(self._initialize_backend)
+
+        while True:
+            user = self._try_remembered_login()
+
+            if not user:
+                user = self._login()
+
+            if not user:
+                break
+
+            user = self.db.permissions.ensure_user_permissions(
+                user
+            )
+
+            if not self.db.can_login_user(user):
+                QMessageBox.warning(
+                    None,
+                    "Anmeldung nicht möglich",
+                    "Dieser Benutzer darf sich derzeit "
+                    "nicht anmelden.",
+                )
+                user_session.clear_session()
+                continue
+
+            if user["must_change_password"]:
+                if not self._force_password_change(user):
+                    user_session.clear_session()
+                    continue
+                user = user_session.get_user()
+                if user:
+                    user = (
+                        self.db.permissions.ensure_user_permissions(
+                            user
+                        )
+                    )
+                    user_session.set_session(
+                        user,
+                        user_session.get_login_id(),
+                    )
+
+            if not self.db.is_initial_setup_complete():
+                if not self._run_initial_setup_wizard():
+                    user_session.clear_session()
+                    continue
+
+                created_user = (
+                    self._initial_setup_created_username
+                )
+                user_session.clear_session()
+                clear_remember_data()
+
+                QMessageBox.information(
+                    None,
+                    "Erstinstallation abgeschlossen",
+                    "Die Erstinstallation ist abgeschlossen.\n\n"
+                    f"Melde dich jetzt als "
+                    f"„{created_user or 'Administrator'}“ an.",
+                )
+                continue
+
+            if not self.db.can_use_main_application(user):
+                if (
+                    is_super_administrator(user)
+                    and self.db.is_initial_setup_complete()
+                ):
+                    self._run_super_admin_recovery()
+                    user_session.clear_session()
+                    continue
+
+                QMessageBox.information(
+                    None,
+                    "Super-Administrator",
+                    "Der Super-Administrator ist nur für die "
+                    "Erstinstallation und Notfälle gedacht.\n\n"
+                    "Bitte melde dich mit einem "
+                    "Organisations-Benutzer an.",
+                )
+                user_session.clear_session()
+                continue
+
+            self._apply_user_theme(user)
+            self._load_saved_network_mode()
+
+            if not self._offer_connection_assistant():
+                user_session.clear_session()
+                break
+
+            self._try_restore_client_connection()
+
+            connection = get_client_connection()
+            is_client = (
+                connection is not None
+                and connection.is_connected
+            )
+
+            if is_client:
+                user = user_session.get_user() or user
+
+            self._start_host_server()
+            user = self.db.permissions.ensure_user_permissions(
+                user
+            )
+            self._show_main_window(user, is_client=is_client)
+
+            exit_code = self.app.exec()
+
+            if not self.main_window or (
+                not self.main_window.logged_out
+            ):
+                host = get_host_server()
+                if host and host.is_running():
+                    host.stop()
+                stop_host_relay()
+                return exit_code
+
+            self._network_mode = NETWORK_MODE_STANDALONE
+            self.db = Database()
+            set_database(self.db)
+            set_client_connection(None)
+            set_host_server(None)
+            self.main_window = None
+
+            state = get_network_state()
+            state.connected = False
+            state.host_running = False
+
+    def _try_remembered_login(self):
+        remember_data = load_remember_data()
+
+        if not remember_data:
+            return None
+
+        user = self.db.authenticate_remember_token(
+            remember_data["username"],
+            remember_data["token"],
+        )
+
+        if not user:
+            clear_remember_data()
+            return None
+
+        if not self.db.can_login_user(user):
+            clear_remember_data()
+            return None
+
+        login_id = self.db.record_login(user["id"])
+        user = self.db.permissions.attach_permissions_to_user(
+            user
+        )
+        user_session.set_session(user, login_id)
+
+        return user
+
+    def _login(self):
+        dialog = LoginDialog()
+
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return None
+
+        return dialog.user
+
+    def _force_password_change(self, user):
+        dialog = ChangePasswordDialog(
+            user,
+            required=True,
+        )
+
+        return (
+            dialog.exec()
+            == QDialog.DialogCode.Accepted
+        )
+
+    def _run_initial_setup_wizard(self):
+        wizard = InitialSetupWizard()
+        accepted = (
+            wizard.exec()
+            == QDialog.DialogCode.Accepted
+        )
+        self._initial_setup_created_username = (
+            wizard.created_username
+        )
+        return accepted
+
+    def _run_super_admin_recovery(self):
+        dialog = SuperAdminRecoveryDialog()
+        dialog.exec()
+
+    def _show_main_window(self, user, *, is_client=False):
+        try:
+            self.main_window = MainWindow(
+                user,
+                on_logout=self._handle_logout,
+                is_network_client=is_client,
+            )
+            self.main_window.show()
+        except Exception as error:
+            QMessageBox.critical(
+                None,
+                "Startfehler",
+                "Das Hauptfenster konnte nicht geladen werden:\n\n"
+                f"{error}",
+            )
+            raise
+
+    def _handle_logout(self):
+        self._skip_client_restore = True
+
+        connection = get_client_connection()
+        if connection:
+            connection.disconnect_from_host()
+        set_client_connection(None)
+
+        host = get_host_server()
+        if host and host.is_running():
+            host.stop()
+        stop_host_relay()
+        set_host_server(None)
+
+        state = get_network_state()
+        state.connected = False
+        state.host_running = False
+
+        local_db = Database()
+        set_database(local_db)
+
+        login_id = user_session.get_login_id()
+        if login_id:
+            local_db.record_logout(login_id)
+
+        user = user_session.get_user()
+        if user and not user.get("is_network_guest"):
+            local_db.revoke_remember_tokens(user["id"])
+
+        clear_remember_data()
+        user_session.clear_session()
+        self.db = local_db
+
+
+def main():
+    app = SalvageTrackerApp()
+    sys.exit(app.run())
+
+
+if __name__ == "__main__":
+    main()
