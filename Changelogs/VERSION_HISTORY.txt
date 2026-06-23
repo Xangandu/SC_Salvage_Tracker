@@ -1,7 +1,7 @@
 SC SALVAGE TRACKER – VERSIONSHISTORIE
 ======================================
 
-Aktuelle Version: 0.14.1 Alpha | Build 2026.06 | Codename: Launcher Polish
+Aktuelle Version: 0.14.3 Alpha | Build 2026.07 | Codename: Design Control
 
 Detaillierte Patchnotes:  Changelogs/PATCHNOTES.txt
 Roadmap:                  Changelogs/ROADMAP.txt
@@ -13,6 +13,8 @@ Im Programm: Navigation → Link „Patchnotes & Roadmap“
 KURZÜBERSICHT DER ENTWICKLUNG
 -------------------------------
 
+0.14.3 Design Control: Design-Einstellungen, Schriften (Oxanium), Dichte/Transparenz, Fenster-Geometrie
+0.14.2 Live Update: In-App-Updates, GitHub-Manifest, SHA256, silent Setup
 0.14.1 Launcher Polish: AAA-Tabs, Panel-/Tabellen-Polish
 0.14.0 Launcher Polish: UI-Redesign RSI-Launcher-Stil, Navigation, Login, Orange/Cyan
 0.13.0 Database Guard: DB-Backup, Restore, Migration, Admin-UI, Retention

@@ -1,8 +1,8 @@
-# SC Salvage Tracker — Custom Setup (Launcher Polish)
+# SC Salvage Tracker — Custom Setup (Design Control · 0.14.3)
 #
 # Ergebnis:
 #   Release\app\SC_Salvage_Tracker\
-#   Release\installer\SC_Salvage_Tracker_Setup_0.14.1.exe
+#   Release\installer\SC_Salvage_Tracker_Setup_0.14.3.exe
 #
 # Voraussetzung: Inno Setup 6.7+ (https://jrsoftware.org/isinfo.php)
 

@@ -1,6 +1,50 @@
 SC SALVAGE TRACKER – PATCHNOTES
 ================================
 
+VERSION 0.14.3 Alpha | Build 2026.07 | Codename: Design Control
+-----------------------------------------------------------------
+
+NEU — DESIGN-EINSTELLUNGEN (PHASE 1)
+• Design-Tab mit Unter-Reitern: Erscheinungsbild, Dichte, Farben, Dashboard, Organisation
+• Schriftart: 10 Optionen (Oxanium, Exo 2, Audiowide, Michroma, Teko, Jura, …)
+• Oxanium als Standard-Schrift nach frischer Installation
+• Schriftgröße, Theme, Animationen, Navigationsbreite (schmal/normal/breit)
+• Farben: Akzent, Label, Primär- und Sekundär-Button (leer = Theme-Standard)
+• Dichte: Tabellen kompakt/normal/geräumig
+• Fenster-Transparenz (0–100 %) und Panel-Transparenz in 5-%-Schritten
+• Fensterposition und -größe werden beim Beenden gespeichert (auch Monitor 2)
+
+UI & POLISH
+• Moderner Farbwähler (eingebetteter QColorDialog, Launcher-Stil)
+• Navigation: größere, fette Menü-Labels (17 px)
+• Orange Überschriften app-weit proportional vergrößert
+• Navigations-Footer: filigraner Alien-Trenner (orange) über Versionsangabe
+• Design-Unter-Tabs bündig mit Inhalts-Panel (kein Spalt)
+• Eingebettete Google Fonts (OFL) + scripts/download_fonts.py
+
+DATENBANK
+• Schema 026: font_family-Standard (Oxanium)
+• Schema 027: table_density, panel_transparency
+• user_settings: Dichte- und Transparenz-Felder
+
+VERSION 0.14.2 Alpha | Build 2026.06 | Codename: Live Update
+-----------------------------------------------------------------
+
+NEU — IN-APP-UPDATES
+• Automatische Update-Prüfung beim Start (optional abschaltbar)
+• Einstellungen → System: manuelle Suche, installierte Version, letzte Prüfung
+• Update-Dialog mit Patchnotes (Deutsch / English)
+• Download mit SHA256-Prüfsumme, silent Inno-Setup-Installation
+• update-manifest.json über GitHub Releases (latest)
+
+INSTALLER & RELEASE
+• Windows-Setup (Inno Setup) im Launcher-Stil, Wizard-Polish
+• Manifest-Generator beim Build (installer/build_installer.ps1)
+
+UI (FORTFÜHRUNG 0.14.x)
+• Navigation: Salvage Tracker + Benutzerkarte; Titelleiste APP_NAME
+• Erstinstallation im Launcher-Stil (Setup-Wizard)
+
 VERSION 0.14.1 Alpha | Build 2026.06 | Codename: Launcher Polish
 -----------------------------------------------------------------
 

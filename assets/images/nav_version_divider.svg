@@ -1,0 +1,75 @@
+<svg width="240" height="28" viewBox="0 0 240 28"
+     xmlns="http://www.w3.org/2000/svg">
+
+    <defs>
+        <linearGradient id="alienOrangeGrad"
+                        x1="0%" y1="0%"
+                        x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#E07A2A" stop-opacity="0"/>
+            <stop offset="35%" stop-color="#FF8C00" stop-opacity="0.85"/>
+            <stop offset="50%" stop-color="#F09848"/>
+            <stop offset="65%" stop-color="#FF8C00" stop-opacity="0.85"/>
+            <stop offset="100%" stop-color="#E07A2A" stop-opacity="0"/>
+        </linearGradient>
+    </defs>
+
+    <!-- Linkes Segment (industrielle Winkelplatte) -->
+    <path d="
+        M12 14
+        L22 9
+        L72 9
+        L82 14
+        L72 19
+        L22 19
+        Z"
+        fill="#0D1218"
+        stroke="#E07A2A"
+        stroke-width="0.75"/>
+
+    <!-- Rechtes Segment -->
+    <path d="
+        M228 14
+        L218 9
+        L168 9
+        L158 14
+        L168 19
+        L218 19
+        Z"
+        fill="#0D1218"
+        stroke="#E07A2A"
+        stroke-width="0.75"/>
+
+    <!-- Zentrale Verbindungslinie -->
+    <line x1="82" y1="14" x2="158" y2="14"
+          stroke="url(#alienOrangeGrad)"
+          stroke-width="0.75"/>
+
+    <!-- Zentraler technischer Node -->
+    <rect x="115" y="10" width="10" height="8"
+          fill="#0D1218"
+          stroke="#FF8C00"
+          stroke-width="0.75"/>
+    <line x1="120" y1="10" x2="120" y2="18"
+          stroke="#E07A2A"
+          stroke-width="0.5"
+          opacity="0.6"/>
+
+    <!-- Mikro-Ticks (Alien-HUD) -->
+    <line x1="92" y1="11" x2="92" y2="17"
+          stroke="#E07A2A" stroke-width="0.5" opacity="0.55"/>
+    <line x1="100" y1="12" x2="100" y2="16"
+          stroke="#E07A2A" stroke-width="0.5" opacity="0.4"/>
+    <line x1="140" y1="12" x2="140" y2="16"
+          stroke="#E07A2A" stroke-width="0.5" opacity="0.4"/>
+    <line x1="148" y1="11" x2="148" y2="17"
+          stroke="#E07A2A" stroke-width="0.5" opacity="0.55"/>
+
+    <!-- Datenpunkte -->
+    <circle cx="42" cy="14" r="1.2" fill="#FF8C00"/>
+    <circle cx="198" cy="14" r="1.2" fill="#FF8C00"/>
+
+    <!-- Äußere End-Chevrons -->
+    <path d="M6 14 L10 11 L10 17 Z" fill="#E07A2A" opacity="0.7"/>
+    <path d="M234 14 L230 11 L230 17 Z" fill="#E07A2A" opacity="0.7"/>
+
+</svg>

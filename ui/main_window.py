@@ -2,7 +2,7 @@ from ui.session_page import SessionPage
 from ui.salvage_page import SalvagePage
 from ui.statistics_page import StatisticsPage
 from ui.history_page import HistoryPage
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 from ui.refinery_page import RefineryPage
 from ui.sales_page import SalesPage
 from ui.admin_page import AdminPage
@@ -36,7 +36,13 @@ from ui.mobiglas_window_frame import (
     MobiglasFramelessMixin,
     apply_mobiglas_window_frame,
 )
-from ui.page_layout import hud_divider
+from ui.page_layout import hud_divider, nav_version_divider
+from ui.update_manager import UpdateManager
+from ui.window_geometry import (
+    restore_window_geometry,
+    save_window_geometry,
+)
+from ui.theme_manager import NAV_WIDTH_PX
 
 
 class MainWindow(MobiglasFramelessMixin, QMainWindow):
@@ -65,7 +71,6 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
 
         self.setObjectName("mainWindow")
         self.setWindowTitle(APP_NAME)
-        self.resize(1600, 900)
 
         central_widget = QWidget()
         central_widget.setObjectName("mainCentral")
@@ -76,8 +81,7 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
 
         nav_widget = QWidget()
         nav_widget.setObjectName("navPanel")
-        nav_widget.setMinimumWidth(248)
-        nav_widget.setMaximumWidth(268)
+        self.nav_widget = nav_widget
 
         nav_layout = QVBoxLayout()
         nav_widget.setLayout(nav_layout)
@@ -306,6 +310,10 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
 
         self._refresh_nav_visibility()
 
+        nav_layout.addStretch(1)
+
+        nav_layout.addWidget(nav_version_divider())
+
         version_label = QLabel(format_version_nav_html())
         version_label.setObjectName("versionLabel")
 
@@ -328,8 +336,6 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
         nav_layout.addWidget(
             version_label
         )
-
-        nav_layout.addStretch()
 
         main_layout.addWidget(nav_widget, 1)
         main_layout.addWidget(self.pages, 5)
@@ -354,6 +360,29 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
         )
 
         self._wire_network_events()
+
+        self.update_manager = UpdateManager(db, self)
+        self.admin_page.set_update_manager(self.update_manager)
+        self.update_manager.check_completed.connect(
+            self.admin_page.refresh_updates_section
+        )
+        QTimer.singleShot(
+            2000,
+            self.update_manager.run_startup_check,
+        )
+
+        settings = db.settings.resolve_effective_settings(
+            user["id"]
+        )
+        self.apply_nav_width(settings.get("nav_width", "normal"))
+        restore_window_geometry(self, db)
+
+    def apply_nav_width(self, nav_width: str = "normal"):
+        if nav_width not in NAV_WIDTH_PX:
+            nav_width = "normal"
+        min_w, max_w = NAV_WIDTH_PX[nav_width]
+        self.nav_widget.setMinimumWidth(min_w)
+        self.nav_widget.setMaximumWidth(max_w)
 
     def refresh_network_display(self):
         """Navigations-Anzeige und Client-/Host-UI aktualisieren."""
@@ -613,6 +642,9 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
 
     def closeEvent(self, event):
         self._close_detached_dashboard()
+        from database.access import get_database
+
+        save_window_geometry(self, get_database())
         super().closeEvent(event)
 
     def logout(self):

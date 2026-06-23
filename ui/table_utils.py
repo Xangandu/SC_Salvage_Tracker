@@ -82,6 +82,10 @@ def configure_mobiglas_table(
 
     _apply_table_palette(table)
 
+    ThemeManager.apply_table_row_height(table)
+
+    ThemeManager.apply_table_row_height(table)
+
 
 
 

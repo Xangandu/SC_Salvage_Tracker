@@ -1,24 +1,24 @@
-; SC Salvage Tracker — Custom Setup (Launcher Polish · Inno Setup 6.7+)
+; SC Salvage Tracker — Custom Setup (Design Control · Inno Setup 6.7+)
 ; Build: powershell -ExecutionPolicy Bypass -File installer\build_installer.ps1
 
 #ifndef MyAppVersion
-  #define MyAppVersion "0.14.1 Alpha"
+  #define MyAppVersion "0.14.3 Alpha"
 #endif
 
 #ifndef MyAppVersionFile
-  #define MyAppVersionFile "0.14.1"
+  #define MyAppVersionFile "0.14.3"
 #endif
 
 #ifndef MyAppVersionInfo
-  #define MyAppVersionInfo "0.14.1.0"
+  #define MyAppVersionInfo "0.14.3.0"
 #endif
 
 #ifndef MyAppBuild
-  #define MyAppBuild "2026.06"
+  #define MyAppBuild "2026.07"
 #endif
 
 #ifndef MyAppCodename
-  #define MyAppCodename "Launcher Polish"
+  #define MyAppCodename "Design Control"
 #endif
 
 #ifndef InstallerOutputDir

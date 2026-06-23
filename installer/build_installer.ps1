@@ -27,10 +27,10 @@ function Get-VersionMeta {
     param([string]$VersionFile)
     $content = Get-Content $VersionFile -Raw
     $meta = @{
-        FileVersion = "0.14.1"
-        DisplayVersion = "0.14.1 Alpha"
-        Build = "2026.06"
-        Codename = "Launcher Polish"
+        FileVersion = "0.14.3"
+        DisplayVersion = "0.14.3 Alpha"
+        Build = "2026.07"
+        Codename = "Design Control"
     }
 
     if ($content -match 'APP_VERSION\s*=\s*"([^"]+)"') {
@@ -242,3 +242,16 @@ if (-not $Copied) {
 Write-Host ""
 Write-Host "Fertig!"
 Write-Host "Setup-EXE: $SetupExe"
+
+Write-Host ""
+Write-Host "Update-Manifest erzeugen..."
+$ManifestScript = Join-Path $InstallerDir "generate_update_manifest.py"
+$ManifestPath = Join-Path $InstallerOutput "update-manifest.json"
+& py -3 $ManifestScript --setup $SetupExe --output $ManifestPath --tag "v$AppVersion"
+if ($LASTEXITCODE -ne 0) {
+    Write-Warning "Update-Manifest konnte nicht erzeugt werden."
+}
+else {
+    Write-Host "Update-Manifest: $ManifestPath"
+    Write-Host "  -> Beim GitHub-Release zusammen mit der Setup-EXE hochladen."
+}

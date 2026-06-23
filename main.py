@@ -16,7 +16,7 @@ from ui.super_admin_recovery_dialog import (
     SuperAdminRecoveryDialog,
 )
 from config.permissions import is_super_administrator
-from config.paths import asset_path
+from config.font_families import existing_font_paths
 from database.database import Database
 from database.access import (
     get_database,
@@ -75,16 +75,8 @@ class SalvageTrackerApp:
         self._load_default_theme()
 
     def _load_fonts(self):
-        for font_file in (
-            "assets/fonts/Orbitron-Bold.ttf",
-            "assets/fonts/Rajdhani-Regular.ttf",
-            "assets/fonts/Rajdhani-Bold.ttf",
-        ):
-            font_path = asset_path(font_file)
-            if font_path.exists():
-                QFontDatabase.addApplicationFont(
-                    str(font_path)
-                )
+        for font_path in existing_font_paths():
+            QFontDatabase.addApplicationFont(str(font_path))
 
     def _load_default_theme(self):
         settings = self.db.settings.get_app_settings()

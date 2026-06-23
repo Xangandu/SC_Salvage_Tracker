@@ -1,7 +1,7 @@
 SC SALVAGE TRACKER – ROADMAP
 =============================
 
-Stand: Version 0.14.0 Alpha | Build 2026.06 | Codename: Launcher Polish
+Stand: Version 0.14.3 Alpha | Build 2026.07 | Codename: Design Control
 
 
 PHASE 1 – UI AN NEUES DATENMODELL ANBINDEN (ABGESCHLOSSEN)
@@ -43,7 +43,8 @@ PHASE 3 – ADMINISTRATION & SYSTEM
 [x] Datenbank zurücksetzen / neu initialisieren (Administrator, Auto-Backup)
     (0.13.0: Admin → System → Datenbank + Backup & Wiederherstellung)
 [~] Systemeinstellungen-Seite (settings)
-    (0.10.0: Tab Vernetzung; Backup-Einstellungen unter System 0.13.0)
+    (0.10.0: Tab Vernetzung; 0.13.0: Backup; 0.14.3: Design-Unter-Tabs,
+     Schriften, Farben, Dichte, Fenster-Geometrie)
 [x] Export / Backup der Datenbank
     (0.13.0: data/backups/, manuell + vor Reset/Restore; Projekt-ZIP separat)
 [ ] Benutzer: Passwort selbst ändern (Profil)
@@ -67,7 +68,10 @@ PHASE 4 – QUALITÄT & STABILITÄT
     (scripts/network_workflow_test.py)
 [ ] Deutsche Zahlenformatierung app-weit (format_number_de)
     (0.8.7: Dashboard; Verkäufe/Auszahlung noch englisches Format)
-[ ] Installer / Release auf 0.10.0 aktualisieren und testen
+[x] Installer / Release (Windows-Setup, GitHub Releases)
+    (0.14.2: Inno Setup, update-manifest.json, In-App-Updates)
+[x] In-App-Updates (Manifest, Startup-Check, Einstellungen → System)
+    (0.14.2: Download, SHA256, silent Install)
 
 
 PHASE 5 – HOST-CLIENT / NETZWERK (0.10.0 — MVP)

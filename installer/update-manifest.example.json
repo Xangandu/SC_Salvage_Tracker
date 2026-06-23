@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "app": "SC Salvage Tracker",
+  "version": "0.14.3",
+  "version_display": "0.14.3 Alpha",
+  "build": "2026.07",
+  "codename": "Design Control",
+  "tag": "v0.14.3",
+  "published_at": "2026-06-23T12:00:00Z",
+  "mandatory": false,
+  "min_version": "0.8.0",
+  "channel": "stable",
+  "download": {
+    "filename": "SC_Salvage_Tracker_Setup_0.14.3.exe",
+    "url": "https://github.com/Xangandu/SC_Salvage_Tracker/releases/download/v0.14.3/SC_Salvage_Tracker_Setup_0.14.3.exe",
+    "size_bytes": 0,
+    "sha256": "REPLACE_WITH_SHA256_FROM_BUILD"
+  },
+  "release_notes": {
+    "de": {
+      "title": "SC Salvage Tracker 0.14.3 Alpha — Design Control",
+      "summary": "Umfangreiche Design-Einstellungen: Schriften, Farben, Dichte, Transparenz und Fenster-Geometrie.",
+      "highlights": [
+        "Design-Tab: Erscheinungsbild, Dichte, Farben, Dashboard, Organisation",
+        "10 Schriftarten — Oxanium als Standard nach Installation",
+        "Tabellen-Dichte, Fenster- und Panel-Transparenz",
+        "Fensterposition wird gespeichert (auch Monitor 2)",
+        "Moderner Farbwähler, Navigationsbreite, orange Überschriften"
+      ]
+    },
+    "en": {
+      "title": "SC Salvage Tracker 0.14.3 Alpha — Design Control",
+      "summary": "Extensive design settings: fonts, colors, density, transparency, and window geometry.",
+      "highlights": [
+        "Design tab: appearance, density, colors, dashboard, organization",
+        "10 font families — Oxanium default on fresh install",
+        "Table density, window and panel transparency",
+        "Window position saved (including second monitor)",
+        "Modern color picker, nav width, scaled orange headings"
+      ]
+    }
+  },
+  "release_notes_url": "https://github.com/Xangandu/SC_Salvage_Tracker/releases/tag/v0.14.3"
+}

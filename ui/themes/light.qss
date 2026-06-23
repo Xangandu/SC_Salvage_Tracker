@@ -1,5 +1,5 @@
 /* ==========================================================
-   01. GLOBAL APPLICATION — RSI Launcher Polish (0.14)
+   01. GLOBAL APPLICATION — RSI Launcher Polish (0.14.2 Live Update)
    ========================================================== */
 
 QMainWindow {
@@ -100,7 +100,7 @@ QFrame#navUserPanel {
 QLabel#navUserHeading {
     color: #E07A2A;
     font-family: "Segoe UI";
-    font-size: 9px;
+    font-size: 11px;
     font-weight: bold;
     letter-spacing: 2px;
     padding: 0;
@@ -151,11 +151,11 @@ QLabel#navNetworkBadge {
     border-radius: 0;
     color: #8FA3B8;
     padding: 12px 16px 12px 14px;
-    min-height: 42px;
+    min-height: 44px;
     text-align: left;
     font-family: "Segoe UI";
-    font-size: 15px;
-    font-weight: 600;
+    font-size: 17px;
+    font-weight: bold;
     letter-spacing: 0.5px;
 }
 
@@ -231,9 +231,9 @@ QLabel#sectionTitle {
 }
 
 QLabel#subSectionTitle {
-    color: #93A8BC;
+    color: #E07A2A;
     font-family: Orbitron;
-    font-size: 11px;
+    font-size: 14px;
     font-weight: 700;
     letter-spacing: 2px;
 }
@@ -776,6 +776,27 @@ QDialog#mobiglasDialog QLabel#mutedLabel {
     font-weight: bold;
 }
 
+QDialog#mobiglasDialog QProgressBar#updateProgressBar {
+    background-color: #0E141C;
+    border: 1px solid #263545;
+    border-radius: 6px;
+    min-height: 18px;
+    text-align: center;
+    color: #D8E4EF;
+    font-family: "Segoe UI";
+    font-size: 13px;
+    font-weight: 600;
+}
+
+QDialog#mobiglasDialog QProgressBar#updateProgressBar::chunk {
+    background-color: qlineargradient(
+        x1: 0, y1: 0, x2: 1, y2: 0,
+        stop: 0 #005A9E,
+        stop: 1 #0078D7
+    );
+    border-radius: 5px;
+}
+
 QDialog#mobiglasDialog QListWidget#dashboardPresetList {
     background-color: #0E141C;
     border: 1px solid #263545;
@@ -834,7 +855,7 @@ QWidget#mobiglasTitleRow {
 }
 
 QLabel#mobiglasTitleMarker {
-    color: #42D4F5;
+    color: #E07A2A;
     font-family: "Segoe UI";
     font-size: 10px;
     padding: 0;
@@ -855,62 +876,62 @@ QWidget#mobiglasTitleActions {
     background: transparent;
 }
 
-QFrame#mobiglasTitleControls {
-    background: #141C26;
-    border: 1px solid #33485C;
-    border-radius: 4px;
-    min-height: 26px;
-    max-height: 26px;
+QWidget#mobiglasTitleControls {
+    background: transparent;
+    border: none;
+    min-height: 32px;
+    max-height: 32px;
 }
 
 QPushButton#mobiglasTitleMin,
 QPushButton#mobiglasTitleMax,
 QPushButton#mobiglasTitleClose {
     background: transparent;
-    border: 1px solid transparent;
-    border-radius: 4px;
-    min-width: 26px;
-    max-width: 26px;
-    min-height: 22px;
-    max-height: 22px;
+    border: none;
+    border-radius: 0;
+    min-width: 40px;
+    max-width: 40px;
+    min-height: 32px;
+    max-height: 32px;
     padding: 0;
     margin: 0;
 }
 
 QPushButton#mobiglasTitleMin:hover,
 QPushButton#mobiglasTitleMax:hover {
-    background: #1E2835;
-    border: 1px solid #334155;
-}
-
-QPushButton#mobiglasTitleClose:hover {
-    background: #8B2635;
-    border: 1px solid #B83244;
+    background: rgba(255, 255, 255, 0.08);
 }
 
 QPushButton#mobiglasTitleMin:pressed,
-QPushButton#mobiglasTitleMax:pressed,
+QPushButton#mobiglasTitleMax:pressed {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+QPushButton#mobiglasTitleClose:hover {
+    background: #C42B1C;
+}
+
 QPushButton#mobiglasTitleClose:pressed {
-    background: #0F161E;
+    background: #9A2218;
 }
 
 QPushButton#mobiglasTitleAction {
-    background: #141C26;
-    color: #C5D6E6;
-    border: 1px solid #33485C;
-    border-radius: 4px;
+    background: rgba(20, 28, 38, 0.85);
+    color: #E07A2A;
+    border: 1px solid rgba(224, 122, 42, 0.45);
+    border-radius: 6px;
     font-family: "Segoe UI";
     font-size: 13px;
-    font-weight: 600;
-    padding: 2px 12px;
-    min-height: 24px;
-    max-height: 24px;
+    font-weight: bold;
+    padding: 4px 14px;
+    min-height: 28px;
+    max-height: 28px;
 }
 
 QPushButton#mobiglasTitleAction:hover {
-    background: #1A2430;
-    border: 1px solid #42D4F5;
-    color: #E8F2FA;
+    background: rgba(224, 122, 42, 0.15);
+    border: 1px solid #E07A2A;
+    color: #FFD4B0;
 }
 
 QWidget#mobiglasWindowRoot {
@@ -927,76 +948,81 @@ QWidget#mobiglasDialogContent {
     background: transparent;
 }
 
-/* MobiGlas color picker (embedded QColorDialog) */
-QDialog#mobiglasDialog QColorDialog#mobiglasColorPicker {
+QScrollArea#colorPickerScroll {
     background: transparent;
     border: none;
 }
 
-QDialog#mobiglasDialog QColorDialog#mobiglasColorPicker QLabel {
-    color: #222222;
+QScrollArea#colorPickerScroll > QWidget > QWidget {
+    background: transparent;
+}
+
+/* Farbwähler — RSI-Launcher / modernes Tracker-Design */
+QDialog#mobiglasDialog QFrame#colorPickerPanel {
+    padding: 8px;
+}
+
+QDialog#mobiglasDialog QFrame#colorPickerPanel QColorDialog#colorPicker {
+    background: transparent;
+    border: none;
+    padding: 0;
+}
+
+QDialog#mobiglasDialog QFrame#colorPickerPanel QColorDialog#colorPicker QLabel {
+    color: #0078D7;
     font-family: "Segoe UI";
-    font-size: 14px;
+    font-size: 16px;
     font-weight: bold;
     background: transparent;
 }
 
-QDialog#mobiglasDialog QColorDialog#mobiglasColorPicker QLineEdit,
-QDialog#mobiglasDialog QColorDialog#mobiglasColorPicker QSpinBox {
-    background-color: #F5F5F5;
-    color: #222222;
-    border: 1px solid rgba(0, 217, 255, 0.45);
+QDialog#mobiglasDialog QFrame#colorPickerPanel QColorDialog#colorPicker QLineEdit,
+QDialog#mobiglasDialog QFrame#colorPickerPanel QColorDialog#colorPicker QSpinBox {
+    background: #0A1016;
+    color: #E8F0F6;
+    border: 1px solid #243040;
     border-radius: 6px;
     padding: 4px 8px;
     font-family: "Segoe UI";
     font-size: 14px;
-    min-height: 24px;
+    min-height: 28px;
 }
 
-QDialog#mobiglasDialog QColorDialog#mobiglasColorPicker QSpinBox::up-button,
-QDialog#mobiglasDialog QColorDialog#mobiglasColorPicker QSpinBox::down-button {
-    background-color: rgba(0, 217, 255, 0.12);
+QDialog#mobiglasDialog QFrame#colorPickerPanel QColorDialog#colorPicker QLineEdit:focus,
+QDialog#mobiglasDialog QFrame#colorPickerPanel QColorDialog#colorPicker QSpinBox:focus {
+    border: 1px solid #42D4F5;
+    background: #0C131A;
+}
+
+QDialog#mobiglasDialog QFrame#colorPickerPanel QColorDialog#colorPicker QSpinBox::up-button,
+QDialog#mobiglasDialog QFrame#colorPickerPanel QColorDialog#colorPicker QSpinBox::down-button {
+    background-color: #1A2430;
     border: none;
     width: 16px;
 }
 
-QDialog#mobiglasDialog QColorDialog#mobiglasColorPicker QSpinBox::up-button:hover,
-QDialog#mobiglasDialog QColorDialog#mobiglasColorPicker QSpinBox::down-button:hover {
-    background-color: rgba(0, 217, 255, 0.28);
+QDialog#mobiglasDialog QFrame#colorPickerPanel QColorDialog#colorPicker QSpinBox::up-button:hover,
+QDialog#mobiglasDialog QFrame#colorPickerPanel QColorDialog#colorPicker QSpinBox::down-button:hover {
+    background-color: #243040;
 }
 
-QDialog#mobiglasDialog QColorDialog#mobiglasColorPicker QPushButton {
-    background: qlineargradient(
-        x1: 0, y1: 0, x2: 0, y2: 1,
-        stop: 0 rgba(24, 48, 64, 0.72),
-        stop: 1 rgba(8, 18, 28, 0.92)
-    );
-    color: #0078D7;
-    border: 1px solid rgba(0, 217, 255, 0.42);
-    border-top-color: rgba(130, 235, 255, 0.28);
-    border-bottom-color: rgba(0, 70, 95, 0.82);
-    border-radius: 10px;
+QDialog#mobiglasDialog QFrame#colorPickerPanel QColorDialog#colorPicker QPushButton {
+    background-color: #141C26;
+    color: #C5D6E6;
+    border: 1px solid #33485C;
+    border-radius: 6px;
     font-family: "Segoe UI";
     font-size: 13px;
-    font-weight: bold;
+    font-weight: 600;
     padding: 6px 14px;
     min-height: 28px;
     text-align: center;
 }
 
-QDialog#mobiglasDialog QColorDialog#mobiglasColorPicker QPushButton:hover {
-    background: qlineargradient(
-        x1: 0, y1: 0, x2: 0, y2: 1,
-        stop: 0 rgba(0, 217, 255, 0.28),
-        stop: 1 rgba(0, 120, 160, 0.22)
-    );
-    border: 1px solid #0078D7;
-    color: #FFFFFF;
-}
-
-QDialog#mobiglasDialog QColorDialog#mobiglasColorPicker QFrame,
-QDialog#mobiglasDialog QColorDialog#mobiglasColorPicker QWidget {
-    background: transparent;
+QDialog#mobiglasDialog QFrame#colorPickerPanel QColorDialog#colorPicker QPushButton:hover {
+    background-color: #1A2430;
+    border-color: #E07A2A;
+    color: #E8F0F6;
 }
 
 QMenuBar#mobiglasMenuBar {
@@ -1179,18 +1205,30 @@ QLabel#versionLabel {
     font-size: 11px;
 
     font-weight: bold;
+
+    padding: 2px 12px 0 12px;
 }
 
 QLabel#versionLabel a {
-    color: #B8860B;
+    color: #E07A2A;
 
     text-decoration: none;
+}
+
+QWidget#navVersionDividerHost {
+    background: transparent;
+}
+
+QSvgWidget#navVersionDivider {
+    background: transparent;
+    min-height: 22px;
+    max-height: 22px;
 }
 
 QLabel#sectionAccent {
     color: #E07A2A;
     font-family: "Segoe UI";
-    font-size: 14px;
+    font-size: 18px;
     font-weight: bold;
     letter-spacing: 2px;
 }
@@ -1258,10 +1296,10 @@ QLabel#profitLabel {
 }
 
 QLabel#formLabel {
-    color: #7C92A8;
+    color: #E07A2A;
     font-family: "Segoe UI";
-    font-size: 12px;
-    font-weight: 600;
+    font-size: 14px;
+    font-weight: bold;
     letter-spacing: 1px;
     padding-top: 4px;
 }
@@ -1323,7 +1361,7 @@ QFrame#hudLine {
 
 QLabel#hudMarker {
     color: #E07A2A;
-    font-size: 14px;
+    font-size: 16px;
     font-weight: bold;
 }
 
@@ -1522,8 +1560,69 @@ QTabWidget QTabBar::tab:selected:hover {
 }
 
 QTabWidget#changelogTabs,
-QTabWidget#settingsTabs {
+QTabWidget#settingsTabs,
+QTabWidget#designSubTabs {
     background: transparent;
+}
+
+QTabWidget#designSubTabs::pane {
+    border: 1px solid #263545;
+    border-top: 1px solid #263545;
+    border-radius: 0 0 8px 8px;
+    background: qlineargradient(
+        x1: 0, y1: 0, x2: 0, y2: 1,
+        stop: 0 #171E28,
+        stop: 1 #121820
+    );
+    top: -1px;
+    padding: 0;
+    margin: 0;
+}
+
+QTabWidget#designSubTabs QTabBar::tab {
+    min-width: 128px;
+    min-height: 34px;
+    padding: 10px 18px 9px 18px;
+    margin-top: 0;
+    margin-bottom: -1px;
+    margin-right: 2px;
+    border-bottom: 1px solid #243040;
+}
+
+QTabWidget#designSubTabs QTabBar::tab:selected {
+    background: #171E28;
+    border-color: #263545;
+    border-bottom: 1px solid #171E28;
+    margin-top: 0;
+    margin-bottom: -1px;
+    padding-bottom: 10px;
+}
+
+QTabWidget#designSubTabs QTabBar::tab:hover:!selected {
+    margin-bottom: -1px;
+}
+
+QWidget#designSubPage {
+    background: transparent;
+    min-height: 420px;
+}
+
+QWidget#designSubPage QFrame#pagePanel {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+}
+
+QFrame#designColorControl {
+    background: transparent;
+    border: none;
+}
+
+QPushButton#designColorSwatch {
+    background-color: #141C26;
+    border: 1px solid #33485C;
+    border-radius: 8px;
+    padding: 0;
 }
 
 QWidget#settingsTabContent {
@@ -1591,7 +1690,7 @@ QLabel#loginTagline {
 QLabel#setupStepIndicator {
     color: #E07A2A;
     font-family: "Segoe UI";
-    font-size: 11px;
+    font-size: 13px;
     font-weight: bold;
     letter-spacing: 2px;
     padding: 2px 0 6px 0;
@@ -1765,7 +1864,7 @@ QFrame#dashboardSessionPanel {
 }
 
 QWidget#dashboardPage QLabel#hudMarker {
-    font-size: 18px;
+    font-size: 20px;
 }
 
 QLabel#dashboardKpiTitle {
@@ -1820,13 +1919,25 @@ QLabel#dashboardSessionHeading {
     letter-spacing: 1.2px;
     padding-bottom: 0;
     border-bottom: 1px solid rgba(0, 217, 255, 0.25);
-    margin-bottom: 3px;
+    margin-bottom: 2px;
+}
+
+QFrame#dashboardSessionPanel QLabel#dashboardStatLabel {
+    font-size: 12px;
+    padding: 0;
+    margin: 0;
+}
+
+QFrame#dashboardSessionPanel QLabel#dashboardStatValue {
+    font-size: 11px;
+    padding: 0;
+    margin: 0;
 }
 
 QLabel#dashboardStatLabel {
-    color: rgba(85, 232, 255, 0.55);
+    color: #E07A2A;
     font-family: "Segoe UI";
-    font-size: 11px;
+    font-size: 13px;
     font-weight: bold;
 }
 
@@ -1991,6 +2102,11 @@ QWidget#dashboardCatalogScrollViewport {
     background-color: #FFFFFF;
     color: #222222;
     border: 1px solid #0078D7;
+    font-family: "Rajdhani";
+    font-size: 17px;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+    min-height: 44px;
 }
 
 #navButton:hover {
@@ -2010,7 +2126,15 @@ QWidget#dashboardCatalogScrollViewport {
 }
 
 QLabel#subSectionTitle {
-    color: #222222;
+    color: #B85A18;
+}
+
+QLabel#sectionAccent {
+    color: #B85A18;
+}
+
+QLabel#formLabel {
+    color: #B85A18;
 }
 
 QLabel#sectionTitle {

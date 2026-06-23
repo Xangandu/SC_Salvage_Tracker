@@ -7,9 +7,23 @@ import re
 from pathlib import Path
 
 from PySide6.QtGui import QFont
-from PySide6.QtWidgets import QApplication, QLabel, QPushButton, QWidget
+from PySide6.QtWidgets import (
+    QApplication,
+    QLabel,
+    QPushButton,
+    QTableWidget,
+    QWidget,
+)
 
 from config.debug import debug_log
+from config.font_families import (
+    DEFAULT_FONT_FAMILY,
+    FONT_FAMILY_LABELS,
+    apply_font_family_to_qss,
+    dashboard_label_fonts,
+    resolve_body_font,
+    resolve_heading_font,
+)
 
 THEMES_DIR = Path(__file__).parent / "themes"
 PALETTES_DIR = THEMES_DIR / "palettes"
@@ -33,6 +47,21 @@ FONT_SIZE_LABELS = {
     "normal": "Normal",
     "large": "Groß",
 }
+
+NAV_WIDTH_LABELS = {
+    "narrow": "Schmal",
+    "normal": "Normal",
+    "wide": "Breit",
+}
+
+NAV_WIDTH_PX = {
+    "narrow": (188, 208),
+    "normal": (248, 268),
+    "wide": (288, 308),
+}
+
+LAUNCHER_FONT_NAMES = ('"Rajdhani"', '"Orbitron"')
+SYSTEM_FONT_NAME = '"Segoe UI"'
 
 ANIMATION_LABELS = {
     "off": "Aus",
@@ -72,20 +101,50 @@ DASHBOARD_FONT_PREVIEW_RULES = (
     ("QLabel#dashboardFontPreviewValue", 16),
 )
 
-DASHBOARD_LABEL_FONT_BASE = {
-    "dashboardKpiTitle": ("Orbitron", 10),
-    "dashboardKpiValue": ("Rajdhani", 16),
-    "dashboardKpiValueAccent": ("Rajdhani", 16),
-    "dashboardSessionHeading": ("Orbitron", 10),
-    "dashboardStatLabel": ("Rajdhani", 11),
-    "dashboardStatValue": ("Rajdhani", 12),
-    "dashboardCatalogTitle": ("Orbitron", 12),
-    "dashboardCatalogHint": ("Rajdhani", 11),
-    "dashboardCatalogDropLabel": ("Rajdhani", 10),
-    "dashboardCatalogLabel": ("Rajdhani", 12),
+TRANSPARENCY_OPTIONS = (0, 25, 50, 75, 100)
+PANEL_TRANSPARENCY_OPTIONS = tuple(range(0, 101, 5))
+
+TABLE_DENSITY_LABELS = {
+    "compact": "Kompakt",
+    "normal": "Normal",
+    "spacious": "Geräumig",
 }
 
-TRANSPARENCY_OPTIONS = (0, 25, 50, 75, 100)
+TABLE_DENSITY_ROW_HEIGHT = {
+    "compact": 28,
+    "normal": 36,
+    "spacious": 46,
+}
+
+TABLE_DENSITY_PADDING = {
+    "compact": {
+        "item_v": 4,
+        "item_h": 6,
+        "header_v": 6,
+        "header_h": 8,
+        "header_font": 9,
+    },
+    "normal": {
+        "item_v": 8,
+        "item_h": 10,
+        "header_v": 10,
+        "header_h": 12,
+        "header_font": 10,
+    },
+    "spacious": {
+        "item_v": 12,
+        "item_h": 14,
+        "header_v": 14,
+        "header_h": 16,
+        "header_font": 11,
+    },
+}
+
+TABLE_OBJECT_NAMES = (
+    "dataTable",
+    "historyTable",
+    "editableTable",
+)
 
 # Alle Akzent-/Highlight-Farben (Cyan, Blau, Orange, Gold) — für Benutzer-Akzent
 ACCENT_REPLACE_COLORS = (
@@ -170,6 +229,11 @@ _LIGHT_THEME_PATCH = """
     background-color: #FFFFFF;
     color: #222222;
     border: 1px solid #0078D7;
+    font-family: "Rajdhani";
+    font-size: 17px;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+    min-height: 44px;
 }
 
 #navButton:hover {
@@ -189,7 +253,15 @@ _LIGHT_THEME_PATCH = """
 }
 
 QLabel#subSectionTitle {
-    color: #222222;
+    color: #B85A18;
+}
+
+QLabel#sectionAccent {
+    color: #B85A18;
+}
+
+QLabel#formLabel {
+    color: #B85A18;
 }
 
 QLabel#sectionTitle {
@@ -450,6 +522,126 @@ class ThemeManager:
         cls._current_palette["gold"] = accent_color
         return qss
 
+    @staticmethod
+    def _normalize_hex(color: str) -> str | None:
+        if not color or not re.match(
+            r"^#[0-9A-Fa-f]{6}$",
+            color,
+        ):
+            return None
+        return color.upper()
+
+    @staticmethod
+    def _parse_hex_color(hex_color: str) -> tuple[int, int, int]:
+        value = hex_color.lstrip("#")
+        return (
+            int(value[0:2], 16),
+            int(value[2:4], 16),
+            int(value[4:6], 16),
+        )
+
+    @classmethod
+    def _format_hex_color(cls, red: int, green: int, blue: int) -> str:
+        return (
+            f"#{max(0, min(255, red)):02X}"
+            f"{max(0, min(255, green)):02X}"
+            f"{max(0, min(255, blue)):02X}"
+        )
+
+    @classmethod
+    def _shade_hex(cls, hex_color: str, factor: float) -> str:
+        red, green, blue = cls._parse_hex_color(hex_color)
+        if factor >= 1:
+            red = round(red + (255 - red) * (factor - 1))
+            green = round(green + (255 - green) * (factor - 1))
+            blue = round(blue + (255 - blue) * (factor - 1))
+        else:
+            red = round(red * factor)
+            green = round(green * factor)
+            blue = round(blue * factor)
+        return cls._format_hex_color(red, green, blue)
+
+    @classmethod
+    def _append_ui_color_overrides(
+        cls,
+        qss: str,
+        *,
+        label_color: str = "",
+        primary_button_color: str = "",
+        secondary_button_color: str = "",
+    ) -> str:
+        blocks: list[str] = []
+
+        label = cls._normalize_hex(label_color)
+        if label:
+            blocks.append(
+                f"QLabel#formLabel {{ color: {label}; }}"
+            )
+
+        primary = cls._normalize_hex(primary_button_color)
+        if primary:
+            light = cls._shade_hex(primary, 1.12)
+            dark = cls._shade_hex(primary, 0.82)
+            border = cls._shade_hex(primary, 1.18)
+            hover_light = cls._shade_hex(primary, 1.22)
+            hover_dark = cls._shade_hex(primary, 0.88)
+            hover_border = cls._shade_hex(primary, 1.28)
+            pressed = cls._shade_hex(primary, 0.65)
+            blocks.append(
+                "\n".join(
+                    (
+                        "QPushButton#primaryAction {",
+                        "    background: qlineargradient(",
+                        "        x1: 0, y1: 0, x2: 0, y2: 1,",
+                        f"        stop: 0 {light},",
+                        f"        stop: 1 {dark}",
+                        "    );",
+                        f"    border: 1px solid {border};",
+                        "    color: #FFF8F2;",
+                        "}",
+                        "QPushButton#primaryAction:hover {",
+                        "    background: qlineargradient(",
+                        "        x1: 0, y1: 0, x2: 0, y2: 1,",
+                        f"        stop: 0 {hover_light},",
+                        f"        stop: 1 {hover_dark}",
+                        "    );",
+                        f"    border: 1px solid {hover_border};",
+                        "}",
+                        f"QPushButton#primaryAction:pressed {{ background: {pressed}; }}",
+                    )
+                )
+            )
+
+        secondary = cls._normalize_hex(secondary_button_color)
+        if secondary:
+            hover_bg = cls._shade_hex(secondary, 1.15)
+            border = cls._shade_hex(secondary, 1.35)
+            blocks.append(
+                "\n".join(
+                    (
+                        "QPushButton#secondaryAction {",
+                        f"    background-color: {secondary};",
+                        f"    border: 1px solid {border};",
+                        "    color: #C5D6E6;",
+                        "}",
+                        "QPushButton#secondaryAction:hover {",
+                        f"    background-color: {hover_bg};",
+                        "    border-color: #42D4F5;",
+                        "    color: #E8F2FA;",
+                        "}",
+                    )
+                )
+            )
+
+        if not blocks:
+            return qss
+
+        return (
+            qss
+            + "\n\n/* UI color overrides */\n"
+            + "\n\n".join(blocks)
+        )
+
     @classmethod
     def default_dashboard_font_scale(cls) -> int:
         return DEFAULT_DASHBOARD_FONT_SCALE
@@ -570,10 +762,23 @@ class ThemeManager:
         return "\n".join(lines)
 
     @classmethod
+    def _current_font_family_id(cls) -> str:
+        family_id = cls._current_settings.get(
+            "font_family",
+            DEFAULT_FONT_FAMILY,
+        )
+        if family_id not in FONT_FAMILY_LABELS:
+            return DEFAULT_FONT_FAMILY
+        return family_id
+
+    @classmethod
     def build_dashboard_font_preview_qss(cls, scale_percent: int) -> str:
         scale = cls.normalize_dashboard_font_scale(scale_percent)
         pad_v = max(3, round(3 * scale / 100))
         pad_h = max(6, round(6 * scale / 100))
+        family_id = cls._current_font_family_id()
+        heading = resolve_heading_font(family_id)
+        body = resolve_body_font(family_id)
         return (
             "QFrame#dashboardFontPreviewHost {\n"
             "    background: transparent;\n"
@@ -587,17 +792,17 @@ class ThemeManager:
             "}\n"
             "QLabel#dashboardFontPreviewTitle {\n"
             "    color: rgba(0, 217, 255, 0.68);\n"
-            '    font-family: "Orbitron";\n'
+            f'    font-family: "{heading}";\n'
             "    font-weight: bold;\n"
             "}\n"
             "QLabel#dashboardFontPreviewValue {\n"
             "    color: #E6F2F8;\n"
-            '    font-family: "Rajdhani";\n'
+            f'    font-family: "{body}";\n'
             "    font-weight: bold;\n"
             "}\n"
             "QLabel#dashboardFontPreviewHint {\n"
             "    color: rgba(85, 232, 255, 0.55);\n"
-            '    font-family: "Rajdhani";\n'
+            f'    font-family: "{body}";\n'
             "    font-size: 11px;\n"
             "    font-weight: bold;\n"
             "}\n"
@@ -626,18 +831,23 @@ class ThemeManager:
             )
         )
 
+        family_id = cls._current_font_family_id()
+        heading_font = resolve_heading_font(family_id)
+        body_font = resolve_body_font(family_id)
+        label_fonts = dashboard_label_fonts(family_id)
+
         for label in root_widget.findChildren(QLabel):
             name = label.objectName()
             if name == "pageTitle":
                 font = QFont(
-                    "Orbitron",
+                    heading_font,
                     cls._scaled_dashboard_px(42, title_scale),
                 )
                 font.setBold(True)
                 label.setFont(font)
                 continue
 
-            spec = DASHBOARD_LABEL_FONT_BASE.get(name)
+            spec = label_fonts.get(name)
             if spec is None:
                 continue
             family, base_px = spec
@@ -655,7 +865,7 @@ class ThemeManager:
                 "primaryAction",
             ):
                 continue
-            font = QFont("Rajdhani", button_px)
+            font = QFont(body_font, button_px)
             font.setBold(True)
             button.setFont(font)
 
@@ -710,7 +920,24 @@ class ThemeManager:
         )
 
     @classmethod
-    def _append_transparency(
+    def _append_font_family(
+        cls,
+        qss: str,
+        font_family: str,
+    ) -> str:
+        family_id = (
+            font_family
+            if font_family in FONT_FAMILY_LABELS
+            else DEFAULT_FONT_FAMILY
+        )
+        return apply_font_family_to_qss(qss, family_id)
+
+    @classmethod
+    def _alpha_from_percent(cls, percent: int) -> int:
+        return max(0, min(255, int(255 * percent / 100)))
+
+    @classmethod
+    def _append_window_transparency(
         cls,
         qss: str,
         transparency: int,
@@ -718,16 +945,123 @@ class ThemeManager:
         if transparency >= 100:
             return qss
 
-        alpha = max(0, min(255, int(255 * transparency / 100)))
+        alpha = cls._alpha_from_percent(transparency)
+        window_bg = cls._current_palette.get(
+            "background",
+            "#0A0D12",
+        )
+        nav_bg = cls._current_palette.get(
+            "background_dark",
+            "#07090D",
+        )
+        return (
+            qss
+            + f"\n\n/* ThemeManager: Fenster-Transparenz {transparency}% */\n"
+            + "QMainWindow#mainWindow,\n"
+            + "QMainWindow#dashboardWindow {\n"
+            + f"    background-color: rgba({cls._hex_to_rgb(window_bg)}, {alpha});\n"
+            + "}\n"
+            + "#navPanel {\n"
+            + f"    background-color: rgba({cls._hex_to_rgb(nav_bg)}, {alpha});\n"
+            + "}\n"
+        )
+
+    @classmethod
+    def _append_panel_transparency(
+        cls,
+        qss: str,
+        panel_transparency: int,
+    ) -> str:
+        if panel_transparency >= 100:
+            return qss
+
+        alpha = cls._alpha_from_percent(panel_transparency)
         panel = cls._current_palette.get("panel", "#152532")
         return (
             qss
-            + f"\n\n/* ThemeManager: Transparenz {transparency}% */\n"
+            + f"\n\n/* ThemeManager: Panel-Transparenz {panel_transparency}% */\n"
             + "QFrame#pagePanel,\n"
             + "QFrame#infoPanel {\n"
             + f"    background-color: rgba({cls._hex_to_rgb(panel)}, {alpha});\n"
             + "}\n"
         )
+
+    @classmethod
+    def _append_table_density(
+        cls,
+        qss: str,
+        table_density: str,
+    ) -> str:
+        density = (
+            table_density
+            if table_density in TABLE_DENSITY_LABELS
+            else "normal"
+        )
+        if density == "normal":
+            return qss
+
+        spec = TABLE_DENSITY_PADDING[density]
+        selectors = ",\n".join(
+            f"QTableWidget#{name}" for name in TABLE_OBJECT_NAMES
+        )
+        item_selectors = ",\n".join(
+            f"QTableWidget#{name}::item"
+            for name in TABLE_OBJECT_NAMES
+        )
+        header_selectors = ",\n".join(
+            f"QTableWidget#{name} QHeaderView::section"
+            for name in TABLE_OBJECT_NAMES
+        )
+        return (
+            qss
+            + f"\n\n/* ThemeManager: Tabellen-Dichte {density} */\n"
+            + f"{item_selectors} {{\n"
+            + f"    padding: {spec['item_v']}px {spec['item_h']}px;\n"
+            + "}\n"
+            + f"{header_selectors} {{\n"
+            + f"    padding: {spec['header_v']}px {spec['header_h']}px;\n"
+            + f"    font-size: {spec['header_font']}px;\n"
+            + "}\n"
+            + f"{selectors} {{\n"
+            + "    outline: none;\n"
+            + "}\n"
+        )
+
+    @classmethod
+    def apply_table_row_height(
+        cls,
+        table,
+        table_density: str | None = None,
+    ) -> None:
+        density = table_density or cls._current_settings.get(
+            "table_density",
+            "normal",
+        )
+        if density not in TABLE_DENSITY_ROW_HEIGHT:
+            density = "normal"
+
+        row_height = TABLE_DENSITY_ROW_HEIGHT[density]
+        header = table.verticalHeader()
+        header.setDefaultSectionSize(row_height)
+        header.setMinimumSectionSize(max(20, row_height - 6))
+
+    @classmethod
+    def refresh_table_density(cls, table_density: str | None = None) -> None:
+        app = QApplication.instance()
+        if app is None:
+            return
+
+        density = table_density or cls._current_settings.get(
+            "table_density",
+            "normal",
+        )
+        for widget in app.allWidgets():
+            if not isinstance(widget, QTableWidget):
+                continue
+            if widget.objectName() not in TABLE_OBJECT_NAMES:
+                continue
+            cls.apply_table_row_height(widget, density)
+            widget.resizeRowsToContents()
 
     @classmethod
     def _hex_to_rgb(cls, hex_color: str) -> str:
@@ -771,8 +1105,14 @@ class ThemeManager:
         theme_id: str,
         *,
         accent_color: str = "",
+        label_color: str = "",
+        primary_button_color: str = "",
+        secondary_button_color: str = "",
         font_size: str = "normal",
+        font_family: str = DEFAULT_FONT_FAMILY,
         transparency: int = 100,
+        panel_transparency: int = 100,
+        table_density: str = "normal",
         animations: str = "full",
         dashboard_layout: str = "classic",
         dashboard_font_scale: int = DEFAULT_DASHBOARD_FONT_SCALE,
@@ -799,13 +1139,34 @@ class ThemeManager:
             }
         )
 
+        if font_family not in FONT_FAMILY_LABELS:
+            font_family = DEFAULT_FONT_FAMILY
+
+        if table_density not in TABLE_DENSITY_LABELS:
+            table_density = "normal"
+
+        panel_transparency = max(
+            0,
+            min(100, int(panel_transparency or 100)),
+        )
+        transparency = max(
+            0,
+            min(100, int(transparency or 100)),
+        )
+
         cls._current_theme_id = theme_id
         cls._current_palette = cls.load_palette(theme_id)
         cls._current_settings = {
             "theme": theme_id,
             "accent_color": accent_color,
+            "label_color": label_color,
+            "primary_button_color": primary_button_color,
+            "secondary_button_color": secondary_button_color,
             "font_size": font_size,
+            "font_family": font_family,
             "transparency": transparency,
+            "panel_transparency": panel_transparency,
+            "table_density": table_density,
             "animations": animations,
             "dashboard_layout": dashboard_layout,
             **scales,
@@ -817,20 +1178,45 @@ class ThemeManager:
             accent_color,
             theme_id,
         )
+        qss = cls._append_ui_color_overrides(
+            qss,
+            label_color=label_color,
+            primary_button_color=primary_button_color,
+            secondary_button_color=secondary_button_color,
+        )
         qss = cls._append_font_size(qss, font_size)
-        qss = cls._append_transparency(qss, transparency)
+        qss = cls._append_font_family(
+            qss,
+            cls._current_settings.get(
+                "font_family",
+                DEFAULT_FONT_FAMILY,
+            ),
+        )
+        qss = cls._append_window_transparency(qss, transparency)
+        qss = cls._append_panel_transparency(
+            qss,
+            panel_transparency,
+        )
+        qss = cls._append_table_density(qss, table_density)
 
         app = QApplication.instance()
         if app is not None:
             app.setStyleSheet(qss)
-            cls._apply_application_font(font_size, theme_id)
+            cls._apply_application_font(
+                font_size,
+                theme_id,
+                font_family,
+            )
             cls.refresh_dashboard_font_scale(scales)
+            cls.refresh_table_density(table_density)
 
         debug_log(
             "Theme geladen:",
             theme_id,
             f"font={font_size}",
-            f"transparency={transparency}%",
+            f"window_transparency={transparency}%",
+            f"panel_transparency={panel_transparency}%",
+            f"table_density={table_density}",
             f"dashboard_widget={scales['dashboard_font_scale']}%",
             f"dashboard_title={scales['dashboard_title_font_scale']}%",
             f"dashboard_button={scales['dashboard_button_font_scale']}%",
@@ -844,13 +1230,24 @@ class ThemeManager:
         cls,
         font_size: str,
         theme_id: str,
+        font_family: str = DEFAULT_FONT_FAMILY,
     ) -> None:
         app = QApplication.instance()
         if app is None:
             return
 
+        family_id = (
+            font_family
+            if font_family in FONT_FAMILY_LABELS
+            else DEFAULT_FONT_FAMILY
+        )
         palette = cls.load_palette(theme_id)
-        family = palette.get("font_ui", "Segoe UI")
+        family = resolve_body_font(
+            family_id,
+            theme_id=theme_id,
+            palette=palette,
+        )
+
         px = FONT_SIZE_MAP.get(font_size, 16)
         app.setFont(QFont(family, px))
 
@@ -860,9 +1257,29 @@ class ThemeManager:
         cls.load_theme(
             settings.get("theme", "star_citizen"),
             accent_color=settings.get("accent_color", ""),
+            label_color=settings.get("label_color", ""),
+            primary_button_color=settings.get(
+                "primary_button_color",
+                "",
+            ),
+            secondary_button_color=settings.get(
+                "secondary_button_color",
+                "",
+            ),
             font_size=settings.get("font_size", "normal"),
+            font_family=settings.get(
+                "font_family",
+                DEFAULT_FONT_FAMILY,
+            ),
             transparency=int(
                 settings.get("transparency", 100) or 100
+            ),
+            panel_transparency=int(
+                settings.get("panel_transparency", 100) or 100
+            ),
+            table_density=settings.get(
+                "table_density",
+                "normal",
             ),
             animations=settings.get("animations", "full"),
             dashboard_layout=settings.get(

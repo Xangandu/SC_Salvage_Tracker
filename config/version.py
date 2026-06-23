@@ -7,9 +7,9 @@ aus diesem Modul, damit Version, Build und Codename immer synchron sind.
 
 APP_NAME = "SC Salvage Tracker"
 
-APP_VERSION = "0.14.1 Alpha"
-APP_BUILD = "2026.06"
-APP_CODENAME = "Launcher Polish"
+APP_VERSION = "0.14.3 Alpha"
+APP_BUILD = "2026.07"
+APP_CODENAME = "Design Control"
 
 DEVELOPER_NAME = "Christian"
 DEVELOPER_ALIAS = "Xan-Gan-Du"

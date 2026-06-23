@@ -7,6 +7,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QPushButton,
     QScrollArea,
+    QSizePolicy,
     QVBoxLayout,
     QWidget,
 )
@@ -161,3 +162,30 @@ def hud_divider():
     row.addWidget(right, 1)
 
     return row
+
+
+def nav_version_divider():
+    from PySide6.QtSvgWidgets import QSvgWidget
+
+    host = QWidget()
+    host.setObjectName("navVersionDividerHost")
+
+    row = QHBoxLayout(host)
+    row.setContentsMargins(10, 10, 10, 2)
+    row.setSpacing(0)
+
+    divider = QSvgWidget(
+        str(asset_path("assets/images/nav_version_divider.svg"))
+    )
+    divider.setObjectName("navVersionDivider")
+    divider.setFixedHeight(22)
+    divider.setAttribute(
+        Qt.WidgetAttribute.WA_TranslucentBackground,
+    )
+    divider.setSizePolicy(
+        QSizePolicy.Policy.Expanding,
+        QSizePolicy.Policy.Fixed,
+    )
+
+    row.addWidget(divider, 1)
+    return host

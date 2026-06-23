@@ -19,6 +19,8 @@ from PySide6.QtWidgets import (
     QCheckBox,
     QSpinBox,
     QGroupBox,
+    QGridLayout,
+    QFrame,
 )
 
 from ui.mobiglas_color_dialog import MobiglasColorDialog
@@ -35,7 +37,7 @@ from config.permissions import (
     ROLE_ADMIN,
 )
 from database.migration_manager import DEFAULT_BACKUP_MAX_COUNT
-from config.version import APP_VERSION
+from config.version import APP_VERSION, format_version_subtitle
 from ui.table_utils import (
     configure_mobiglas_table,
     finalize_table_columns,
@@ -47,6 +49,7 @@ from ui.page_layout import (
     section_accent,
     subsection_title,
     add_form_field,
+    form_label,
     info_panel,
     page_panel,
     primary_button,
@@ -60,9 +63,13 @@ from ui.connection_scenario_panel import ConnectionScenarioPanel
 from ui.theme_manager import (
     ThemeManager,
     FONT_SIZE_LABELS,
+    FONT_FAMILY_LABELS,
+    NAV_WIDTH_LABELS,
     ANIMATION_LABELS,
     DASHBOARD_LAYOUT_LABELS,
     TRANSPARENCY_OPTIONS,
+    PANEL_TRANSPARENCY_OPTIONS,
+    TABLE_DENSITY_LABELS,
     DASHBOARD_FONT_SCALE_MIN,
     DASHBOARD_FONT_SCALE_MAX,
 )
@@ -91,6 +98,7 @@ class AdminPage(QWidget):
 
         self.db = get_database()
         self.current_user = None
+        self.update_manager = None
 
         content, layout = page_content_widget()
         layout.addWidget(page_title("EINSTELLUNGEN"))
@@ -369,14 +377,51 @@ class AdminPage(QWidget):
 
     def _build_design_tab(self):
         tab, layout = self._new_tab()
+        layout.setContentsMargins(12, 12, 12, 12)
 
-        layout.addWidget(
-            subsection_title("◆ MEIN DESIGN")
+        self.design_sub_tabs = QTabWidget()
+        self.design_sub_tabs.setObjectName("designSubTabs")
+        configure_aaa_tabs(self.design_sub_tabs)
+
+        self.design_sub_tabs.addTab(
+            self._build_design_appearance_page(),
+            "Erscheinungsbild",
         )
-        layout.addLayout(hud_divider())
+        self.design_sub_tabs.addTab(
+            self._build_design_density_page(),
+            "Dichte",
+        )
+        self.design_sub_tabs.addTab(
+            self._build_design_colors_page(),
+            "Farben",
+        )
+        self.design_sub_tabs.addTab(
+            self._build_design_dashboard_page(),
+            "Dashboard",
+        )
+        self.design_sub_tabs.addTab(
+            self._build_design_org_page(),
+            "Organisation",
+        )
 
-        user_panel, user_layout = info_panel()
-        user_layout.setContentsMargins(16, 16, 16, 16)
+        layout.addWidget(self.design_sub_tabs)
+        return tab
+
+    def _build_design_appearance_page(self):
+        page = QWidget()
+        page.setObjectName("designSubPage")
+        layout = QVBoxLayout(page)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+
+        panel, panel_layout = page_panel()
+        panel_layout.setContentsMargins(20, 20, 20, 20)
+        panel_layout.setSpacing(12)
+
+        panel_layout.addWidget(
+            subsection_title("◆ ERSCHEINUNGSBILD")
+        )
+        panel_layout.addLayout(hud_divider())
 
         self.theme_combo = QComboBox()
         for theme_id, label in ThemeManager.available_themes():
@@ -386,90 +431,246 @@ class AdminPage(QWidget):
         for key, label in FONT_SIZE_LABELS.items():
             self.font_size_combo.addItem(label, key)
 
-        accent_row = QHBoxLayout()
-        self.accent_color_input = QLineEdit()
-        self.accent_color_input.setPlaceholderText(
-            "Standard (Theme-Akzent)"
-        )
-        self.accent_color_button = _secondary_button(
-            "Farbe wählen"
-        )
-        self.accent_color_button.clicked.connect(
-            self._pick_accent_color
-        )
-        self.accent_clear_button = _secondary_button(
-            "Zurücksetzen"
-        )
-        self.accent_clear_button.clicked.connect(
-            lambda: self.accent_color_input.clear()
-        )
-        accent_row.addWidget(self.accent_color_input, 1)
-        accent_row.addWidget(self.accent_color_button)
-        accent_row.addWidget(self.accent_clear_button)
-
-        accent_host = QWidget()
-        accent_host.setLayout(accent_row)
-
-        self.transparency_combo = QComboBox()
-        for value in TRANSPARENCY_OPTIONS:
-            self.transparency_combo.addItem(
-                f"{value} %",
-                value,
-            )
+        self.font_family_combo = QComboBox()
+        for key, label in FONT_FAMILY_LABELS.items():
+            self.font_family_combo.addItem(label, key)
 
         self.animations_combo = QComboBox()
         for key, label in ANIMATION_LABELS.items():
             self.animations_combo.addItem(label, key)
 
-        for label_text, widget in [
+        self.nav_width_combo = QComboBox()
+        for key, label in NAV_WIDTH_LABELS.items():
+            self.nav_width_combo.addItem(label, key)
+
+        grid = QGridLayout()
+        grid.setHorizontalSpacing(20)
+        grid.setVerticalSpacing(14)
+        grid.setColumnStretch(0, 1)
+        grid.setColumnStretch(1, 1)
+
+        appearance_fields = [
             ("Theme", self.theme_combo),
             ("Schriftgröße", self.font_size_combo),
-            ("Akzentfarbe", accent_host),
-            ("Transparenz", self.transparency_combo),
+            ("Schriftart", self.font_family_combo),
             ("Animationen", self.animations_combo),
-        ]:
-            add_form_field(user_layout, label_text, widget)
+            ("Navigationsbreite", self.nav_width_combo),
+        ]
+        for index, (label_text, widget) in enumerate(
+            appearance_fields
+        ):
+            row = index // 2
+            col = index % 2
+            cell = QVBoxLayout()
+            cell.setSpacing(6)
+            cell.addWidget(form_label(label_text))
+            cell.addWidget(widget)
+            grid.addLayout(cell, row, col)
 
-        preview_hint = QLabel(
-            "Änderungen können mit „Vorschau“ sofort getestet "
-            "und mit „Speichern“ dauerhaft übernommen werden. "
-            "Die Akzentfarbe ersetzt alle Highlight-Farben "
-            "(Türkis, Blau, Orange und Gold)."
-        )
-        preview_hint.setObjectName("mutedLabel")
-        preview_hint.setWordWrap(True)
-        user_layout.addWidget(preview_hint)
+        panel_layout.addLayout(grid)
 
-        action_row = QHBoxLayout()
-        self.preview_design_button = _secondary_button(
-            "Vorschau"
+        hint = QLabel(
+            "Grundlegende Darstellung der App. Farben werden "
+            "im Tab „Farben“ eingestellt. Position und Größe "
+            "des Fensters werden beim Beenden automatisch "
+            "gespeichert (auch Monitor 2)."
         )
-        self.preview_design_button.clicked.connect(
-            self.preview_design_settings
-        )
-        self.save_design_button = primary_button(
-            "Speichern"
-        )
-        self.save_design_button.clicked.connect(
-            self.save_design_settings
-        )
-        action_row.addWidget(self.preview_design_button)
-        action_row.addWidget(self.save_design_button)
-        action_row.addStretch()
-        user_layout.addLayout(action_row)
-        layout.addWidget(user_panel)
+        hint.setObjectName("mutedLabel")
+        hint.setWordWrap(True)
+        panel_layout.addWidget(hint)
 
-        layout.addWidget(subsection_title("◆ DASHBOARD"))
-        layout.addLayout(hud_divider())
+        panel_layout.addLayout(
+            self._design_action_row(
+                self.preview_design_settings,
+                self.save_design_settings,
+            )
+        )
+        layout.addWidget(panel)
+        layout.addStretch()
+        return page
 
-        dashboard_panel, dashboard_layout = info_panel()
-        dashboard_layout.setContentsMargins(16, 16, 16, 16)
+    def _build_design_density_page(self):
+        page = QWidget()
+        page.setObjectName("designSubPage")
+        layout = QVBoxLayout(page)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+
+        panel, panel_layout = page_panel()
+        panel_layout.setContentsMargins(20, 20, 20, 20)
+        panel_layout.setSpacing(12)
+
+        panel_layout.addWidget(
+            subsection_title("◆ DICHTE & TRANSPARENZ")
+        )
+        panel_layout.addLayout(hud_divider())
+
+        self.table_density_combo = QComboBox()
+        for key, label in TABLE_DENSITY_LABELS.items():
+            self.table_density_combo.addItem(label, key)
+
+        self.window_transparency_combo = QComboBox()
+        for value in TRANSPARENCY_OPTIONS:
+            self.window_transparency_combo.addItem(
+                f"{value} %",
+                value,
+            )
+
+        self.panel_transparency_combo = QComboBox()
+        for value in PANEL_TRANSPARENCY_OPTIONS:
+            self.panel_transparency_combo.addItem(
+                f"{value} %",
+                value,
+            )
+
+        grid = QGridLayout()
+        grid.setHorizontalSpacing(20)
+        grid.setVerticalSpacing(14)
+        grid.setColumnStretch(0, 1)
+        grid.setColumnStretch(1, 1)
+
+        density_fields = [
+            ("Tabellen-Dichte", self.table_density_combo),
+            ("Fenster-Transparenz", self.window_transparency_combo),
+            ("Panel-Transparenz", self.panel_transparency_combo),
+        ]
+        for index, (label_text, widget) in enumerate(
+            density_fields
+        ):
+            row = index // 2
+            col = index % 2
+            cell = QVBoxLayout()
+            cell.setSpacing(6)
+            cell.addWidget(form_label(label_text))
+            cell.addWidget(widget)
+            grid.addLayout(cell, row, col)
+
+        panel_layout.addLayout(grid)
+
+        hint = QLabel(
+            "Tabellen-Dichte steuert Zeilenhöhe und Innenabstände. "
+            "Fenster-Transparenz betrifft Hintergrund und Navigation. "
+            "Panel-Transparenz wirkt feiner (5-%-Schritte) auf "
+            "Inhalts- und Info-Panels."
+        )
+        hint.setObjectName("mutedLabel")
+        hint.setWordWrap(True)
+        panel_layout.addWidget(hint)
+
+        panel_layout.addLayout(
+            self._design_action_row(
+                self.preview_design_settings,
+                self.save_design_settings,
+            )
+        )
+        layout.addWidget(panel)
+        layout.addStretch()
+        return page
+
+    def _build_design_colors_page(self):
+        page = QWidget()
+        page.setObjectName("designSubPage")
+        layout = QVBoxLayout(page)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+
+        panel, panel_layout = page_panel()
+        panel_layout.setContentsMargins(20, 20, 20, 20)
+        panel_layout.setSpacing(12)
+
+        panel_layout.addWidget(
+            subsection_title("◆ FARBPALETTE")
+        )
+        panel_layout.addLayout(hud_divider())
+
+        (
+            self.accent_color_input,
+            accent_widget,
+        ) = self._build_color_control(
+            "Akzentfarbe",
+            "Standard (Theme-Akzent)",
+            "#00D9FF",
+            "Akzentfarbe wählen",
+        )
+        (
+            self.label_color_input,
+            label_widget,
+        ) = self._build_color_control(
+            "Label-Farbe",
+            "Standard (Theme-Label)",
+            "#E07A2A",
+            "Label-Farbe wählen",
+        )
+        (
+            self.primary_button_color_input,
+            primary_widget,
+        ) = self._build_color_control(
+            "Primär-Button",
+            "Standard (Theme-Primär)",
+            "#E8893A",
+            "Primär-Button wählen",
+        )
+        (
+            self.secondary_button_color_input,
+            secondary_widget,
+        ) = self._build_color_control(
+            "Sekundär-Button",
+            "Standard (Theme-Sekundär)",
+            "#141C26",
+            "Sekundär-Button wählen",
+        )
+
+        color_grid = QGridLayout()
+        color_grid.setHorizontalSpacing(20)
+        color_grid.setVerticalSpacing(16)
+        color_grid.setColumnStretch(0, 1)
+        color_grid.setColumnStretch(1, 1)
+        color_grid.addWidget(accent_widget, 0, 0)
+        color_grid.addWidget(label_widget, 0, 1)
+        color_grid.addWidget(primary_widget, 1, 0)
+        color_grid.addWidget(secondary_widget, 1, 1)
+        panel_layout.addLayout(color_grid)
+
+        hint = QLabel(
+            "Leere Felder übernehmen Theme-Standardwerte. "
+            "Die Akzentfarbe ersetzt Highlight-Farben "
+            "(Türkis, Blau, Orange, Gold). "
+            "Klick auf die Farbfläche öffnet den Farbwähler."
+        )
+        hint.setObjectName("mutedLabel")
+        hint.setWordWrap(True)
+        panel_layout.addWidget(hint)
+
+        panel_layout.addLayout(
+            self._design_action_row(
+                self.preview_design_settings,
+                self.save_design_settings,
+            )
+        )
+        layout.addWidget(panel)
+        layout.addStretch()
+        return page
+
+    def _build_design_dashboard_page(self):
+        page = QWidget()
+        page.setObjectName("designSubPage")
+        layout = QVBoxLayout(page)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+
+        dashboard_panel, dashboard_layout = page_panel()
+        dashboard_layout.setContentsMargins(20, 20, 20, 20)
+        dashboard_layout.setSpacing(12)
+
+        dashboard_layout.addWidget(
+            subsection_title("◆ DASHBOARD")
+        )
+        dashboard_layout.addLayout(hud_divider())
 
         self.dashboard_layout_combo = QComboBox()
         for key, label in DASHBOARD_LAYOUT_LABELS.items():
             self.dashboard_layout_combo.addItem(label, key)
 
-        scale_row = QHBoxLayout()
         (
             self.dashboard_font_scale_slider,
             self.dashboard_font_scale_value,
@@ -497,67 +698,75 @@ class AdminPage(QWidget):
             self._on_dashboard_button_scale_changed
         )
 
-        add_form_field(
-            dashboard_layout,
-            "Dashboard-Layout",
-            self.dashboard_layout_combo,
-        )
-        add_form_field(
-            dashboard_layout,
-            "Widgets (KPI & Panels)",
-            scale_host,
-        )
-        add_form_field(
-            dashboard_layout,
-            "Überschrift (SALVAGE-ÜBERSICHT)",
-            title_scale_host,
-        )
-        add_form_field(
-            dashboard_layout,
-            "Header-Buttons",
-            button_scale_host,
-        )
+        dash_grid = QGridLayout()
+        dash_grid.setHorizontalSpacing(20)
+        dash_grid.setVerticalSpacing(14)
+        dash_grid.setColumnStretch(0, 1)
+        dash_grid.setColumnStretch(1, 1)
+
+        layout_cell = QVBoxLayout()
+        layout_cell.setSpacing(6)
+        layout_cell.addWidget(form_label("Dashboard-Layout"))
+        layout_cell.addWidget(self.dashboard_layout_combo)
+        dash_grid.addLayout(layout_cell, 0, 0, 1, 2)
+
+        for row_index, (label_text, host) in enumerate(
+            (
+                ("Widgets (KPI & Panels)", scale_host),
+                (
+                    "Überschrift (SALVAGE-ÜBERSICHT)",
+                    title_scale_host,
+                ),
+                ("Header-Buttons", button_scale_host),
+            ),
+            start=1,
+        ):
+            cell = QVBoxLayout()
+            cell.setSpacing(6)
+            cell.addWidget(form_label(label_text))
+            cell.addWidget(host)
+            dash_grid.addLayout(
+                cell,
+                row_index,
+                0,
+                1,
+                2,
+            )
+
+        dashboard_layout.addLayout(dash_grid)
 
         self.dashboard_font_preview = DashboardFontPreviewWidget()
         dashboard_layout.addWidget(self.dashboard_font_preview)
 
         dashboard_hint = QLabel(
-            "Layout und Schriftgrößen können mit „Vorschau“ "
-            "sofort getestet und mit „Speichern“ dauerhaft "
-            "übernommen werden. Überschrift, Buttons und "
-            "Widgets lassen sich unabhängig voneinander "
-            "skalieren."
+            "Layout und Schriftgrößen lassen sich unabhängig "
+            "voneinander skalieren."
         )
         dashboard_hint.setObjectName("mutedLabel")
         dashboard_hint.setWordWrap(True)
         dashboard_layout.addWidget(dashboard_hint)
 
-        dashboard_action_row = QHBoxLayout()
-        self.preview_dashboard_button = _secondary_button(
-            "Vorschau"
+        dashboard_layout.addLayout(
+            self._design_action_row(
+                self.preview_dashboard_settings,
+                self.save_dashboard_settings,
+            )
         )
-        self.preview_dashboard_button.clicked.connect(
-            self.preview_dashboard_settings
-        )
-        self.save_dashboard_button = primary_button(
-            "Speichern"
-        )
-        self.save_dashboard_button.clicked.connect(
-            self.save_dashboard_settings
-        )
-        dashboard_action_row.addWidget(
-            self.preview_dashboard_button
-        )
-        dashboard_action_row.addWidget(
-            self.save_dashboard_button
-        )
-        dashboard_action_row.addStretch()
-        dashboard_layout.addLayout(dashboard_action_row)
-
         layout.addWidget(dashboard_panel)
+        layout.addStretch()
+        return page
 
-        self.app_defaults_panel, app_layout = info_panel()
-        app_layout.setContentsMargins(16, 16, 16, 16)
+    def _build_design_org_page(self):
+        page = QWidget()
+        page.setObjectName("designSubPage")
+        self.design_org_page = page
+        layout = QVBoxLayout(page)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+
+        self.app_defaults_panel, app_layout = page_panel()
+        app_layout.setContentsMargins(20, 20, 20, 20)
+        app_layout.setSpacing(12)
         app_layout.addWidget(
             subsection_title("◆ APP-STANDARD (ORGANISATION)")
         )
@@ -589,26 +798,224 @@ class AdminPage(QWidget):
         )
         app_layout.addWidget(self.save_app_defaults_button)
         layout.addWidget(self.app_defaults_panel)
-
         layout.addStretch()
-        return tab
+        return page
 
-    def _pick_accent_color(self):
-        current = self.accent_color_input.text().strip()
+    def _design_action_row(self, preview_callback, save_callback):
+        row = QHBoxLayout()
+        row.setSpacing(12)
+        preview_button = _secondary_button("Vorschau")
+        preview_button.clicked.connect(preview_callback)
+        save_button = primary_button("Speichern")
+        save_button.clicked.connect(save_callback)
+        row.addWidget(preview_button)
+        row.addWidget(save_button)
+        row.addStretch()
+        return row
+
+    def _build_color_control(
+        self,
+        label_text,
+        placeholder,
+        default_hex,
+        picker_title,
+    ):
+        container = QFrame()
+        container.setObjectName("designColorControl")
+        layout = QVBoxLayout(container)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(8)
+        layout.addWidget(form_label(label_text))
+
+        row = QHBoxLayout()
+        row.setSpacing(8)
+
+        line_edit = QLineEdit()
+        line_edit.setPlaceholderText(placeholder)
+        line_edit.setMinimumHeight(40)
+
+        pick_button = _secondary_button("Wählen")
+        pick_button.setFixedWidth(92)
+        pick_button.clicked.connect(
+            lambda: self._pick_color_value(
+                line_edit,
+                picker_title,
+                default_hex,
+            )
+        )
+
+        swatch = QPushButton()
+        swatch.setObjectName("designColorSwatch")
+        swatch.setFixedSize(40, 40)
+        swatch.setCursor(Qt.CursorShape.PointingHandCursor)
+        swatch.setToolTip("Farbe wählen")
+        swatch.clicked.connect(pick_button.click)
+
+        clear_button = _secondary_button("↺")
+        clear_button.setFixedWidth(40)
+        clear_button.setToolTip("Zurücksetzen")
+        clear_button.clicked.connect(line_edit.clear)
+
+        def refresh_swatch():
+            self._apply_color_swatch(
+                swatch,
+                line_edit.text().strip(),
+                default_hex,
+            )
+
+        line_edit.textChanged.connect(
+            lambda _text: refresh_swatch()
+        )
+        line_edit._design_color_swatch = swatch
+        line_edit._design_color_fallback = default_hex
+        refresh_swatch()
+
+        row.addWidget(swatch)
+        row.addWidget(line_edit, 1)
+        row.addWidget(pick_button)
+        row.addWidget(clear_button)
+        layout.addLayout(row)
+
+        return line_edit, container
+
+    def _apply_color_swatch(
+        self,
+        swatch,
+        color_text,
+        fallback_hex,
+    ):
+        color = QColor(color_text)
+        if not color.isValid():
+            color = QColor(fallback_hex)
+        swatch.setStyleSheet(
+            "QPushButton#designColorSwatch {"
+            f"background-color: {color.name()};"
+            "border: 1px solid #33485C;"
+            "border-radius: 8px;"
+            "padding: 0;"
+            "min-width: 40px;"
+            "max-width: 40px;"
+            "min-height: 40px;"
+            "max-height: 40px;"
+            "}"
+            "QPushButton#designColorSwatch:hover {"
+            f"border: 1px solid #42D4F5;"
+            "}"
+        )
+
+    def _refresh_design_color_swatches(self):
+        for line_edit in (
+            self.accent_color_input,
+            self.label_color_input,
+            self.primary_button_color_input,
+            self.secondary_button_color_input,
+        ):
+            swatch = getattr(
+                line_edit,
+                "_design_color_swatch",
+                None,
+            )
+            fallback = getattr(
+                line_edit,
+                "_design_color_fallback",
+                "#888888",
+            )
+            if swatch is not None:
+                self._apply_color_swatch(
+                    swatch,
+                    line_edit.text().strip(),
+                    fallback,
+                )
+
+    def set_update_manager(self, manager):
+        self.update_manager = manager
+        self.refresh_updates_section()
+
+    def refresh_updates_section(self):
+        if not hasattr(self, "update_version_label"):
+            return
+
+        from update.service import (
+            get_last_check,
+            is_auto_check_enabled,
+        )
+
+        self.update_version_label.setText(
+            f"Installierte Version: {format_version_subtitle()}"
+        )
+
+        last_check = get_last_check(self.db)
+        if last_check:
+            status = (
+                f"Letzte Prüfung: "
+                f"{format_datetime(last_check, with_seconds=True)}"
+            )
+        else:
+            status = "Noch keine Update-Prüfung durchgeführt."
+
+        self.update_auto_check.blockSignals(True)
+        self.update_auto_check.setChecked(
+            is_auto_check_enabled(self.db)
+        )
+        self.update_auto_check.blockSignals(False)
+
+        self.update_status_label.setText(status)
+
+    def _save_update_auto_check(self, enabled: bool):
+        if self.update_manager:
+            self.update_manager.set_auto_check(enabled)
+        else:
+            from update.service import set_auto_check_enabled
+
+            set_auto_check_enabled(self.db, enabled)
+
+    def check_updates_clicked(self):
+        if not self.update_manager:
+            QMessageBox.information(
+                self,
+                "Updates",
+                "Update-Dienst ist noch nicht bereit.",
+            )
+            return
+
+        self.update_manager.check_for_updates(silent=False)
+
+    def _pick_color_value(
+        self,
+        line_edit,
+        title,
+        default_hex,
+    ):
+        current = line_edit.text().strip()
         initial = (
             QColor(current)
             if current.startswith("#")
-            else QColor("#00D9FF")
+            else QColor(default_hex)
         )
         color, accepted = MobiglasColorDialog.get_color(
             self,
-            "Akzentfarbe wählen",
+            title,
             initial=initial,
         )
         if accepted and color.isValid():
-            self.accent_color_input.setText(
-                color.name().upper()
-            )
+            line_edit.setText(color.name().upper())
+
+    def _load_color_input(self, line_edit, user_settings, key):
+        value = user_settings.get(key)
+        if value:
+            line_edit.setText(value)
+            return
+
+        app_value = self.db.settings.get_app_setting(
+            key,
+            "",
+        )
+        line_edit.setText(app_value or "")
+
+    @staticmethod
+    def _optional_color(value):
+        cleaned = (value or "").strip()
+        return cleaned or None
 
     def _set_combo_by_data(self, combo, value):
         if value is None:
@@ -641,12 +1048,28 @@ class AdminPage(QWidget):
             effective.get("font_size"),
         )
         self._set_combo_by_data(
-            self.transparency_combo,
+            self.font_family_combo,
+            effective.get("font_family"),
+        )
+        self._set_combo_by_data(
+            self.table_density_combo,
+            effective.get("table_density"),
+        )
+        self._set_combo_by_data(
+            self.window_transparency_combo,
             effective.get("transparency"),
+        )
+        self._set_combo_by_data(
+            self.panel_transparency_combo,
+            effective.get("panel_transparency"),
         )
         self._set_combo_by_data(
             self.animations_combo,
             effective.get("animations"),
+        )
+        self._set_combo_by_data(
+            self.nav_width_combo,
+            effective.get("nav_width"),
         )
         self._set_combo_by_data(
             self.dashboard_layout_combo,
@@ -685,22 +1108,68 @@ class AdminPage(QWidget):
             )
             self.accent_color_input.setText(app_accent or "")
 
+        self._load_color_input(
+            self.label_color_input,
+            user_settings,
+            "label_color",
+        )
+        self._load_color_input(
+            self.primary_button_color_input,
+            user_settings,
+            "primary_button_color",
+        )
+        self._load_color_input(
+            self.secondary_button_color_input,
+            user_settings,
+            "secondary_button_color",
+        )
+
         app_settings = self.db.settings.get_app_settings()
         self._set_combo_by_data(
             self.app_theme_combo,
             app_settings.get("theme"),
         )
+        self._refresh_design_color_swatches()
 
     def _collect_theme_form(self):
         return {
             "theme": self.theme_combo.currentData(),
             "font_size": self.font_size_combo.currentData(),
+            "font_family": self.font_family_combo.currentData(),
             "accent_color": (
                 self.accent_color_input.text().strip()
             ),
-            "transparency": self.transparency_combo.currentData(),
+            "label_color": (
+                self.label_color_input.text().strip()
+            ),
+            "primary_button_color": (
+                self.primary_button_color_input.text().strip()
+            ),
+            "secondary_button_color": (
+                self.secondary_button_color_input.text().strip()
+            ),
+            "transparency": (
+                self.window_transparency_combo.currentData()
+            ),
+            "panel_transparency": (
+                self.panel_transparency_combo.currentData()
+            ),
+            "table_density": (
+                self.table_density_combo.currentData()
+            ),
             "animations": self.animations_combo.currentData(),
+            "nav_width": self.nav_width_combo.currentData(),
         }
+
+    def _apply_layout_to_main_window(self, settings):
+        window = self.window()
+        if window is not None and hasattr(
+            window,
+            "apply_nav_width",
+        ):
+            window.apply_nav_width(
+                settings.get("nav_width", "normal")
+            )
 
     def _make_dashboard_scale_row(self):
         slider = QSlider(Qt.Orientation.Horizontal)
@@ -805,6 +1274,7 @@ class AdminPage(QWidget):
         theme = self._collect_theme_form()
         settings = self._merge_effective_settings(theme)
         ThemeManager.apply_settings(settings)
+        self._apply_layout_to_main_window(settings)
         QMessageBox.information(
             self,
             "Design",
@@ -824,13 +1294,27 @@ class AdminPage(QWidget):
             {
                 "theme": theme["theme"],
                 "font_size": theme["font_size"],
+                "font_family": theme["font_family"],
                 "accent_color": accent,
+                "label_color": self._optional_color(
+                    theme.get("label_color")
+                ),
+                "primary_button_color": self._optional_color(
+                    theme.get("primary_button_color")
+                ),
+                "secondary_button_color": self._optional_color(
+                    theme.get("secondary_button_color")
+                ),
+                "nav_width": theme["nav_width"],
                 "transparency": theme["transparency"],
+                "panel_transparency": theme["panel_transparency"],
+                "table_density": theme["table_density"],
                 "animations": theme["animations"],
             },
         )
         settings = self._merge_effective_settings(theme)
         ThemeManager.apply_settings(settings)
+        self._apply_layout_to_main_window(settings)
 
         QMessageBox.information(
             self,
@@ -944,7 +1428,7 @@ class AdminPage(QWidget):
         self.network_code_label.setStyleSheet(
             "font-size: 32px; letter-spacing: 8px; padding: 8px;"
         )
-        panel_layout.addWidget(QLabel("Beitrittscode"))
+        panel_layout.addWidget(form_label("Beitrittscode"))
         panel_layout.addWidget(self.network_code_label)
 
         copy_row = QHBoxLayout()
@@ -1440,6 +1924,59 @@ class AdminPage(QWidget):
     def _build_system_tab(self):
         tab, layout = self._new_tab()
 
+        self.updates_section = QWidget()
+        updates_section_layout = QVBoxLayout(self.updates_section)
+        updates_section_layout.setContentsMargins(0, 0, 0, 0)
+        updates_section_layout.setSpacing(8)
+
+        updates_section_layout.addWidget(
+            subsection_title("◆ UPDATES")
+        )
+        updates_section_layout.addLayout(hud_divider())
+
+        updates_panel, updates_layout = info_panel()
+        updates_layout.setContentsMargins(16, 16, 16, 16)
+
+        self.update_version_label = QLabel()
+        self.update_version_label.setObjectName("formLabel")
+        self.update_version_label.setWordWrap(True)
+        updates_layout.addWidget(self.update_version_label)
+
+        self.update_status_label = QLabel()
+        self.update_status_label.setObjectName("mutedLabel")
+        self.update_status_label.setWordWrap(True)
+        updates_layout.addWidget(self.update_status_label)
+
+        self.update_auto_check = QCheckBox(
+            "Beim Start automatisch nach Updates suchen"
+        )
+        self.update_auto_check.toggled.connect(
+            self._save_update_auto_check
+        )
+        updates_layout.addWidget(self.update_auto_check)
+
+        update_action_row = QHBoxLayout()
+        self.update_check_button = primary_button(
+            "Nach Updates suchen"
+        )
+        self.update_check_button.clicked.connect(
+            self.check_updates_clicked
+        )
+        update_action_row.addWidget(self.update_check_button)
+        update_action_row.addStretch()
+        updates_layout.addLayout(update_action_row)
+
+        update_hint = QLabel(
+            "Updates werden über GitHub Releases bereitgestellt. "
+            "Die Prüfsumme wird vor der Installation verifiziert."
+        )
+        update_hint.setObjectName("mutedLabel")
+        update_hint.setWordWrap(True)
+        updates_layout.addWidget(update_hint)
+
+        updates_section_layout.addWidget(updates_panel)
+        layout.addWidget(self.updates_section)
+
         self.login_history_section = QWidget()
         login_history_layout = QVBoxLayout(
             self.login_history_section
@@ -1736,6 +2273,18 @@ class AdminPage(QWidget):
             can_settings
         )
         self.app_theme_combo.setEnabled(can_settings)
+        if hasattr(self, "design_sub_tabs") and hasattr(
+            self,
+            "design_org_page",
+        ):
+            org_index = self.design_sub_tabs.indexOf(
+                self.design_org_page
+            )
+            if org_index >= 0:
+                self.design_sub_tabs.setTabVisible(
+                    org_index,
+                    can_settings,
+                )
 
         self.load_design_settings()
 
@@ -2018,6 +2567,7 @@ class AdminPage(QWidget):
         self.refresh_roles()
         self.refresh_login_history()
         self.refresh_datensicherung()
+        self.refresh_updates_section()
         self._refresh_network_tab()
 
     def selected_user_id(self):
