@@ -976,6 +976,8 @@ class AdminPage(QWidget):
         self.update_auto_check.blockSignals(False)
 
         self.update_status_label.setText(status)
+        if hasattr(self, "update_check_button"):
+            self.update_check_button.setEnabled(True)
 
     def _save_update_auto_check(self, enabled: bool):
         if self.update_manager:
@@ -993,6 +995,11 @@ class AdminPage(QWidget):
                 "Update-Dienst ist noch nicht bereit.",
             )
             return
+
+        if hasattr(self, "update_status_label"):
+            self.update_status_label.setText("Update-Prüfung läuft …")
+        if hasattr(self, "update_check_button"):
+            self.update_check_button.setEnabled(False)
 
         self.update_manager.check_for_updates(silent=False)
 

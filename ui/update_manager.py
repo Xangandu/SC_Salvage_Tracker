@@ -16,8 +16,10 @@ from update.service import (
     get_network_update_warning,
     is_auto_check_enabled,
     launch_installer,
+    record_last_check,
     set_auto_check_enabled,
     set_skipped_version,
+    should_offer_update,
 )
 from update.workers import UpdateCheckWorker, UpdateDownloadWorker
 
@@ -57,8 +59,8 @@ class UpdateManager(QObject):
                 )
             return
 
-        self._check_worker = UpdateCheckWorker(self.db)
-        self._check_worker.finished.connect(
+        self._check_worker = UpdateCheckWorker()
+        self._check_worker.check_done.connect(
             lambda manifest, error: self._on_check_finished(
                 manifest,
                 error,
@@ -79,7 +81,18 @@ class UpdateManager(QObject):
                 )
             return
 
-        if manifest:
+        if manifest is None:
+            if not silent:
+                QMessageBox.warning(
+                    self.parent,
+                    "Updates",
+                    "Update-Manifest konnte nicht gelesen werden.",
+                )
+            return
+
+        record_last_check(self.db)
+
+        if should_offer_update(self.db, manifest):
             self._show_update_dialog(manifest)
             return
 
@@ -156,7 +169,7 @@ class UpdateManager(QObject):
         self._download_worker.progress.connect(
             progress_dialog.set_progress
         )
-        self._download_worker.finished.connect(
+        self._download_worker.download_done.connect(
             lambda path, error: self._on_download_finished(
                 path,
                 error,

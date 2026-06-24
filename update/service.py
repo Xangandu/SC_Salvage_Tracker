@@ -73,12 +73,19 @@ def should_offer_update(db, manifest: UpdateManifest) -> bool:
     return manifest.version != get_skipped_version(db)
 
 
-def check_for_update(db) -> tuple[UpdateManifest | None, str | None]:
-    """Lädt Manifest; gibt (manifest, None) oder (None, Fehlertext) zurück."""
+def fetch_update_manifest_online() -> tuple[UpdateManifest | None, str | None]:
+    """Nur Netzwerk — ohne SQLite (für Hintergrund-Thread)."""
     try:
-        manifest = fetch_update_manifest()
+        return fetch_update_manifest(), None
     except RuntimeError as error:
         return None, str(error)
+
+
+def check_for_update(db) -> tuple[UpdateManifest | None, str | None]:
+    """Lädt Manifest und wertet auf dem UI-Thread aus (mit DB)."""
+    manifest, error = fetch_update_manifest_online()
+    if error:
+        return None, error
 
     record_last_check(db)
 
