@@ -12,7 +12,6 @@ from PySide6.QtWidgets import (
     QTableWidget,
     QTableWidgetItem,
     QMessageBox,
-    QInputDialog,
     QTabWidget,
     QLabel,
     QSlider,
@@ -24,6 +23,10 @@ from PySide6.QtWidgets import (
 )
 
 from ui.mobiglas_color_dialog import MobiglasColorDialog
+from ui.mobiglas_input_dialog import (
+    MobiglasItemInputDialog,
+    MobiglasTextInputDialog,
+)
 from config.dates import format_datetime
 from database.access import get_database
 from config.permissions import (
@@ -974,6 +977,18 @@ class AdminPage(QWidget):
             is_auto_check_enabled(self.db)
         )
         self.update_auto_check.blockSignals(False)
+
+        if (
+            self.update_manager
+            and self.update_manager.pending_update
+        ):
+            pending = self.update_manager.pending_update
+            status = (
+                f"Neues Update verfügbar: "
+                f"{pending.version_display} "
+                f"(Build {pending.build})\n"
+                f"{status}"
+            )
 
         self.update_status_label.setText(status)
         if hasattr(self, "update_check_button"):
@@ -2951,7 +2966,7 @@ class AdminPage(QWidget):
         row = self.users_table.currentRow()
         current = self.users_table.item(row, 1).text()
 
-        name, ok = QInputDialog.getText(
+        name, ok = MobiglasTextInputDialog.get_text(
             self,
             "Anzeigename",
             "Neuer Anzeigename:",
@@ -2979,11 +2994,11 @@ class AdminPage(QWidget):
             )
             return
 
-        password, ok = QInputDialog.getText(
+        password, ok = MobiglasTextInputDialog.get_text(
             self,
             "Passwort zurücksetzen",
             "Neues Passwort:",
-            QLineEdit.Password,
+            QLineEdit.EchoMode.Password,
         )
 
         if not ok or not password:
@@ -3034,7 +3049,7 @@ class AdminPage(QWidget):
             else 0
         )
 
-        role_name, ok = QInputDialog.getItem(
+        role_name, ok = MobiglasItemInputDialog.get_item(
             self,
             "Rolle zuweisen",
             "Rolle:",
@@ -3728,7 +3743,7 @@ class AdminPage(QWidget):
         if answer != QMessageBox.Yes:
             return
 
-        confirmation, ok = QInputDialog.getText(
+        confirmation, ok = MobiglasTextInputDialog.get_text(
             self,
             "Alle Tracker-Daten löschen",
             "Zur Bestätigung bitte RESET eingeben:",

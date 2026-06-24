@@ -179,6 +179,28 @@ QLabel#navNetworkBadge {
     margin-top: 6px;
 }
 
+QPushButton#navUpdateBadge {
+    color: #FFB347;
+    background-color: rgba(255, 179, 71, 12);
+    border: 1px solid rgba(255, 179, 71, 45);
+    border-radius: 4px;
+    font-family: "Segoe UI";
+    font-size: 10px;
+    font-weight: 600;
+    padding: 6px 8px;
+    margin-top: 6px;
+    text-align: center;
+}
+
+QPushButton#navUpdateBadge:hover {
+    background-color: rgba(255, 179, 71, 22);
+    border-color: rgba(255, 179, 71, 70);
+}
+
+QPushButton#navUpdateBadge:pressed {
+    background-color: rgba(255, 179, 71, 30);
+}
+
 
 /* ==========================================================
    03. NAVIGATION BUTTONS — Launcher rail

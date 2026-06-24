@@ -338,7 +338,7 @@ $VersionMeta = Get-VersionMeta (Join-Path $ProjectRoot "config\version.py")
 Write-Host "Projekt:   $ProjectRoot"
 Write-Host "Release:   $ReleaseRoot"
 Write-Host "Edition:   $Edition"
-Write-Host "Version:   $($VersionMeta.DisplayVersion) (Build $($VersionMeta.Build) · $($VersionMeta.Codename))"
+Write-Host "Version:   $($VersionMeta.DisplayVersion) (Build $($VersionMeta.Build) - $($VersionMeta.Codename))"
 Write-Host ""
 
 Set-Location $ProjectRoot

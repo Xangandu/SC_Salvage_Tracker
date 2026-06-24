@@ -125,7 +125,11 @@ class ConnectionAssistantDialog(MobiglasFramelessMixin, QDialog):
         )
         self._select_mode(saved_mode)
         self._apply_edition_limits()
-        apply_mobiglas_window_frame(self)
+        apply_mobiglas_window_frame(
+            self,
+            title="Vernetzung",
+            dialog=True,
+        )
 
     def _apply_edition_limits(self) -> None:
         if has_feature("network.crew_edition", self.db):

@@ -335,6 +335,15 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
 
         nav_layout.addStretch(1)
 
+        self.update_badge = QPushButton("◆ UPDATE VERFÜGBAR")
+        self.update_badge.setObjectName("navUpdateBadge")
+        self.update_badge.setCursor(Qt.PointingHandCursor)
+        self.update_badge.setVisible(False)
+        self.update_badge.clicked.connect(
+            self._show_pending_update
+        )
+        nav_layout.addWidget(self.update_badge)
+
         nav_layout.addWidget(nav_version_divider())
 
         version_label = QLabel(
@@ -396,6 +405,12 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
         )
         self.update_manager.check_completed.connect(
             self.admin_page.refresh_updates_section
+        )
+        self.update_manager.update_available.connect(
+            self._show_update_badge
+        )
+        self.update_manager.update_cleared.connect(
+            self._hide_update_badge
         )
         QTimer.singleShot(
             2000,
@@ -579,6 +594,18 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
                 self.edition_badge,
             ),
         )
+
+    def _show_update_badge(self, manifest):
+        self.update_badge.setText(
+            f"◆ UPDATE · {manifest.version_display}"
+        )
+        self.update_badge.setVisible(True)
+
+    def _hide_update_badge(self):
+        self.update_badge.setVisible(False)
+
+    def _show_pending_update(self):
+        self.update_manager.show_pending_update()
 
     def _update_network_label(self):
         from database.access import get_host_server

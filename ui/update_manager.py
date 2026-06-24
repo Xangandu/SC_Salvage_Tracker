@@ -5,7 +5,9 @@ from __future__ import annotations
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import QApplication, QMessageBox
 
+from config.update import UpdateManifest
 from config.version import format_version_subtitle
+from ui.mobiglas_message_box import question as mobiglas_question
 from ui.update_dialog import (
     UpdateAvailableDialog,
     UpdateDialogResult,
@@ -27,6 +29,8 @@ from update.workers import UpdateCheckWorker, UpdateDownloadWorker
 class UpdateManager(QObject):
 
     check_completed = Signal()
+    update_available = Signal(object)
+    update_cleared = Signal()
 
     def __init__(self, db, parent_widget):
         super().__init__(parent_widget)
@@ -35,6 +39,16 @@ class UpdateManager(QObject):
         self._check_worker = None
         self._download_worker = None
         self._startup_check_done = False
+        self._pending_manifest: UpdateManifest | None = None
+
+    @property
+    def pending_update(self) -> UpdateManifest | None:
+        return self._pending_manifest
+
+    def show_pending_update(self):
+        if self._pending_manifest is None:
+            return
+        self._show_update_dialog(self._pending_manifest)
 
     def run_startup_check(self):
         if self._startup_check_done:
@@ -93,8 +107,14 @@ class UpdateManager(QObject):
         record_last_check(self.db)
 
         if should_offer_update(self.db, manifest):
-            self._show_update_dialog(manifest)
+            self._set_pending_update(manifest)
+            if silent:
+                self._notify_update_available(manifest)
+            else:
+                self._show_update_dialog(manifest)
             return
+
+        self._clear_pending_update()
 
         if not silent:
             QMessageBox.information(
@@ -104,6 +124,30 @@ class UpdateManager(QObject):
                 f"{format_version_subtitle()}",
             )
 
+    def _set_pending_update(self, manifest: UpdateManifest):
+        self._pending_manifest = manifest
+        self.update_available.emit(manifest)
+
+    def _clear_pending_update(self):
+        if self._pending_manifest is None:
+            return
+        self._pending_manifest = None
+        self.update_cleared.emit()
+
+    def _notify_update_available(self, manifest: UpdateManifest):
+        answer = mobiglas_question(
+            self.parent,
+            "Neues Update verfügbar",
+            f"Version {manifest.version_display} "
+            f"(Build {manifest.build}) ist auf GitHub verfügbar.\n\n"
+            "Möchten Sie die Update-Details anzeigen?",
+            buttons=QMessageBox.StandardButton.Yes
+            | QMessageBox.StandardButton.No,
+            default_button=QMessageBox.StandardButton.Yes,
+        )
+        if answer == QMessageBox.StandardButton.Yes:
+            self._show_update_dialog(manifest)
+
     def _show_update_dialog(self, manifest):
         dialog = UpdateAvailableDialog(manifest, self.parent)
         dialog.exec()
@@ -112,6 +156,7 @@ class UpdateManager(QObject):
             self._start_install(manifest)
         elif dialog.result_action == UpdateDialogResult.SKIP:
             set_skipped_version(self.db, manifest.version)
+            self._clear_pending_update()
 
     def _start_install(self, manifest):
         if not can_launch_installer():

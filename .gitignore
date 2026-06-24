@@ -33,3 +33,6 @@ Desktop.ini
 # Temporäres
 *.log
 *.tmp
+
+# Lokale KI-Konfiguration (API-Key)
+config/patchnotes_ai.local.json

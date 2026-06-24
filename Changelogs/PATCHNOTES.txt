@@ -5,46 +5,32 @@ VERSION 0.15.0 Beta | Build 2026.08 | Codename: Edition Foundation
 --------------------------------------------------------------------
 
 PHASENWECHSEL: ALPHA → BETA
-• Ab 0.15.0 befindet sich das Projekt in der öffentlichen Beta-Phase
+• Ab Version 0.15.0 befindet sich das Projekt in der öffentlichen Beta-Phase
 • Fokus: stabile Solo-Nutzung, sichtbare CREW/ORGA-Roadmap, Release-Vorbereitung
 
 NEU — PRODUKT-EDITIONEN (SOLO / CREW / ORGA)
-• Drei Produktlinien unter einem Codebase (kein Löschen von Features)
-• Standard-Build: SC Salvage Tracker - SOLO Version (APP_EDITION=solo)
-• config/editions.py — zentrale Feature-Matrix und effective_edition()
-• Vernetzung (Host/Client) in SOLO gesperrt, aber sichtbar mit Teaser
-• Admin → Vernetzung: EditionFeaturePanel — „Mehr zur CREW Version“
-• main.py: Host-Start, Client-Wiederherstellung und Assistent abgesichert
-• Fenstertitel und Navigation zeigen Edition (z. B. „- SOLO Version“)
-• Dev-Test CREW/ORGA: Umgebungsvariable SST_EDITION=crew (nur Entwicklung)
-
-NEU — UNTERSTÜTZEN & SUPPORTER-KEY
-• Einstellungen → Unterstützen: Projekt-Text, Edition-Status, Spenden-Hinweis
-• Supporter-Key → app_settings.edition_unlock (CREW / ORGA)
-• config/edition_keys.py — Key-Format CREW-XXXX-XXXX-XXXXXXXX
-• scripts/generate_supporter_keys.py — Keys offline erzeugen (nicht committen)
-• Nach Einlösung: Badge, Fenstertitel und Vernetzung live aktualisiert
+• Einführung von drei Produktlinien unter einer Codebasis
+• Standard-Build: SC Salvage Tracker - SOLO Version
+• Konfiguration über config/editions.py zur zentralen Feature-Matrix
+• Vernetzung in SOLO gesperrt, aber sichtbar mit Teaser
+• Admin-Bereich: Vernetzung mit EditionFeaturePanel für CREW-Version
 
 NEU — EDITION-INSTALLER
-• build_installer.ps1 -Edition solo|crew|orga|all
-• config/build_edition.txt → APP_EDITION in der .exe
-• Setup-Namen: SC_Salvage_Tracker_Setup_SOLO_0.15.0.exe (CREW/ORGA analog)
-• Eigene AppId pro Edition — parallele Installation möglich
+• Neuer Installer für verschiedene Editionen: solo, crew, orga
+• Setup-Namen entsprechend der Edition (z. B. SC_Salvage_Tracker_Setup_SOLO_0.15.0.exe)
+• Parallele Installation durch separate AppIds pro Edition möglich
+
+FIXES
+• Fehlerbehebung im In-App Update-Check zur Vermeidung von SQLite-Konflikten
+• Korrektur in update_release_notes.json für den Manifest-Generator
 
 DOKUMENTATION
-• Changelogs/EDITIONS.txt — Editionen, Feature-IDs, Build & Unlock
-• installer/GITHUB_RELEASE_v0.15.0.md — GitHub-Release-Anleitung Beta
-• Roadmap Phase 6 — Editionen & Veröffentlichung
-
-UI
-• Dashboard: Auto-Schriftanpassung und dynamische Widget-Größe (Status-KPI)
-• MobiGlas-Meldungsfenster app-weit; Update-Manager unverändert nutzbar
+• Aktualisierte Changelogs und Anleitungen in den entsprechenden Verzeichnissen
+• Einführung von GITHUB_RELEASE_v0.15.0.md zur Veröffentlichung auf GitHub
 
 HINWEIS
-• GitHub-Release v0.15.0 und Spenden-URL folgen als nächster Phase-6-Schritt
-• Spenden-URL: config/support.py → SUPPORT_DONATION_URL (optional)
-• Salvage-Crew (Namen in Sitzungen) bleibt in SOLO voll nutzbar — nur
-  Netzwerk-Host/Client gehört zur CREW Edition
+• Änderungen an den Datenbanken und internen Skripten zur Unterstützung der neuen Editionen
+• Überprüfung und Anpassung der Benutzeroberfläche zur Unterstützung der Editionen erforderlich
 
 
 VERSION 0.14.3 Alpha | Build 2026.07 | Codename: Design Control

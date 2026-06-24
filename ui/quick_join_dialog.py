@@ -78,7 +78,11 @@ class QuickJoinDialog(MobiglasFramelessMixin, QDialog):
         layout.addLayout(row)
         self.setLayout(layout)
 
-        apply_mobiglas_window_frame(self)
+        apply_mobiglas_window_frame(
+            self,
+            title="Crew beitreten",
+            dialog=True,
+        )
         self.code_input.setFocus()
 
     def _on_join(self) -> None:
