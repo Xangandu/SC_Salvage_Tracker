@@ -1,0 +1,9 @@
+# Python virtual environment
+.venv/
+
+# Python bytecode caches
+__pycache__/
+*.py[cod]
+
+# Backups generated at runtime by the app / tests
+data/backups/
