@@ -1,0 +1,73 @@
+SC Salvage Tracker — Lizenz- und Nutzungsbedingungen
+====================================================
+
+Copyright (c) 2024–2026 Christian (Xan-Gan-Du). All rights reserved.
+
+1. GELTUNGSBEREICH
+------------------
+Diese Bedingungen gelten für die Software „SC Salvage Tracker“ (einschließlich
+aller Editionen: SOLO, CREW, ORGA), den Quellcode in diesem Repository und
+die über GitHub Releases bereitgestellten Installationsprogramme.
+
+2. STAR CITIZEN / MARKEN
+------------------------
+Dieses Projekt ist ein inoffizielles Fan-Tool. Es ist nicht von Cloud Imperium
+Games, Roberts Space Industries oder deren Partnern genehmigt, unterstützt
+oder veröffentlicht.
+
+Star Citizen, Roberts Space Industries, Cloud Imperium Games und zugehörige
+Marken sind Eigentum von Cloud Imperium Rights LLC bzw. Cloud Imperium Games.
+
+3. SOLO VERSION (KOSTENLOS)
+---------------------------
+Die SC Salvage Tracker - SOLO Version darf kostenlos installiert und für
+private, persönliche, nicht-kommerzielle Zwecke genutzt werden.
+
+4. CREW / ORGA / SUPPORTER-KEY
+------------------------------
+Erweiterte Funktionen (z. B. Vernetzung Host/Client) sind Teil der CREW- oder
+ORGA-Edition und dürfen nur mit gültigem Supporter-Key, separatem offiziellen
+Build des Autors oder ausdrücklicher schriftlicher Erlaubnis genutzt werden.
+
+5. QUELLCODE (GITHUB)
+---------------------
+Der Quellcode wird zur Transparenz und Community-Feedback bereitgestellt.
+Es ist nicht gestattet:
+
+  - den Code unter eigenem Namen als eigenes Produkt zu veröffentlichen,
+  - Installationsprogramme mit entfernten Copyright- oder Edition-Hinweisen
+    weiterzuverbreiten,
+  - den Code gewerbsmäßig zu verkaufen oder als konkurrierendes Produkt
+    anzubieten,
+
+ohne vorherige schriftliche Zustimmung des Copyright-Inhabers.
+
+Forks zu Lern-, Test- oder Beitragszwecken sind willkommen; kommerzielle
+Weiterverwendung bedarf der Zustimmung des Autors.
+
+6. GEWÄHRLEISTUNG
+-----------------
+DIE SOFTWARE WIRD „WIE BESEHEN“ (AS IS) OHNE JEDE AUSDRÜCKLICHE ODER
+STILSCHWEIGENDE GEWÄHRLEISTUNG BEREITGESTELLT, EINSCHLIESSLICH, ABER NICHT
+BESCHRÄNKT AUF MARKTGÄNGIGKEIT UND EIGNUNG FÜR EINEN BESTIMMTEN ZWECK.
+
+7. HAFTUNGSBESCHRÄNKUNG
+-----------------------
+IN KEINEM FALL HAFTET DER AUTOR FÜR DIREKTE, INDIREKTE, ZUFÄLLIGE ODER
+FOLGESCHÄDEN (EINSCHLIESSLICH DATENVERLUST ODER ENTGANGENEM GEWINN), DIE
+AUS DER NUTZUNG ODER UNMÖGLICHKEIT DER NUTZUNG DER SOFTWARE ENTSTEHEN.
+
+8. DATEN
+--------
+Nutzerdaten werden lokal auf dem Rechner des Nutzers gespeichert. Der Autor
+erhebt keine Spiel- oder Personendaten über die Software hinaus, außer was der
+Nutzer freiwillig über GitHub Issues o. Ä. mitteilt.
+
+9. ÄNDERUNGEN
+-------------
+Diese Bedingungen können für zukünftige Versionen angepasst werden. Die jeweils
+mit einer Version veröffentlichte LICENSE-Datei im Repository gilt.
+
+10. KONTAKT
+-----------
+GitHub: https://github.com/Xangandu/SC_Salvage_Tracker
