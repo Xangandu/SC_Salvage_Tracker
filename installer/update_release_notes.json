@@ -6,10 +6,10 @@
       "highlights": [
         "Phasenwechsel Alpha → Beta",
         "SC Salvage Tracker - SOLO Version als Standard-Build",
-        "CREW Edition: Host/Client-Vernetzung (Build oder Key später)",
-        "Admin → Vernetzung: gesperrt in SOLO, Teaser für CREW",
-        "Dokumentation: Changelogs/EDITIONS.txt",
-        "Dev-Test: SST_EDITION=crew für CREW-Funktionen"
+        "CREW Edition: Host/Client-Vernetzung (Build oder Supporter-Key)",
+        "Admin → Unterstützen: Supporter-Key einlösen",
+        "Separate Installer: SOLO, CREW, ORGA",
+        "Dokumentation: Changelogs/EDITIONS.txt"
       ]
     },
     "en": {
@@ -18,11 +18,11 @@
       "highlights": [
         "Alpha → Beta phase transition",
         "SC Salvage Tracker - SOLO Version as default build",
-        "CREW Edition: host/client networking (build or key later)",
-        "Admin → Networking: locked in SOLO, CREW teaser",
-        "Documentation: Changelogs/EDITIONS.txt",
-        "Dev test: SST_EDITION=crew for CREW features"
+        "CREW Edition: host/client networking (build or supporter key)",
+        "Admin → Support: redeem supporter key",
+        "Separate installers: SOLO, CREW, ORGA",
+        "Documentation: Changelogs/EDITIONS.txt"
       ]
     }
-  },
-  "0.14.3": {
+  }
+}
