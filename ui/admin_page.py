@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QUrl
+from PySide6.QtCore import Qt, QUrl, Signal
 from PySide6.QtGui import QColor, QDesktopServices
 from PySide6.QtWidgets import (
     QWidget,
@@ -37,7 +37,18 @@ from config.permissions import (
     ROLE_ADMIN,
 )
 from database.migration_manager import DEFAULT_BACKUP_MAX_COUNT
+from config.editions import (
+    apply_supporter_key,
+    clear_edition_unlock,
+    edition_status_lines,
+    enforce_standalone_network,
+    has_feature,
+    unlocked_edition,
+)
+from config.support import SUPPORT_DONATION_URL, SUPPORT_PROJECT_TAGLINE
 from config.version import APP_VERSION, format_version_subtitle
+from ui.edition_feature_panel import EditionFeaturePanel
+from ui.edition_dialog import show_edition_locked
 from ui.table_utils import (
     configure_mobiglas_table,
     finalize_table_columns,
@@ -93,6 +104,8 @@ def _format_file_size(size_bytes: int) -> str:
 
 class AdminPage(QWidget):
 
+    edition_unlock_changed = Signal()
+
     def __init__(self):
         super().__init__()
 
@@ -115,12 +128,14 @@ class AdminPage(QWidget):
         self.roles_tab = self._build_roles_tab()
         self.design_tab = self._build_design_tab()
         self.network_tab = self._build_network_tab()
+        self.support_tab = self._build_support_tab()
         self.system_tab = self._build_system_tab()
 
         self.tabs.addTab(self.users_tab, "Benutzer")
         self.tabs.addTab(self.roles_tab, "Rollen")
         self.tabs.addTab(self.design_tab, "Design")
         self.tabs.addTab(self.network_tab, "Vernetzung")
+        self.tabs.addTab(self.support_tab, "Unterstützen")
         self.tabs.addTab(self.system_tab, "System")
 
         layout.addWidget(self.tabs)
@@ -136,6 +151,7 @@ class AdminPage(QWidget):
         super().showEvent(event)
         self.refresh_data()
         self.load_design_settings()
+        self.refresh_support_tab()
 
     def _new_tab(self):
         tab = QWidget()
@@ -1394,6 +1410,13 @@ class AdminPage(QWidget):
         layout.addWidget(subsection_title("◆ CREW"))
         layout.addLayout(hud_divider())
 
+        self.network_edition_panel = EditionFeaturePanel(
+            "network.crew_edition",
+            self.db,
+            tab,
+        )
+        content = self.network_edition_panel.content_layout
+
         panel, panel_layout = info_panel()
 
         hint = QLabel(
@@ -1464,7 +1487,7 @@ class AdminPage(QWidget):
             "Verbundene Crew",
             self.network_clients_label,
         )
-        layout.addWidget(panel)
+        content.addWidget(panel)
 
         advanced = QGroupBox("Erweitert (optional)")
         advanced.setCheckable(True)
@@ -1514,13 +1537,22 @@ class AdminPage(QWidget):
         host_row.addStretch()
         advanced_layout.addLayout(host_row)
 
-        layout.addWidget(advanced)
-        layout.addStretch()
+        content.addWidget(advanced)
+        content.addStretch()
+        layout.addWidget(self.network_edition_panel, 1)
 
         self._refresh_network_tab()
         return tab
 
+    def _require_crew_edition(self, feature_id: str = "network.crew_edition") -> bool:
+        if has_feature(feature_id, self.db):
+            return True
+        show_edition_locked(self, feature_id)
+        return False
+
     def _one_click_host_crew(self):
+        if not self._require_crew_edition("network.host"):
+            return
         from network.simple_connect import (
             apply_host_simple_defaults,
             format_simple_invite,
@@ -1550,6 +1582,8 @@ class AdminPage(QWidget):
         self._notify_main_window_network_changed()
 
     def _one_click_join_crew(self):
+        if not self._require_crew_edition("network.client"):
+            return
         from database.access import (
             get_client_connection,
             set_client_connection,
@@ -1598,6 +1632,9 @@ class AdminPage(QWidget):
 
         if not hasattr(self, "network_mode_label"):
             return
+
+        if hasattr(self, "network_edition_panel"):
+            self.network_edition_panel.refresh()
 
         if hasattr(self, "network_scenario_panel"):
             saved = normalize_scenario(
@@ -1827,6 +1864,9 @@ class AdminPage(QWidget):
             window.refresh_network_display()
 
     def _start_host_from_settings(self, *, silent: bool = False):
+        if not self._require_crew_edition("network.host"):
+            return
+
         from database.access import get_host_server, set_host_server
         from network.host_server import HostServer
 
@@ -1920,6 +1960,217 @@ class AdminPage(QWidget):
         toggle.toggled.connect(content.setVisible)
 
         return toggle, content, content_layout
+
+    def _build_support_tab(self):
+        tab, layout = self._new_tab()
+        layout.addWidget(subsection_title("◆ PROJEKT"))
+        layout.addLayout(hud_divider())
+
+        intro, intro_layout = info_panel()
+        intro_body = QLabel(
+            f"{SUPPORT_PROJECT_TAGLINE}\n\n"
+            "Die SOLO Version ist kostenlos — für Einzelspieler mit vollem "
+            "Salvage-Workflow (Sitzungen, Raffinerie, Verkäufe, Dashboard).\n\n"
+            "Die CREW Version erweitert um Host/Client-Vernetzung: gemeinsame "
+            "Datenbank, Beitrittscode, Crew spielt zusammen.\n\n"
+            "Die ORGA Version (Roadmap) kommt für Organisationen und "
+            "mehrere Teams."
+        )
+        intro_body.setWordWrap(True)
+        intro_body.setObjectName("mutedLabel")
+        intro_layout.addWidget(intro_body)
+        layout.addWidget(intro)
+
+        layout.addWidget(subsection_title("◆ DEINE EDITION"))
+        layout.addLayout(hud_divider())
+
+        status_panel, status_layout = info_panel()
+        self.support_build_label = QLineEdit()
+        self.support_build_label.setReadOnly(True)
+        self.support_unlock_label = QLineEdit()
+        self.support_unlock_label.setReadOnly(True)
+        self.support_effective_label = QLineEdit()
+        self.support_effective_label.setReadOnly(True)
+
+        add_form_field(
+            status_layout,
+            "Installation",
+            self.support_build_label,
+        )
+        add_form_field(
+            status_layout,
+            "Supporter-Freischaltung",
+            self.support_unlock_label,
+        )
+        add_form_field(
+            status_layout,
+            "Aktiv",
+            self.support_effective_label,
+        )
+        layout.addWidget(status_panel)
+
+        layout.addWidget(subsection_title("◆ SUPPORTER-KEY"))
+        layout.addLayout(hud_divider())
+
+        key_panel, key_layout = info_panel()
+        key_hint = QLabel(
+            "Mit einem Supporter-Key schaltest du CREW oder ORGA auf dieser "
+            "Installation frei — ohne die SOLO Version zu ersetzen. "
+            "Keys werden pro Installation gespeichert."
+        )
+        key_hint.setWordWrap(True)
+        key_hint.setObjectName("mutedLabel")
+        key_layout.addWidget(key_hint)
+
+        self.support_key_input = QLineEdit()
+        self.support_key_input.setPlaceholderText(
+            "z. B. CREW-ABCD-EFGH-XXXXXXXX"
+        )
+        add_form_field(
+            key_layout,
+            "Key",
+            self.support_key_input,
+        )
+
+        key_actions = QHBoxLayout()
+        self.support_apply_key_button = primary_button("Freischalten")
+        self.support_apply_key_button.clicked.connect(
+            self._apply_support_key
+        )
+        self.support_clear_key_button = _secondary_button(
+            "Freischaltung entfernen"
+        )
+        self.support_clear_key_button.clicked.connect(
+            self._clear_support_unlock
+        )
+        key_actions.addWidget(self.support_apply_key_button)
+        key_actions.addWidget(self.support_clear_key_button)
+        key_actions.addStretch()
+        key_layout.addLayout(key_actions)
+        layout.addWidget(key_panel)
+
+        layout.addWidget(subsection_title("◆ SPENDEN"))
+        layout.addLayout(hud_divider())
+
+        donate_panel, donate_layout = info_panel()
+        donate_text = QLabel(
+            "Wenn dir der Tracker hilft, kannst du die Weiterentwicklung "
+            "unterstützen. Die SOLO Version bleibt dabei kostenlos."
+        )
+        donate_text.setWordWrap(True)
+        donate_text.setObjectName("mutedLabel")
+        donate_layout.addWidget(donate_text)
+
+        donate_row = QHBoxLayout()
+        self.support_donate_button = primary_button("Projekt unterstützen")
+        self.support_donate_button.clicked.connect(
+            self._open_support_donation_link
+        )
+        donate_row.addWidget(self.support_donate_button)
+        donate_row.addStretch()
+        donate_layout.addLayout(donate_row)
+        layout.addWidget(donate_panel)
+
+        layout.addStretch()
+        self.refresh_support_tab()
+        return tab
+
+    def refresh_support_tab(self):
+        if not hasattr(self, "support_build_label"):
+            return
+
+        build_label, unlock_label, effective_label = edition_status_lines(
+            self.db
+        )
+        self.support_build_label.setText(build_label)
+        self.support_unlock_label.setText(unlock_label)
+        self.support_effective_label.setText(effective_label)
+
+        has_unlock = unlocked_edition(self.db) is not None
+        self.support_clear_key_button.setEnabled(has_unlock)
+
+        if SUPPORT_DONATION_URL.strip():
+            self.support_donate_button.setEnabled(True)
+            self.support_donate_button.setToolTip(SUPPORT_DONATION_URL)
+        else:
+            self.support_donate_button.setEnabled(False)
+            self.support_donate_button.setToolTip(
+                "Spenden-Link wird mit der Beta-Veröffentlichung ergänzt."
+            )
+
+    def _apply_support_key(self):
+        if not has_permission(
+            PERM_SETTINGS_MANAGE,
+            self.current_user,
+        ):
+            QMessageBox.warning(
+                self,
+                "Supporter-Key",
+                "Nur Administratoren können Keys einlösen.",
+            )
+            return
+
+        raw_key = self.support_key_input.text().strip()
+        if not raw_key:
+            QMessageBox.warning(
+                self,
+                "Supporter-Key",
+                "Bitte einen Key eingeben.",
+            )
+            return
+
+        ok, message = apply_supporter_key(self.db, raw_key)
+        if not ok:
+            QMessageBox.warning(self, "Supporter-Key", message)
+            return
+
+        self.support_key_input.clear()
+        self.refresh_support_tab()
+        if hasattr(self, "network_edition_panel"):
+            self.network_edition_panel.refresh()
+        self._refresh_network_tab()
+        self.edition_unlock_changed.emit()
+        QMessageBox.information(self, "Supporter-Key", message)
+
+    def _clear_support_unlock(self):
+        if not has_permission(
+            PERM_SETTINGS_MANAGE,
+            self.current_user,
+        ):
+            return
+
+        if unlocked_edition(self.db) is None:
+            return
+
+        answer = QMessageBox.question(
+            self,
+            "Freischaltung entfernen",
+            "Supporter-Freischaltung wirklich entfernen?\n\n"
+            "Vernetzung wird wieder gesperrt, wenn nur SOLO aktiv ist.",
+            QMessageBox.StandardButton.Yes
+            | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if answer != QMessageBox.StandardButton.Yes:
+            return
+
+        clear_edition_unlock(self.db)
+        self.refresh_support_tab()
+        if hasattr(self, "network_edition_panel"):
+            self.network_edition_panel.refresh()
+        self._refresh_network_tab()
+        self.edition_unlock_changed.emit()
+        QMessageBox.information(
+            self,
+            "Freischaltung entfernt",
+            "Die Supporter-Freischaltung wurde entfernt.",
+        )
+
+    def _open_support_donation_link(self):
+        url = (SUPPORT_DONATION_URL or "").strip()
+        if not url:
+            return
+        QDesktopServices.openUrl(QUrl(url))
 
     def _build_system_tab(self):
         tab, layout = self._new_tab()
@@ -2273,6 +2524,12 @@ class AdminPage(QWidget):
             can_settings
         )
         self.app_theme_combo.setEnabled(can_settings)
+        if hasattr(self, "support_apply_key_button"):
+            self.support_apply_key_button.setEnabled(can_settings)
+            self.support_key_input.setEnabled(can_settings)
+            self.support_clear_key_button.setEnabled(
+                can_settings and unlocked_edition(self.db) is not None
+            )
         if hasattr(self, "design_sub_tabs") and hasattr(
             self,
             "design_org_page",

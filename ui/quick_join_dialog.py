@@ -14,7 +14,7 @@ from ui.mobiglas_window_frame import (
     MobiglasFramelessMixin,
     apply_mobiglas_window_frame,
 )
-from ui.page_layout import hud_divider, page_title, primary_button
+from ui.page_layout import hud_divider, page_title, primary_button, form_label
 
 
 class QuickJoinDialog(MobiglasFramelessMixin, QDialog):
@@ -71,9 +71,9 @@ class QuickJoinDialog(MobiglasFramelessMixin, QDialog):
         layout.addWidget(page_title("CREW BEITRETEN"))
         layout.addWidget(hint)
         layout.addLayout(hud_divider())
-        layout.addWidget(QLabel("Beitrittscode"))
+        layout.addWidget(form_label("Beitrittscode"))
         layout.addWidget(self.code_input)
-        layout.addWidget(QLabel("Anzeigename"))
+        layout.addWidget(form_label("Anzeigename"))
         layout.addWidget(self.name_input)
         layout.addLayout(row)
         self.setLayout(layout)

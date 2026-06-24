@@ -1,7 +1,7 @@
 SC SALVAGE TRACKER – PROJEKT-ZUSAMMENFASSUNG
 ==============================================
 
-Stand: Version 0.14.3 Alpha | Build 2026.07 | Codename: Design Control
+Stand: Version 0.15.0 Beta | Build 2026.08 | Codename: Edition Foundation
 
 
 1. PROJEKTZIEL
@@ -36,11 +36,17 @@ Crew-Auszahlungen.
     • Verkaufbare Materialien: RMC, CM (raffiniert)
     • Rohmaterial (CM Rubble/Scraps/Salvage): nur Raffinerie-Input
 
-2.3 Host-Client (ab v0.10.0)
+2.3 Host-Client (ab v0.10.0, CREW Edition ab v0.15.0)
     Host (SQLite) ←TCP/JSON→ Client(s) (RemoteDatabase / RPC)
     • Ein Rechner = Host (Quelle der Wahrheit)
     • Clients: Sitzung wählen, Material/Raffinerie/Verkauf je nach Rechten
-    • Standalone bleibt Standard für Solo-Spiel
+    • Standalone = SOLO Edition (Standard-Download)
+
+2.4 Produkt-Editionen (ab v0.15.0 Beta)
+    SOLO  — SC Salvage Tracker - SOLO Version (kostenlos, Standard)
+    CREW  — Vernetzung Host/Client (Build oder später Supporter-Key)
+    ORGA  — Organisations-Modul (geplant)
+    Siehe Changelogs/EDITIONS.txt
 
 
 3. WICHTIGE ÄNDERUNGEN NACH VERSION
@@ -140,6 +146,7 @@ ui/
 Changelogs/
   PATCHNOTES.txt          – Versionshistorie
   ROADMAP.txt             – Geplante Entwicklung
+  EDITIONS.txt            – SOLO / CREW / ORGA
   VERSION_HISTORY.txt     – Kurzübersicht
   PROJEKT_ZUSAMMENFASSUNG.txt – Diese Datei
 

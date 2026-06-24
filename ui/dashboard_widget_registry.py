@@ -121,7 +121,8 @@ def widget_definitions():
             "title": "◆ AKTIVE SITZUNG",
             "kind": "session",
             "default_size": "2x2",
-            "sizes": ("2x2",),
+            "sizes": ("2x1", "2x2"),
+            "reflow": False,
         },
         "refinery_stats": {
             "title": "◆ RAFFINERIE-STATISTIK",

@@ -45,6 +45,13 @@ def backups_dir():
     return path
 
 
+def updates_cache_dir():
+    """Cache for downloaded setup packages."""
+    path = data_dir() / "updates"
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
 def asset_path(*parts):
     return app_root().joinpath(*parts)
 

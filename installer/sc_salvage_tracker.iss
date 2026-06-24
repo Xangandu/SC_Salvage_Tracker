@@ -1,37 +1,58 @@
-; SC Salvage Tracker — Custom Setup (Design Control · Inno Setup 6.7+)
+; SC Salvage Tracker — Custom Setup (Edition Foundation · Inno Setup 6.7+)
 ; Build: powershell -ExecutionPolicy Bypass -File installer\build_installer.ps1
+;        powershell -ExecutionPolicy Bypass -File installer\build_installer.ps1 -Edition crew
+;        powershell -ExecutionPolicy Bypass -File installer\build_installer.ps1 -Edition all
 
 #ifndef MyAppVersion
-  #define MyAppVersion "0.14.3 Alpha"
+  #define MyAppVersion "0.15.0 Beta"
 #endif
 
 #ifndef MyAppVersionFile
-  #define MyAppVersionFile "0.14.3"
+  #define MyAppVersionFile "0.15.0"
 #endif
 
 #ifndef MyAppVersionInfo
-  #define MyAppVersionInfo "0.14.3.0"
+  #define MyAppVersionInfo "0.15.0.0"
 #endif
 
 #ifndef MyAppBuild
-  #define MyAppBuild "2026.07"
+  #define MyAppBuild "2026.08"
 #endif
 
 #ifndef MyAppCodename
-  #define MyAppCodename "Design Control"
+  #define MyAppCodename "Edition Foundation"
+#endif
+
+#ifndef MyAppEdition
+  #define MyAppEdition "solo"
+#endif
+
+#ifndef MyAppName
+  #define MyAppName "SC Salvage Tracker - SOLO Version"
+#endif
+
+#ifndef MyAppId
+  #define MyAppId "{{A7C3E9F1-2B4D-4E8A-9F1C-6D5E8A2B4C7F}}"
+#endif
+
+#ifndef MyAppOutputFolder
+  #define MyAppOutputFolder "..\..\..\Release\app\SC_Salvage_Tracker_SOLO"
+#endif
+
+#ifndef MyAppSetupSuffix
+  #define MyAppSetupSuffix "SOLO"
 #endif
 
 #ifndef InstallerOutputDir
   #define InstallerOutputDir "..\..\..\Release\installer"
 #endif
 
-#define MyAppName "SC Salvage Tracker"
 #define MyAppPublisher "Christian · Xan-Gan-Du"
 #define MyAppExeName "SC_Salvage_Tracker.exe"
 #define MyAppURL "https://github.com/"
 
 [Setup]
-AppId={{A7C3E9F1-2B4D-4E8A-9F1C-6D5E8A2B4C7F}
+AppId={#MyAppId}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppVerName={#MyAppName} {#MyAppVersion}
@@ -42,7 +63,7 @@ DefaultGroupName={#MyAppName}
 DisableProgramGroupPage=yes
 AllowNoIcons=yes
 OutputDir={#InstallerOutputDir}
-OutputBaseFilename=SC_Salvage_Tracker_Setup_{#MyAppVersionFile}
+OutputBaseFilename=SC_Salvage_Tracker_Setup_{#MyAppSetupSuffix}_{#MyAppVersionFile}
 Compression=lzma2/ultra64
 SolidCompression=yes
 WizardStyle=classic dark hidebevels includetitlebar
@@ -59,7 +80,7 @@ SetupLogging=yes
 SetupIconFile=assets\app_icon.ico
 VersionInfoVersion={#MyAppVersionInfo}
 VersionInfoCompany={#MyAppPublisher}
-VersionInfoDescription=SC Salvage Tracker — Custom Setup
+VersionInfoDescription=SC Salvage Tracker — Custom Setup ({#MyAppEdition})
 VersionInfoProductName={#MyAppName}
 VersionInfoProductVersion={#MyAppVersionInfo}
 
@@ -87,7 +108,7 @@ Name: "desktopicon"; Description: "Desktop-Verknüpfung erstellen"; GroupDescrip
 Name: "launchapp"; Description: "SC Salvage Tracker nach der Installation starten"; GroupDescription: "Nach der Installation:"; Flags: checkedonce
 
 [Files]
-Source: "..\..\..\Release\app\SC_Salvage_Tracker\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#MyAppOutputFolder}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "assets\install_bg.png"; Flags: dontcopy
 
 [Icons]

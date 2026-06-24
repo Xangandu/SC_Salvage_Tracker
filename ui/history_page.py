@@ -8,6 +8,7 @@ from PySide6.QtWidgets import (
 from database.access import get_database
 from config.dates import format_date
 from config.materials import material_label
+from config.strings_de import format_number_de
 from config.permissions import apply_widget_permissions
 from ui.table_utils import (
     configure_mobiglas_table,
@@ -119,7 +120,7 @@ class HistoryPage(QWidget):
                 row,
                 4,
                 QTableWidgetItem(
-                    f"{sale['total_amount']:,.0f}"
+                    format_number_de(sale['total_amount'])
                 ),
             )
             self.history_table.setItem(

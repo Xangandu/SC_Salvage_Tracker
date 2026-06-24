@@ -76,6 +76,46 @@ QLabel#navTitleSecondary {
     margin: 0;
 }
 
+QLabel#navEditionBadge {
+    color: #0078D7;
+    font-family: "Segoe UI";
+    font-size: 38px;
+    font-weight: bold;
+    letter-spacing: 5px;
+    padding: 0;
+    margin: 0;
+    background: transparent;
+    border: none;
+}
+
+QFrame#navEditionBadgeHost {
+    background-color: #151D28;
+    border: none;
+    border-radius: 2px;
+}
+
+QFrame#navEditionBadgeHost[edition="solo"] {
+    background-color: #151D28;
+}
+
+QLabel#navEditionBadge[edition="crew"],
+QFrame#navEditionBadgeHost[edition="crew"] QLabel#navEditionBadge {
+    color: #E8C547;
+}
+
+QLabel#navEditionBadge[edition="orga"],
+QFrame#navEditionBadgeHost[edition="orga"] QLabel#navEditionBadge {
+    color: #B89AFF;
+}
+
+QLabel#navEditionBadge[edition="crew"] {
+    color: #E8C547;
+}
+
+QLabel#navEditionBadge[edition="orga"] {
+    color: #B89AFF;
+}
+
 QFrame#navBrandCard QFrame#hudLine {
     background: #2A3848;
     color: #2A3848;
@@ -1125,6 +1165,24 @@ QMenu::item:selected {
    20. LABEL VARIANTS
    ========================================================== */
 
+QLabel#editionTeaserBadge {
+    color: #B8860B;
+    font-family: "Segoe UI";
+    font-size: 11px;
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+
+QFrame#editionTeaserPanel {
+    background: rgba(201, 162, 39, 0.06);
+    border: 1px solid rgba(201, 162, 39, 0.28);
+    border-radius: 4px;
+}
+
+QFrame#editionFeatureContent:disabled {
+    color: rgba(230, 242, 248, 0.45);
+}
+
 QLabel#mutedLabel {
     color: #708696;
     font-size: 13px;
@@ -1909,6 +1967,49 @@ QLabel#dashboardKpiValueAccent {
     font-weight: bold;
     padding: 0;
     margin: 0;
+}
+
+QLabel#dashboardKpiStatusValue {
+    color: #E6F2F8;
+    font-family: "Segoe UI";
+    font-size: 13px;
+    font-weight: bold;
+    padding: 0;
+    margin: 0;
+    line-height: 1.15;
+}
+
+QLabel#dashboardKpiDigit,
+QWidget#dashboardKpiValue > QLabel#dashboardKpiDigit {
+    color: #E6F2F8;
+    font-family: "Segoe UI";
+    font-size: 16px;
+    font-weight: bold;
+    padding: 0;
+    margin: 0;
+    min-width: 0.55em;
+}
+
+QLabel#dashboardKpiDigitAccent,
+QWidget#dashboardKpiValueAccent > QLabel#dashboardKpiDigitAccent {
+    color: #B8860B;
+    font-family: "Segoe UI";
+    font-size: 16px;
+    font-weight: bold;
+    padding: 0;
+    margin: 0;
+    min-width: 0.55em;
+}
+
+QLabel#dashboardStatDigit,
+QWidget#dashboardStatValue > QLabel#dashboardStatDigit {
+    color: #DCE8EF;
+    font-family: "Segoe UI";
+    font-size: 11px;
+    font-weight: bold;
+    padding: 0;
+    margin: 0;
+    min-width: 0.55em;
 }
 
 QLabel#dashboardSessionHeading {

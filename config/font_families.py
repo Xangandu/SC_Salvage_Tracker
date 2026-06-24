@@ -150,6 +150,7 @@ _DASHBOARD_LABEL_ROLES: dict[str, tuple[str, int]] = {
     "dashboardKpiTitle": ("heading", 10),
     "dashboardKpiValue": ("body", 16),
     "dashboardKpiValueAccent": ("body", 16),
+    "dashboardKpiStatusValue": ("body", 13),
     "dashboardSessionHeading": ("heading", 10),
     "dashboardStatLabel": ("body", 11),
     "dashboardStatValue": ("body", 12),

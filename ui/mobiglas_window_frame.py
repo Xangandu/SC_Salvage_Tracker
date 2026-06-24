@@ -21,15 +21,15 @@ from PySide6.QtWidgets import (
 
 from config.paths import asset_path
 
-_CONTROL_SIZE = QSize(26, 22)
-_ICON_SIZE = QSize(12, 12)
-_TITLE_BAR_HEIGHT = 38
+_CONTROL_SIZE = QSize(40, 32)
+_ICON_SIZE = QSize(14, 14)
+_TITLE_BAR_HEIGHT = 40
 _BEVEL_TOP_HEIGHT = 2
 _ROW_HEIGHT = _TITLE_BAR_HEIGHT - _BEVEL_TOP_HEIGHT
-_CONTROLS_H_MARGIN = 5
-_CONTROLS_V_MARGIN = 2
-_CONTROLS_BUTTON_SPACING = 4
-_CONTROLS_FRAME_BORDER = 2
+_CONTROLS_H_MARGIN = 0
+_CONTROLS_V_MARGIN = 0
+_CONTROLS_BUTTON_SPACING = 0
+_CONTROLS_FRAME_BORDER = 0
 
 
 def _enable_styled_background(widget):
@@ -203,7 +203,7 @@ class MobiglasTitleBar(QWidget):
         row_host.setFixedHeight(_ROW_HEIGHT)
         _enable_styled_background(row_host)
         row = QHBoxLayout(row_host)
-        row.setContentsMargins(12, 0, 8, 0)
+        row.setContentsMargins(14, 0, 0, 0)
         row.setSpacing(10)
         row.setAlignment(Qt.AlignmentFlag.AlignVCenter)
 
@@ -242,7 +242,7 @@ class MobiglasTitleBar(QWidget):
             Qt.AlignmentFlag.AlignVCenter,
         )
 
-        controls_host = QFrame()
+        controls_host = QWidget()
         controls_host.setObjectName("mobiglasTitleControls")
         _enable_styled_background(controls_host)
         controls_host.setSizePolicy(
@@ -291,9 +291,14 @@ class MobiglasTitleBar(QWidget):
                 "close",
                 "Schließen",
             )
-            self._close_button.clicked.connect(
-                self._window.close
-            )
+            if isinstance(self._window, QDialog):
+                self._close_button.clicked.connect(
+                    self._window.reject
+                )
+            else:
+                self._close_button.clicked.connect(
+                    self._window.close
+                )
             controls.addWidget(self._close_button)
 
         visible_controls = sum(
@@ -435,7 +440,10 @@ def _polish_title_bar(title_bar: MobiglasTitleBar):
         title_bar,
         title_bar._bevel_top,
         title_bar._controls_host,
+        title_bar.findChild(QWidget, "mobiglasTitleRow"),
     ):
+        if widget is None:
+            continue
         style.unpolish(widget)
         style.polish(widget)
         widget.update()

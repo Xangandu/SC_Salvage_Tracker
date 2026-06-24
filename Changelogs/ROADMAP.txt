@@ -1,7 +1,7 @@
 SC SALVAGE TRACKER – ROADMAP
 =============================
 
-Stand: Version 0.14.3 Alpha | Build 2026.07 | Codename: Design Control
+Stand: Version 0.15.0 Beta | Build 2026.08 | Codename: Edition Foundation
 
 
 PHASE 1 – UI AN NEUES DATENMODELL ANBINDEN (ABGESCHLOSSEN)
@@ -100,6 +100,20 @@ PHASE 5 – HOST-CLIENT / NETZWERK (0.10.0 — MVP)
 [~] Portweiterleitung / Internet-Setup
     (0.10.2: Crew-Einladung statt Tailscale; Router-Fallback; Relay geplant)
 [ ] Feingranulare Client-Rollen (nicht nur Gast vs. Vollzugriff)
+
+
+PHASE 6 – BETA & PRODUKT-EDITIONEN (0.15.0 — GESTARTET)
+--------------------------------------------------------
+[x] Phasenwechsel Alpha → Beta (0.15.0)
+[x] config/editions.py — SOLO / CREW / ORGA Feature-Matrix
+[x] SOLO-Build: Vernetzung gesperrt, Teaser in Admin → Vernetzung
+[x] main.py — Host/Client/Assistent editionsgesichert
+[x] Fenstertitel: SC Salvage Tracker - SOLO Version
+[x] Dokumentation: Changelogs/EDITIONS.txt, GITHUB_RELEASE_v0.15.0.md
+[x] Supporter-Key → edition_unlock in Datenbank
+[x] Admin-Tab „Unterstützen“ (Projekt-Text, Key-Einlösung, Spenden-Hinweis)
+[x] Separate Installer: SOLO, CREW, ORGA (build_installer.ps1 -Edition)
+[ ] Öffentlicher GitHub-Release mit Manifest (Beta-Publikation)
 
 
 LANGFRISTIG

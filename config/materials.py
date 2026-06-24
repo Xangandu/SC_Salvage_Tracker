@@ -99,14 +99,45 @@ def resolve_material_label(name_or_code):
 SHIP_MATERIAL_CODES = {
     "RSI Salvation": ("RMC", "CM_RUBBLE"),
     "Aegis Reclaimer": ("RMC", "CM_SALVAGE"),
-    "Drake Vulture": ("CM_RUBBLE",),
+    "Drake Vulture": ("RMC", "CM_RUBBLE"),
     "MISC Fortune": ("CM_RUBBLE",),
-    "ARGO MOTH": ("CM_SCRAPS",),
+    "ARGO MOTH": ("RMC", "CM_SCRAPS"),
+}
+
+# Kurzname → voller Sitzungsname (Legacy / Tests)
+SHIP_NAME_ALIASES = {
+    "Vulture": "Drake Vulture",
+    "Salvation": "RSI Salvation",
+    "Fortune": "MISC Fortune",
+    "MOTH": "ARGO MOTH",
+    "Argo Moth": "ARGO MOTH",
+    "ARGO Moth": "ARGO MOTH",
+    "Reclaimer": "Aegis Reclaimer",
 }
 
 
+def normalize_ship_name(ship_name: str) -> str:
+    name = (ship_name or "").strip()
+    return SHIP_NAME_ALIASES.get(name, name)
+
+
 def material_codes_for_ship(ship_name: str) -> tuple[str, ...]:
+    normalized = normalize_ship_name(ship_name)
     return SHIP_MATERIAL_CODES.get(
-        ship_name,
+        normalized,
         ("RMC", "CM_RUBBLE"),
     )
+
+
+def ship_supports_material(
+    ship_name: str,
+    material_code: str,
+) -> bool:
+    return material_code in material_codes_for_ship(ship_name)
+
+
+def materials_summary_for_ship(ship_name: str) -> str:
+    codes = material_codes_for_ship(ship_name)
+    if not ship_name:
+        return "—"
+    return ", ".join(material_label(code) for code in codes)

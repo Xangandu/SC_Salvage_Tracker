@@ -1,0 +1,101 @@
+SC SALVAGE TRACKER – PRODUKT-EDITIONEN
+======================================
+
+Stand: Version 0.15.0 Beta | Build 2026.08 | Codename: Edition Foundation
+
+
+1. ÜBERBLICK
+------------
+Das Programm gibt es in drei Produkt-Editionen — technisch ein Codebase,
+unterschiedliche Freischaltungen:
+
+  SC Salvage Tracker - SOLO Version   (solo)  — Standard-Download, kostenlos
+  SC Salvage Tracker - CREW Version   (crew)  — Mehrspieler / Vernetzung
+  SC Salvage Tracker - ORGA Version   (orga)  — Organisation (Roadmap)
+
+Edition ≠ Benutzer-Rolle (Administrator, Operator, …).
+Edition = was diese Installation darf.
+
+
+2. FEATURE-MATRIX (STAND 0.15.0)
+---------------------------------
+Feature-ID              | Mindest-Edition | Beschreibung
+------------------------|-----------------|----------------------------------
+network.crew_edition    | crew            | Tab Vernetzung, CREW-UI gesamt
+network.host            | crew            | Host-Server starten
+network.client          | crew            | Als Client verbinden
+org.module              | orga            | Organisations-Modul (geplant)
+
+Alles andere (Sitzungen, Raffinerie, Verkäufe, Salvage-Crew-Namen,
+Dashboard, Design) ist in SOLO enthalten.
+
+
+3. TECHNIK
+----------
+Quellcode:
+  config/version.py     APP_EDITION (Build-Obergrenze), APP_NAME
+  config/editions.py    has_feature(), effective_edition(), resolve_app_name()
+  ui/edition_feature_panel.py   Teaser + gesperrter Inhalt
+  ui/edition_dialog.py          Hinweis-Dialog bei gesperrter Aktion
+
+Build-Edition (config/version.py):
+  APP_EDITION = "solo"   | "crew" | "orga"
+
+Runtime-Unlock (später):
+  app_settings.edition_unlock = crew | orga
+  effective_edition = max(build_edition, unlock) — begrenzt durch Build
+
+Entwicklung — CREW/ORGA testen ohne separaten Build:
+  set SST_EDITION=crew
+  python main.py
+  (nur wenn nicht frozen / nicht .exe)
+
+
+4. ABSICHERUNG (SOLO)
+---------------------
+• main.py: kein Host-Start, kein Client-Restore, Assistent nur Standalone
+• enforce_standalone_network() setzt network_mode auf standalone
+• Admin: Vernetzung sichtbar, Buttons deaktiviert + Teaser
+• Code für Netzwerk bleibt im Projekt — nicht gelöscht
+
+
+5. BEGRIFFE (WICHTIG FÜR SUPPORT)
+---------------------------------
+Salvage-Crew     = Namen der Mitspieler in einer Sitzung (SOLO + CREW)
+CREW Edition     = Produkt mit Host/Client-Vernetzung
+ORGA Edition     = Mehrere Teams/Organisation (noch nicht implementiert)
+
+
+6. RELEASE & INSTALLER
+----------------------
+SOLO:  SC_Salvage_Tracker_Setup_SOLO_0.15.0.exe  (Standard-Download)
+CREW:  SC_Salvage_Tracker_Setup_CREW_0.15.0.exe   (Supporter / eigener Build)
+ORGA:  SC_Salvage_Tracker_Setup_ORGA_0.15.0.exe  (Roadmap / eigener Build)
+
+Build:
+  powershell -ExecutionPolicy Bypass -File installer\build_installer.ps1
+  powershell -ExecutionPolicy Bypass -File installer\build_installer.ps1 -Edition all
+
+Technik: config/build_edition.txt → PyInstaller → APP_EDITION in .exe
+Jede Edition: eigene AppId (parallele Installation), gemeinsame User-Daten.
+
+GitHub: öffentliches Repo + Release mit update-manifest.json + Setup.exe
+Manifest-URL: releases/latest/download/update-manifest.json
+
+
+7. SPENDEN / UNLOCK
+-------------------
+• Einstellungen → Unterstützen: Projekt-Text, Edition-Status, Key-Eingabe
+• Supporter-Key speichert edition_unlock in app_settings
+• Key-Format: CREW-XXXX-XXXX-XXXXXXXX (ORGA analog)
+• Keys erzeugen: python scripts/generate_supporter_keys.py crew
+• Spenden-Link: config/support.py → SUPPORT_DONATION_URL (optional)
+
+Build-Obergrenze APP_EDITION ist das Minimum; ein Supporter-Key kann
+die Edition anheben (effective_edition = max(build, unlock)).
+
+
+Siehe auch:
+  Changelogs/PATCHNOTES.txt
+  Changelogs/ROADMAP.txt (Phase 6)
+  installer/GITHUB_RELEASE_v0.15.0.md

@@ -1,5 +1,0 @@
--- =====================================================
--- Raffinerie / Material-Batches (Erweiterung 0.8.6)
--- remaining_quantity wird zur Laufzeit per Migration gesetzt
--- falls die Spalte in älteren DBs noch fehlt.
--- =====================================================

@@ -36,9 +36,9 @@ def read_version_meta(root: Path) -> dict[str, str]:
     content = version_file.read_text(encoding="utf-8")
     meta = {
         "app_name": "SC Salvage Tracker",
-        "version": "0.14.1 Alpha",
+        "version": "0.14.2 Alpha",
         "build": "2026.06",
-        "codename": "Launcher Polish",
+        "codename": "Live Update",
         "developer": "Christian",
         "alias": "Xan-Gan-Du",
     }

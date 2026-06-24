@@ -10,6 +10,7 @@ bundle_data = [
     (str(project_dir / "ui" / "themes"), "ui/themes"),
     (str(project_dir / "database" / "schema"), "database/schema"),
     (str(project_dir / "Changelogs"), "Changelogs"),
+    (str(project_dir / "config" / "build_edition.txt"), "config"),
 ]
 
 a = Analysis(

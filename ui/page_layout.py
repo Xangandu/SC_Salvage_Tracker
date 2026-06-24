@@ -164,6 +164,27 @@ def hud_divider():
     return row
 
 
+def nav_edition_divider(edition_label):
+    """HUD-Linie mit Edition-Badge mittig (ersetzt den Trennpunkt)."""
+    row = QHBoxLayout()
+    row.setSpacing(6)
+    row.setContentsMargins(0, 2, 0, 0)
+
+    left = QFrame()
+    left.setObjectName("hudLine")
+    left.setFrameShape(QFrame.Shape.HLine)
+
+    right = QFrame()
+    right.setObjectName("hudLine")
+    right.setFrameShape(QFrame.Shape.HLine)
+
+    row.addWidget(left, 1)
+    row.addWidget(edition_label, 0, Qt.AlignmentFlag.AlignHCenter)
+    row.addWidget(right, 1)
+
+    return row
+
+
 def nav_version_divider():
     from PySide6.QtSvgWidgets import QSvgWidget
 

@@ -34,7 +34,10 @@ from ui.mobiglas_window_frame import (
     MobiglasFramelessMixin,
     apply_mobiglas_window_frame,
 )
+from config.editions import has_feature
+from ui.edition_dialog import show_edition_locked
 from ui.page_layout import (
+    form_label,
     hud_divider,
     page_title,
     primary_button,
@@ -121,7 +124,17 @@ class ConnectionAssistantDialog(MobiglasFramelessMixin, QDialog):
             self.MODE_STANDALONE,
         )
         self._select_mode(saved_mode)
+        self._apply_edition_limits()
         apply_mobiglas_window_frame(self)
+
+    def _apply_edition_limits(self) -> None:
+        if has_feature("network.crew_edition", self.db):
+            return
+
+        self.host_radio.setEnabled(False)
+        self.client_radio.setEnabled(False)
+        self.standalone_radio.setChecked(True)
+        self._on_mode_changed()
 
     def _build_standalone_page(self) -> QWidget:
         page = QWidget()
@@ -205,9 +218,9 @@ class ConnectionAssistantDialog(MobiglasFramelessMixin, QDialog):
             "Dein Name (optional)"
         )
 
-        panel_layout.addWidget(QLabel("Beitrittscode"))
+        panel_layout.addWidget(form_label("Beitrittscode"))
         panel_layout.addWidget(self.client_code_input)
-        panel_layout.addWidget(QLabel("Anzeigename"))
+        panel_layout.addWidget(form_label("Anzeigename"))
         panel_layout.addWidget(self.client_name_input)
 
         client_settings = read_client_settings(self.db)
@@ -269,6 +282,9 @@ class ConnectionAssistantDialog(MobiglasFramelessMixin, QDialog):
             return
 
         if self.host_radio.isChecked():
+            if not has_feature("network.host", self.db):
+                show_edition_locked(self, "network.host")
+                return
             code = self.host_code_input.text().strip().upper()
             if not code:
                 code = generate_join_code()
@@ -282,6 +298,9 @@ class ConnectionAssistantDialog(MobiglasFramelessMixin, QDialog):
             return
 
         if self.client_radio.isChecked():
+            if not has_feature("network.client", self.db):
+                show_edition_locked(self, "network.client")
+                return
             self._connect_as_client()
 
     def _connect_as_client(self) -> None:

@@ -19,6 +19,7 @@ from config.dates import (
     today_display,
 )
 from config.materials import material_label
+from config.strings_de import format_number_de, parse_int_de, parse_number_de
 from config.permissions import apply_widget_permissions
 from ui.table_utils import (
     configure_mobiglas_table,
@@ -285,12 +286,12 @@ class SalesPage(QWidget):
                     row,
                     1,
                     QTableWidgetItem(
-                        f"{quantity:,.1f}"
+                        format_number_de(quantity, 1)
                     ),
                 )
 
                 combo_label = (
-                    f"{label} — {quantity:,.1f} SCU"
+                    f"{label} — {format_number_de(quantity, 1)} SCU"
                 )
                 self.material_combo.addItem(
                     combo_label,
@@ -342,7 +343,7 @@ class SalesPage(QWidget):
                 row,
                 4,
                 QTableWidgetItem(
-                    f"{sale['total_amount']:,.0f} aUEC"
+                    f"{format_number_de(sale['total_amount'])} aUEC"
                 ),
             )
             self.history_table.setItem(
@@ -363,24 +364,19 @@ class SalesPage(QWidget):
 
         self.revenue_summary_label.setText(
             f"Gesamtumsatz (alle Verkäufe): "
-            f"{revenue:,.0f} aUEC"
+            f"{format_number_de(revenue)} aUEC"
         )
         self.costs_summary_label.setText(
-            f"Gesamtkosten: {costs:,.0f} aUEC"
+            f"Gesamtkosten: {format_number_de(costs)} aUEC"
         )
         self.profit_summary_label.setText(
-            f"Gewinn: {profit:,.0f} aUEC"
+            f"Gewinn: {format_number_de(profit)} aUEC"
         )
 
     def update_line_total(self):
-        try:
-            quantity = float(
-                self.quantity_input.text() or 0
-            )
-            unit_price = float(
-                self.unit_price_input.text() or 0
-            )
-        except ValueError:
+        quantity = parse_number_de(self.quantity_input.text(), default=0)
+        unit_price = parse_number_de(self.unit_price_input.text(), default=0)
+        if quantity is None or unit_price is None:
             self.total_label.setText(
                 "Gesamt: — aUEC"
             )
@@ -388,7 +384,7 @@ class SalesPage(QWidget):
 
         total = quantity * unit_price
         self.total_label.setText(
-            f"Gesamt: {total:,.0f} aUEC"
+            f"Gesamt: {format_number_de(total)} aUEC"
         )
 
     def save_sale(self):
@@ -424,14 +420,9 @@ class SalesPage(QWidget):
             )
             return
 
-        try:
-            quantity = float(
-                self.quantity_input.text()
-            )
-            unit_price = float(
-                self.unit_price_input.text()
-            )
-        except ValueError:
+        quantity = parse_number_de(self.quantity_input.text())
+        unit_price = parse_number_de(self.unit_price_input.text())
+        if quantity is None or unit_price is None:
             QMessageBox.warning(
                 self,
                 "Fehler",

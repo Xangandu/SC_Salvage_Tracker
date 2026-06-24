@@ -26,6 +26,7 @@ from config.materials import (
     material_label,
 )
 from config.refinery_methods import REFINERY_METHODS
+from config.strings_de import format_number_de, parse_int_de, parse_number_de
 from config.permissions import apply_widget_permissions
 from ui.table_utils import (
     configure_mobiglas_table,
@@ -329,12 +330,12 @@ class RefineryPage(QWidget):
             self.batches_table.setItem(
                 row,
                 2,
-                QTableWidgetItem(f"{remaining:,.1f}"),
+                QTableWidgetItem(format_number_de(remaining, 1)),
             )
             self.batches_table.setItem(
                 row,
                 3,
-                QTableWidgetItem(f"{original:,.1f}"),
+                QTableWidgetItem(format_number_de(original, 1)),
             )
             self.batches_table.setItem(
                 row,
@@ -344,7 +345,7 @@ class RefineryPage(QWidget):
 
             combo_text = (
                 f"#{batch_id} | {label} | "
-                f"{remaining:,.1f} SCU"
+                f"{format_number_de(remaining, 1)} SCU"
             )
             self.batch_combo.addItem(
                 combo_text,
@@ -417,7 +418,7 @@ class RefineryPage(QWidget):
                     / job["total_input"]
                     * 100
                 )
-                yield_text = f"{yield_pct:.1f} %"
+                yield_text = f"{format_number_de(yield_pct, 1)} %"
 
             self.history_table.setItem(
                 row,
@@ -458,7 +459,7 @@ class RefineryPage(QWidget):
             )
             cost = job.get("cost", 0) or 0
             payer = (job.get("cost_paid_by") or "").strip()
-            cost_text = f"{cost:,.0f} aUEC"
+            cost_text = f"{format_number_de(cost)} aUEC"
 
             if cost > 0 and payer:
                 cost_text = f"{cost_text} ({payer})"
@@ -605,7 +606,7 @@ class RefineryPage(QWidget):
             ))
         cost = job.get("cost", 0) or 0
         payer = (job.get("cost_paid_by") or "").strip()
-        cost_line = f"Kosten: {cost:,.0f} aUEC"
+        cost_line = f"Kosten: {format_number_de(cost)} aUEC"
 
         if cost > 0 and payer:
             cost_line = f"{cost_line} · bezahlt von {payer}"
@@ -619,7 +620,7 @@ class RefineryPage(QWidget):
             card_layout.addWidget(_detail_label(
                 f"Batch #{item['batch_id']} | "
                 f"{material_label(item['input_material'])} | "
-                f"Input: {item['input_quantity']:,.0f} SCU"
+                f"Input: {format_number_de(item['input_quantity'])} SCU"
             ))
 
         card_layout.addWidget(_detail_label(
@@ -676,14 +677,14 @@ class RefineryPage(QWidget):
             )
             return
 
-        try:
-            input_scu = float(self.input_scu.text())
-            hours = int(self.hours_input.text() or 0)
-            minutes = int(self.minutes_input.text() or 0)
-            cost = float(
-                self.refinery_cost_input.text().strip() or 0
-            )
-        except ValueError:
+        input_scu = parse_number_de(self.input_scu.text())
+        hours = parse_int_de(self.hours_input.text(), default=0)
+        minutes = parse_int_de(self.minutes_input.text(), default=0)
+        cost = parse_number_de(
+            self.refinery_cost_input.text(),
+            default=0,
+        )
+        if input_scu is None or hours is None or minutes is None or cost is None:
             QMessageBox.warning(
                 self,
                 "Fehler",
@@ -787,7 +788,7 @@ class RefineryPage(QWidget):
                 hint_text = (
                     f"Dein bisheriger Durchschnitt für "
                     f"{material_label(material_code)}: "
-                    f"{stats['efficiency_percent']:.1f} % "
+                    f"{format_number_de(stats['efficiency_percent'], 1)} % "
                     f"({stats['job_count']} Aufträge)"
                 )
 
@@ -832,9 +833,9 @@ class RefineryPage(QWidget):
         QMessageBox.information(
             self,
             "Abgeschlossen",
-            f"{result['output_quantity']:,.1f} SCU "
+            f"{format_number_de(result['output_quantity'], 1)} SCU "
             f"{material_label(REFINERY_OUTPUT_CODE)} ins Lager "
-            f"gebucht (Ausbeute: {result['yield_percent']:.1f} %).",
+            f"gebucht (Ausbeute: {format_number_de(result['yield_percent'], 1)} %).",
         )
 
         self.load_data()

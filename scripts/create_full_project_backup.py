@@ -23,6 +23,8 @@ def main() -> int:
         ".venv",
         "venv",
         "node_modules",
+        "build",
+        "dist",
     }
 
     file_count = 0

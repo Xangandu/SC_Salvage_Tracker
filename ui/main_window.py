@@ -1,8 +1,9 @@
 from ui.session_page import SessionPage
-from ui.salvage_page import SalvagePage
 from ui.statistics_page import StatisticsPage
 from ui.history_page import HistoryPage
 from PySide6.QtCore import Qt, QTimer
+from PySide6.QtGui import QColor
+from PySide6.QtWidgets import QGraphicsDropShadowEffect
 from ui.refinery_page import RefineryPage
 from ui.sales_page import SalesPage
 from ui.admin_page import AdminPage
@@ -10,10 +11,18 @@ from ui.changelog_dialog import (
     ChangelogDialog
 )
 
-from config.version import (
-    APP_NAME,
-    format_version_nav_html,
+from ui.nav_edition_badge import (
+    build_nav_edition_badge,
+    sync_nav_edition_badge_size,
 )
+from config.editions import (
+    EDITION_GLOW_RGB,
+    edition_short_label,
+    edition_title,
+    effective_edition,
+    resolve_app_name,
+)
+from config.version import format_version_nav_html
 from config.permissions import can_access
 
 from PySide6.QtWidgets import (
@@ -36,7 +45,7 @@ from ui.mobiglas_window_frame import (
     MobiglasFramelessMixin,
     apply_mobiglas_window_frame,
 )
-from ui.page_layout import hud_divider, nav_version_divider
+from ui.page_layout import hud_divider, nav_version_divider, nav_edition_divider
 from ui.update_manager import UpdateManager
 from ui.window_geometry import (
     restore_window_geometry,
@@ -58,6 +67,7 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
         from database.access import get_database
 
         db = get_database()
+        self.db = db
         if hasattr(db, "permissions"):
             user = db.permissions.ensure_user_permissions(user)
 
@@ -69,8 +79,9 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
         self._wired_host_server = None
         self._wired_client_connection = None
 
+        app_name = resolve_app_name(db)
         self.setObjectName("mainWindow")
-        self.setWindowTitle(APP_NAME)
+        self.setWindowTitle(app_name)
 
         central_widget = QWidget()
         central_widget.setObjectName("mainCentral")
@@ -119,6 +130,19 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
             | Qt.AlignmentFlag.AlignVCenter
         )
 
+        edition_key = effective_edition(db)
+        self.edition_badge_host, self.edition_badge = build_nav_edition_badge(
+            edition_short_label(db),
+            edition_key,
+        )
+        self._apply_edition_badge_glow(edition_key)
+
+        title_stack = QVBoxLayout()
+        title_stack.setContentsMargins(0, 0, 0, 0)
+        title_stack.setSpacing(0)
+        title_stack.addWidget(title_primary)
+        title_stack.addWidget(title_secondary)
+
         user_panel = QFrame()
         user_panel.setObjectName("navUserPanel")
         user_panel_layout = QVBoxLayout(user_panel)
@@ -159,10 +183,11 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
         self.network_label.setWordWrap(True)
         self._update_network_label()
 
-        brand_layout.addWidget(title_primary)
-        brand_layout.addWidget(title_secondary)
-        brand_layout.addSpacing(10)
-        brand_layout.addLayout(hud_divider())
+        brand_layout.addLayout(title_stack)
+        brand_layout.addSpacing(8)
+        brand_layout.addLayout(
+            nav_edition_divider(self.edition_badge_host)
+        )
         brand_layout.addSpacing(10)
 
         user_panel_layout.addWidget(user_heading)
@@ -220,7 +245,6 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
         )
         self.refinery_page = RefineryPage()
         self.sales_page = SalesPage()
-        self.salvage_page = SalvagePage()
         self.statistics_page = StatisticsPage()
         self.history_page = HistoryPage()
         self.admin_page = AdminPage()
@@ -235,7 +259,6 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
 
         self.pages.addWidget(self.refinery_page)
         self.pages.addWidget(self.sales_page)
-        self.pages.addWidget(self.salvage_page)
         self.pages.addWidget(self.statistics_page)
         self.pages.addWidget(self.history_page)
         self.pages.addWidget(self.admin_page)
@@ -314,8 +337,13 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
 
         nav_layout.addWidget(nav_version_divider())
 
-        version_label = QLabel(format_version_nav_html())
+        version_label = QLabel(
+            format_version_nav_html(
+                edition_title(effective_edition(db))
+            )
+        )
         version_label.setObjectName("versionLabel")
+        self.version_label = version_label
 
         version_label.setAlignment(
             Qt.AlignCenter
@@ -352,7 +380,7 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
 
         title_bar = apply_mobiglas_window_frame(
             self,
-            title=APP_NAME,
+            title=resolve_app_name(self.db),
         )
         title_bar.add_action_button(
             "Abmelden",
@@ -363,6 +391,9 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
 
         self.update_manager = UpdateManager(db, self)
         self.admin_page.set_update_manager(self.update_manager)
+        self.admin_page.edition_unlock_changed.connect(
+            self.refresh_edition_state
+        )
         self.update_manager.check_completed.connect(
             self.admin_page.refresh_updates_section
         )
@@ -416,7 +447,6 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
         db = get_database()
         for page in (
             self.session_page,
-            self.salvage_page,
             self.refinery_page,
             self.sales_page,
             self.statistics_page,
@@ -499,6 +529,57 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
     def _on_client_disconnected(self):
         self.apply_network_mode()
 
+    def refresh_edition_state(self):
+        """Nach Supporter-Key: Titel, Badge und gesperrte Bereiche aktualisieren."""
+        edition_key = effective_edition(self.db)
+        app_name = resolve_app_name(self.db)
+
+        self.setWindowTitle(app_name)
+        title_bar = getattr(self, "_mobiglas_title_bar", None)
+        if title_bar is not None:
+            title_bar.set_title(app_name)
+
+        self.edition_badge.setText(edition_short_label(self.db))
+        self.edition_badge.setProperty("edition", edition_key)
+        self.edition_badge_host.setProperty("edition", edition_key)
+        self._apply_edition_badge_glow(edition_key)
+
+        if hasattr(self, "version_label"):
+            self.version_label.setText(
+                format_version_nav_html(edition_title(edition_key))
+            )
+
+        if hasattr(self, "admin_page"):
+            self.admin_page.refresh_support_tab()
+            if hasattr(self.admin_page, "network_edition_panel"):
+                self.admin_page.network_edition_panel.refresh()
+            self.admin_page._refresh_network_tab()
+
+        self._update_network_label()
+
+    def _apply_edition_badge_glow(self, edition_key: str):
+        rgb = EDITION_GLOW_RGB.get(edition_key, EDITION_GLOW_RGB["solo"])
+        sync_nav_edition_badge_size(
+            self.edition_badge_host,
+            self.edition_badge,
+        )
+        effect = QGraphicsDropShadowEffect(self.edition_badge_host)
+        effect.setBlurRadius(40)
+        effect.setOffset(0, 0)
+        effect.setColor(QColor(*rgb, 255))
+        self.edition_badge_host.setGraphicsEffect(effect)
+        self.edition_badge_host.style().unpolish(self.edition_badge_host)
+        self.edition_badge_host.style().polish(self.edition_badge_host)
+        self.edition_badge.style().unpolish(self.edition_badge)
+        self.edition_badge.style().polish(self.edition_badge)
+        QTimer.singleShot(
+            0,
+            lambda: sync_nav_edition_badge_size(
+                self.edition_badge_host,
+                self.edition_badge,
+            ),
+        )
+
     def _update_network_label(self):
         from database.access import get_host_server
         from network.network_state import get_network_state
@@ -537,7 +618,6 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
 
     def _on_network_data_changed(self):
         self.session_page.refresh_session()
-        self.salvage_page.load_session()
         self.refinery_page.load_data()
         self.sales_page.load_data()
         self.statistics_page.refresh_data()
@@ -582,7 +662,6 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
     def apply_permissions(self):
         pages = [
             (self.session_page, "session"),
-            (self.salvage_page, "salvage"),
             (self.refinery_page, "refinery"),
             (self.sales_page, "sales"),
             (self.statistics_page, "statistics"),
@@ -666,9 +745,6 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
         if page == self.dashboard_page:
             self.dashboard_page.apply_dashboard_layout()
             self.dashboard_page.refresh_dashboard()
-
-        if page == self.salvage_page:
-            self.salvage_page.load_session()
 
         if page == self.sales_page:
             self.sales_page.load_data()

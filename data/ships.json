@@ -2,27 +2,37 @@
     {
         "manufacturer": "RSI",
         "name": "Salvation",
+        "session_name": "RSI Salvation",
         "class": "Light Salvage",
-        "cargo_scu": 6
+        "cargo_scu": 6,
+        "materials": ["RMC", "CM_RUBBLE"]
     },
     {
         "manufacturer": "MISC",
         "name": "Fortune",
-        "class": "Light Salvage"
+        "session_name": "MISC Fortune",
+        "class": "Light Salvage",
+        "materials": ["CM_RUBBLE"]
     },
     {
         "manufacturer": "Drake",
         "name": "Vulture",
-        "class": "Light Salvage"
+        "session_name": "Drake Vulture",
+        "class": "Light Salvage",
+        "materials": ["RMC", "CM_RUBBLE"]
     },
     {
         "manufacturer": "ARGO",
         "name": "MOTH",
-        "class": "Medium Salvage"
+        "session_name": "ARGO MOTH",
+        "class": "Medium Salvage",
+        "materials": ["RMC", "CM_SCRAPS"]
     },
     {
         "manufacturer": "Aegis",
         "name": "Reclaimer",
-        "class": "Heavy Salvage"
+        "session_name": "Aegis Reclaimer",
+        "class": "Heavy Salvage",
+        "materials": ["RMC", "CM_SALVAGE"]
     }
 ]

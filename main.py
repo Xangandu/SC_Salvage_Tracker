@@ -29,6 +29,7 @@ from database.access import (
 from network.host_relay import start_host_relay_if_enabled, stop_host_relay
 from ui.theme_manager import ThemeManager
 from ui.wheel_guard import install_wheel_guard
+from ui.mobiglas_message_box import install_mobiglas_message_boxes
 import auth.session as user_session
 from auth.remember_me import (
     load_remember_data,
@@ -42,6 +43,10 @@ from network.constants import (
 from network.host_server import HostServer
 from network.network_state import get_network_state
 from network.client_connect import restore_saved_client_connection
+from config.editions import (
+    enforce_standalone_network,
+    has_feature,
+)
 
 
 class SalvageTrackerApp:
@@ -73,6 +78,7 @@ class SalvageTrackerApp:
         splash.set_status("OBERFLÄCHE WIRD VORBEREITET...")
         ThemeManager.ensure_derived_themes()
         self._load_default_theme()
+        install_mobiglas_message_boxes()
 
     def _load_fonts(self):
         for font_path in existing_font_paths():
@@ -86,16 +92,25 @@ class SalvageTrackerApp:
         ThemeManager.apply_for_user(self.db, user["id"])
 
     def _load_saved_network_mode(self):
+        enforce_standalone_network(self.db)
         settings = self.db.settings.get_app_settings()
         saved_mode = settings.get(
             "network_mode",
             NETWORK_MODE_STANDALONE,
         )
+        if not has_feature("network.crew_edition", self.db):
+            saved_mode = NETWORK_MODE_STANDALONE
         get_network_state().mode = saved_mode
         self._network_mode = saved_mode
 
     def _offer_connection_assistant(self):
         """Optional nach der Anmeldung — Standard: überspringen (Solo-Spiel)."""
+        enforce_standalone_network(self.db)
+        if not has_feature("network.crew_edition", self.db):
+            self._network_mode = NETWORK_MODE_STANDALONE
+            get_network_state().mode = NETWORK_MODE_STANDALONE
+            return True
+
         settings = self.db.settings.get_app_settings()
         if settings.get("network_show_assistant", "0") == "0":
             self._load_saved_network_mode()
@@ -107,6 +122,22 @@ class SalvageTrackerApp:
 
         self._network_mode = dialog.selected_mode
         get_network_state().mode = self._network_mode
+
+        if self._network_mode == NETWORK_MODE_HOST and not has_feature(
+            "network.host",
+            self.db,
+        ):
+            self._network_mode = NETWORK_MODE_STANDALONE
+            get_network_state().mode = NETWORK_MODE_STANDALONE
+            return True
+
+        if self._network_mode == NETWORK_MODE_CLIENT and not has_feature(
+            "network.client",
+            self.db,
+        ):
+            self._network_mode = NETWORK_MODE_STANDALONE
+            get_network_state().mode = NETWORK_MODE_STANDALONE
+            return True
 
         if self._network_mode == NETWORK_MODE_CLIENT:
             set_client_connection(dialog.client_connection)
@@ -121,6 +152,9 @@ class SalvageTrackerApp:
 
     def _try_restore_client_connection(self):
         """Gespeicherte Gast-Verbindung still wiederherstellen (ohne Assistent)."""
+        if not has_feature("network.client", self.db):
+            return
+
         if self._skip_client_restore:
             self._skip_client_restore = False
             return
@@ -141,6 +175,8 @@ class SalvageTrackerApp:
         self.db = get_database()
 
     def _start_host_server(self):
+        if not has_feature("network.host", self.db):
+            return
         if self._network_mode != NETWORK_MODE_HOST:
             return
 

@@ -43,7 +43,7 @@ def main():
     # --- Session ---
     session_id = db.create_session(
         None,
-        "Vulture",
+        "Drake Vulture",
         datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         created_by=1,
     )

@@ -1,24 +1,53 @@
-# SC Salvage Tracker — Custom Setup (Design Control · 0.14.3)
+# SC Salvage Tracker — Custom Setup (Edition Foundation · 0.15.0 Beta)
 #
-# Ergebnis:
-#   Release\app\SC_Salvage_Tracker\
-#   Release\installer\SC_Salvage_Tracker_Setup_0.14.3.exe
+# Standard-Build: SC Salvage Tracker - SOLO Version
+#
+# Ergebnis (SOLO):
+#   Release\app\SC_Salvage_Tracker_SOLO\
+#   Release\installer\SC_Salvage_Tracker_Setup_SOLO_0.15.0.exe
+#   Release\installer\update-manifest.json
 #
 # Voraussetzung: Inno Setup 6.7+ (https://jrsoftware.org/isinfo.php)
 
-## Setup bauen (alles in einem Schritt)
+## Setup bauen
 
+**Nur SOLO (Standard-Download):**
 ```powershell
 cd "X:\Projektordner\SC_Salvage_Tracker\Source\SC_Salvage_Tracker"
 powershell -ExecutionPolicy Bypass -File installer\build_installer.ps1
 ```
 
-Der Assistent nutzt **denselben Launcher-Stil** wie die App:
-- Dunkler Hintergrund (#0A0D12)
-- Orange Primär-Aktion (#E07A2A)
-- Cyan-Akzente (#42D4F5)
-- Deutsche HUD-Texte (◆ SETUP, WEITER, INSTALLIEREN)
-- Hintergrund-Grafik aus `config/version.py` + Splash
+**CREW oder ORGA:**
+```powershell
+powershell -ExecutionPolicy Bypass -File installer\build_installer.ps1 -Edition crew
+powershell -ExecutionPolicy Bypass -File installer\build_installer.ps1 -Edition orga
+```
+
+**Alle drei Editionen nacheinander:**
+```powershell
+powershell -ExecutionPolicy Bypass -File installer\build_installer.ps1 -Edition all
+```
+
+Ergebnis in `Release\installer\`:
+| Datei | Edition |
+|-------|---------|
+| `SC_Salvage_Tracker_Setup_SOLO_0.15.0.exe` | SOLO (kostenlos) |
+| `SC_Salvage_Tracker_Setup_CREW_0.15.0.exe` | CREW (Vernetzung) |
+| `SC_Salvage_Tracker_Setup_ORGA_0.15.0.exe` | ORGA (Roadmap) |
+| `update-manifest.json` | In-App-Updates (SOLO) |
+| `update-manifest-crew.json` / `-orga.json` | optional pro Edition |
+
+Die Build-Edition wird in `config/build_edition.txt` gesetzt und von PyInstaller
+mit eingepackt — jede .exe kennt ihre Edition ohne Supporter-Key.
+
+---
+
+## Nur Installer (App bereits gebaut)
+
+```powershell
+powershell -ExecutionPolicy Bypass -File installer\build_installer.ps1 -SkipPyInstaller
+powershell -ExecutionPolicy Bypass -File installer\build_installer.ps1 -Edition crew -SkipPyInstaller
+```
 
 ---
 
@@ -28,36 +57,22 @@ Der Assistent nutzt **denselben Launcher-Stil** wie die App:
 powershell -ExecutionPolicy Bypass -File installer\prepare_installer_assets.ps1
 ```
 
-Erzeugt in `installer\assets\`:
-- `install_bg.png` (920×580, Launcher-Look)
-- `app_icon.ico`
-- `wizard_small.png`, `wizard_sidebar.png`
-
----
-
-## Nur Installer (App bereits gebaut)
-
-```powershell
-powershell -ExecutionPolicy Bypass -File installer\build_installer.ps1 -SkipPyInstaller
-```
-
 ---
 
 ## Dateien
 
 | Datei | Beschreibung |
 |-------|--------------|
-| `sc_salvage_tracker.iss` | Inno-Setup-Hauptskript |
-| `mobiglas_wizard.inc` | Custom Wizard (Farben, Layout, deutsche Texte) |
-| `generate_installer_assets.py` | Launcher-Hintergrund + Icon |
-| `build_installer.ps1` | PyInstaller + Inno Setup |
+| `sc_salvage_tracker.iss` | Inno-Setup (Edition per `/DMyAppName=…`) |
+| `build_installer.ps1` | PyInstaller + Inno, Parameter `-Edition` |
+| `config/build_edition.txt` | Marker für frozen APP_EDITION |
 | `salvage_tracker.spec` | PyInstaller-Spezifikation |
 
 ---
 
 ## Hinweise
 
-- **Kein Standard-Windows-Look:** Classic Wizard + eigenes Pascal-Skript
-- Version/Codename kommen automatisch aus `config/version.py`
-- Bei gesperrter Setup-EXE: Antivirus/Explorer schließen, erneut bauen
-- **miniupnpc / UPnP:** optional (`requirements-optional.txt`). Fehlender Build bricht den Installer nicht ab; UPnP-Button in den Einstellungen zeigt dann eine Hinweismeldung.
+- Jede Edition hat **eigene AppId** → parallele Installation möglich
+- Datenbank bleibt unter `%LOCALAPPDATA%\SC Salvage Tracker\data` (gemeinsam)
+- **miniupnpc / UPnP:** optional (`requirements-optional.txt`)
+- Nach dem Build wird `build_edition.txt` wieder auf `solo` zurückgesetzt (Dev)

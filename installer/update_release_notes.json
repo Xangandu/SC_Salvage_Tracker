@@ -1,74 +1,28 @@
 {
+  "0.15.0": {
+    "de": {
+      "title": "SC Salvage Tracker 0.15.0 Beta — Edition Foundation",
+      "summary": "Beta-Start mit Produkt-Editionen: SOLO (kostenlos), CREW (Vernetzung) und ORGA (geplant). Vernetzung in SOLO sichtbar mit Teaser.",
+      "highlights": [
+        "Phasenwechsel Alpha → Beta",
+        "SC Salvage Tracker - SOLO Version als Standard-Build",
+        "CREW Edition: Host/Client-Vernetzung (Build oder Key später)",
+        "Admin → Vernetzung: gesperrt in SOLO, Teaser für CREW",
+        "Dokumentation: Changelogs/EDITIONS.txt",
+        "Dev-Test: SST_EDITION=crew für CREW-Funktionen"
+      ]
+    },
+    "en": {
+      "title": "SC Salvage Tracker 0.15.0 Beta — Edition Foundation",
+      "summary": "Beta launch with product editions: SOLO (free), CREW (networking), and ORGA (planned). Networking visible but locked in SOLO with teaser.",
+      "highlights": [
+        "Alpha → Beta phase transition",
+        "SC Salvage Tracker - SOLO Version as default build",
+        "CREW Edition: host/client networking (build or key later)",
+        "Admin → Networking: locked in SOLO, CREW teaser",
+        "Documentation: Changelogs/EDITIONS.txt",
+        "Dev test: SST_EDITION=crew for CREW features"
+      ]
+    }
+  },
   "0.14.3": {
-    "de": {
-      "title": "SC Salvage Tracker 0.14.3 Alpha — Design Control",
-      "summary": "Umfangreiche Design-Einstellungen: Schriften, Farben, Dichte, Transparenz und Fenster-Geometrie.",
-      "highlights": [
-        "Design-Tab: Erscheinungsbild, Dichte, Farben, Dashboard, Organisation",
-        "10 Schriftarten — Oxanium als Standard nach Installation",
-        "Tabellen-Dichte, Fenster- und Panel-Transparenz",
-        "Fensterposition wird gespeichert (auch Monitor 2)",
-        "Moderner Farbwähler, Navigationsbreite, orange Überschriften"
-      ]
-    },
-    "en": {
-      "title": "SC Salvage Tracker 0.14.3 Alpha — Design Control",
-      "summary": "Extensive design settings: fonts, colors, density, transparency, and window geometry.",
-      "highlights": [
-        "Design tab: appearance, density, colors, dashboard, organization",
-        "10 font families — Oxanium default on fresh install",
-        "Table density, window and panel transparency",
-        "Window position saved (including second monitor)",
-        "Modern color picker, nav width, scaled orange headings"
-      ]
-    }
-  },
-  "0.14.2": {
-    "de": {
-      "title": "SC Salvage Tracker 0.14.2 Alpha — Live Update",
-      "summary": "In-App-Updates über GitHub Releases mit sicherem Download und silent Setup.",
-      "highlights": [
-        "Automatische Update-Prüfung beim Start (optional)",
-        "Einstellungen → System: manuelle Suche und Versionsinfo",
-        "Update-Dialog mit Patchnotes (DE/EN)",
-        "SHA256-Prüfsumme und silent Inno-Setup-Installation",
-        "update-manifest.json für GitHub Releases"
-      ]
-    },
-    "en": {
-      "title": "SC Salvage Tracker 0.14.2 Alpha — Live Update",
-      "summary": "In-app updates via GitHub Releases with verified download and silent setup.",
-      "highlights": [
-        "Optional automatic update check on startup",
-        "Settings → System: manual check and version info",
-        "Update dialog with release notes (DE/EN)",
-        "SHA256 verification and silent Inno Setup install",
-        "update-manifest.json for GitHub Releases"
-      ]
-    }
-  },
-  "0.14.1": {
-    "de": {
-      "title": "SC Salvage Tracker 0.14.1 Alpha — Launcher Polish",
-      "summary": "Erstes offizielles Release mit Windows-Installer und RSI-Launcher-Oberfläche.",
-      "highlights": [
-        "Launcher-Polish UI (Orbitron/Rajdhani, Orange/Cyan)",
-        "Navigation: Salvage Tracker + Benutzerkarte",
-        "Custom Windows-Setup (Inno Setup)",
-        "Erstinstallation, DB-Backup, Rechte, Host/Client",
-        "Raffinerie, Verkäufe, Crew-Auszahlung, Historie"
-      ]
-    },
-    "en": {
-      "title": "SC Salvage Tracker 0.14.1 Alpha — Launcher Polish",
-      "summary": "First official release with Windows installer and RSI Launcher–style UI.",
-      "highlights": [
-        "Launcher-polish UI (Orbitron/Rajdhani, orange/cyan)",
-        "Navigation: Salvage Tracker + user card",
-        "Custom Windows setup (Inno Setup)",
-        "Initial setup, DB backup, permissions, host/client",
-        "Refinery, sales, crew payout, history"
-      ]
-    }
-  }
-}

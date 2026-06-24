@@ -21,6 +21,7 @@ from ui.mobiglas_window_frame import (
     MobiglasFramelessMixin,
     apply_mobiglas_window_frame,
 )
+from config.strings_de import parse_number_de
 
 
 def _secondary_button(text):
@@ -118,7 +119,7 @@ class MobiglasDoubleInputDialog(MobiglasFramelessMixin, QDialog):
         return self._value
 
     def _accept_value(self):
-        text = self.input.text().strip().replace(",", ".")
+        text = self.input.text().strip()
 
         if not text:
             QMessageBox.warning(
@@ -128,15 +129,16 @@ class MobiglasDoubleInputDialog(MobiglasFramelessMixin, QDialog):
             )
             return
 
-        try:
-            parsed = round(float(text), self._decimals)
-        except ValueError:
+        parsed = parse_number_de(text)
+        if parsed is None:
             QMessageBox.warning(
                 self,
                 "Eingabe",
                 "Bitte eine gültige Zahl eingeben.",
             )
             return
+
+        parsed = round(parsed, self._decimals)
 
         if parsed < self._minimum or parsed > self._maximum:
             QMessageBox.warning(

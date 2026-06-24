@@ -23,6 +23,10 @@ from ui.dashboard_grid_utils import (
     widget_entry,
     migrate_layout,
 )
+from ui.dashboard_size_utils import (
+    next_larger_size,
+    widget_needs_wider_size,
+)
 from ui.dashboard_widget_registry import (
     GRID_COLUMNS,
     GRID_GAP,
@@ -176,6 +180,7 @@ class DashboardGridCanvas(QWidget):
         self._stash.hide()
 
         self._layout_data = empty_layout()
+        self._base_sizes: dict[str, str] = {}
         self._wrappers: dict[str, PlacedWidgetFrame] = {}
         self._drag_preview = None
         self._last_host_pos = QPoint()
@@ -233,6 +238,24 @@ class DashboardGridCanvas(QWidget):
         self.update()
 
     def get_layout_data(self):
+        widgets = []
+        for entry in self._layout_data.get("widgets", []):
+            widget_id = entry["widget_id"]
+            base_size = self._base_sizes.get(
+                widget_id,
+                infer_size_key(entry),
+            )
+            col_span, row_span = spans_for_size(base_size)
+            widgets.append(
+                {
+                    "widget_id": widget_id,
+                    "col": entry["col"],
+                    "row": entry["row"],
+                    "col_span": col_span,
+                    "row_span": row_span,
+                    "size": base_size,
+                }
+            )
         return {
             "version": self._layout_data.get("version", 1),
             "grid_epoch": self._layout_data.get("grid_epoch", 1),
@@ -241,16 +264,20 @@ class DashboardGridCanvas(QWidget):
                 "placement_mode",
                 "hybrid",
             ),
-            "widgets": [
-                dict(entry)
-                for entry in self._layout_data.get("widgets", [])
-            ],
+            "widgets": widgets,
+        }
+
+    def _sync_base_sizes(self):
+        self._base_sizes = {
+            entry["widget_id"]: infer_size_key(entry)
+            for entry in self._layout_data.get("widgets", [])
         }
 
     def load_layout_data(self, layout_data):
         self._layout_data = migrate_layout(
             dict(layout_data or empty_layout())
         )
+        self._sync_base_sizes()
         self._rebuild_grid()
 
     def widgets_on_canvas(self):
@@ -264,6 +291,7 @@ class DashboardGridCanvas(QWidget):
         self._layout_data["widgets"] = [
             e for e in entries if e["widget_id"] != widget_id
         ]
+        self._base_sizes.pop(widget_id, None)
         self._detach_wrapper(widget_id)
         self.layout_changed.emit()
 
@@ -290,6 +318,7 @@ class DashboardGridCanvas(QWidget):
             return False
 
         self._layout_data.setdefault("widgets", []).append(entry)
+        self._base_sizes[widget_id] = size_key
         self._mount_entry(entry)
         self.layout_changed.emit()
         return True
@@ -439,6 +468,15 @@ class DashboardGridCanvas(QWidget):
         return max(hint.height(), min_hint.height(), 1)
 
     def reflow_content_sizes(self):
+        if getattr(self, "_reflow_guard", False):
+            return
+        self._reflow_guard = True
+        try:
+            self._reflow_content_sizes_impl()
+        finally:
+            self._reflow_guard = False
+
+    def _reflow_content_sizes_impl(self):
         widgets = self._layout_data.get("widgets", [])
         if not widgets:
             return
@@ -454,14 +492,63 @@ class DashboardGridCanvas(QWidget):
         for entry in widgets:
             trial = dict(entry)
             inner = self._pool.get(entry["widget_id"])
-            size_key = infer_size_key(entry)
+            widget_id = entry["widget_id"]
+            base_size = self._base_sizes.get(
+                widget_id,
+                infer_size_key(entry),
+            )
+            size_key = base_size
             col_span, min_row_span = spans_for_size(size_key)
-            trial["col_span"] = col_span
-            trial["size"] = size_key
+            trial["size"] = base_size
+            effective_size = base_size
 
-            if inner is None:
+            widget_def = widget_definitions().get(widget_id, {})
+            if widget_def.get("reflow") is False:
+                trial["col_span"] = col_span
+                trial["row_span"] = min_row_span
+                if inner is not None:
+                    inner.setMinimumWidth(0)
+                    inner.setMaximumWidth(16777215)
                 updated.append(trial)
                 continue
+
+            if inner is None:
+                trial["col_span"] = col_span
+                updated.append(trial)
+                continue
+
+            allowed_sizes = widget_def.get(
+                "sizes",
+                ("1x1", "2x1", "2x2"),
+            )
+            while True:
+                col_span, min_row_span = spans_for_size(
+                    effective_size,
+                )
+                block_w = self._block_width(
+                    cell_w,
+                    spacing,
+                    col_span,
+                )
+                content_width = max(
+                    int(block_w) - pad_h * 2,
+                    24,
+                )
+                if not widget_needs_wider_size(
+                    inner,
+                    content_width,
+                ):
+                    break
+                larger = next_larger_size(
+                    effective_size,
+                    allowed_sizes,
+                )
+                if larger is None or larger == effective_size:
+                    break
+                effective_size = larger
+
+            col_span, min_row_span = spans_for_size(effective_size)
+            trial["col_span"] = col_span
 
             block_w = self._block_width(
                 cell_w,

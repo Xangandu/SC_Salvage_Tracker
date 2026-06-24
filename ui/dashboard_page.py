@@ -28,6 +28,9 @@ from ui.dashboard_grid_canvas import DashboardGridCanvas
 from ui.dashboard_catalog_panel import DashboardCatalogPanel
 from ui.dashboard_preset_dialog import DashboardPresetDialog
 from ui.dashboard_grid_utils import default_classic_layout
+from ui.dashboard_number_animation import AnimatedDashboardValue
+from ui.dashboard_status_animation import DashboardStatusAnimator
+from ui.dashboard_fit_label import DashboardFitLabel
 from ui.theme_manager import ThemeManager
 import auth.session as user_session
 
@@ -49,6 +52,7 @@ class DashboardPage(QWidget):
         self.detached_window = None
 
         self._widget_pool: dict[str, QFrame] = {}
+        self._last_session_status = None
         self._build_widget_pool()
 
         root = QVBoxLayout(self)
@@ -147,7 +151,11 @@ class DashboardPage(QWidget):
             return
 
         avg = stats.get("avg_efficiency_percent")
-        avg_text = f"{avg:.1f} %" if avg is not None else "—"
+        avg_text = (
+            f"{format_number_de(avg, 1)} %"
+            if avg is not None
+            else "—"
+        )
 
         lines = [
             f"Aufträge: {stats['job_count']}",
@@ -163,7 +171,11 @@ class DashboardPage(QWidget):
             lines.append("Nach Material:")
             for row in stats["by_material"]:
                 eff = row.get("efficiency_percent")
-                eff_label = f"{eff:.1f} %" if eff is not None else "—"
+                eff_label = (
+                    f"{format_number_de(eff, 1)} %"
+                    if eff is not None
+                    else "—"
+                )
                 lines.append(
                     f"  {material_label(row['material_code'])}: "
                     f"{eff_label} ({row['job_count']}×)"
@@ -174,7 +186,11 @@ class DashboardPage(QWidget):
             lines.append("Nach Methode:")
             for row in stats["by_method"]:
                 eff = row.get("efficiency_percent")
-                eff_label = f"{eff:.1f} %" if eff is not None else "—"
+                eff_label = (
+                    f"{format_number_de(eff, 1)} %"
+                    if eff is not None
+                    else "—"
+                )
                 lines.append(
                     f"  {row['refinery_method']}: "
                     f"{eff_label} ({row['job_count']}×)"
@@ -183,20 +199,23 @@ class DashboardPage(QWidget):
         self.refinery_stats_label.setText("\n".join(lines))
 
     def _build_widget_pool(self):
-        self.status_value = QLabel("LEERLAUF")
-        self.crew_value = QLabel("0")
-        self.rmc_value = QLabel("0 SCU")
-        self.cm_value = QLabel("0 SCU")
-        self.rubble_value = QLabel("0 SCU")
-        self.scraps_value = QLabel("0 SCU")
-        self.salvage_value = QLabel("0 SCU")
-        self.active_sessions_value = QLabel("0")
-        self.total_sessions_value = QLabel("0")
-        self.sold_sessions_value = QLabel("0")
-        self.ready_sessions_value = QLabel("0")
-        self.refinery_jobs_value = QLabel("0")
-        self.total_sales_value = QLabel("0")
-        self.total_profit_value = QLabel("0")
+        self.status_value = DashboardFitLabel(
+            "LEERLAUF",
+            max_lines=2,
+        )
+        self.crew_value = AnimatedDashboardValue("0")
+        self.rmc_value = AnimatedDashboardValue("0 SCU")
+        self.cm_value = AnimatedDashboardValue("0 SCU")
+        self.rubble_value = AnimatedDashboardValue("0 SCU")
+        self.scraps_value = AnimatedDashboardValue("0 SCU")
+        self.salvage_value = AnimatedDashboardValue("0 SCU")
+        self.active_sessions_value = AnimatedDashboardValue("0")
+        self.total_sessions_value = AnimatedDashboardValue("0")
+        self.sold_sessions_value = AnimatedDashboardValue("0")
+        self.ready_sessions_value = AnimatedDashboardValue("0")
+        self.refinery_jobs_value = AnimatedDashboardValue("0")
+        self.total_sales_value = AnimatedDashboardValue("0")
+        self.total_profit_value = AnimatedDashboardValue("0")
 
         kpi_specs = [
             ("status", "STATUS", self.status_value),
@@ -237,21 +256,27 @@ class DashboardPage(QWidget):
 
         for card_id, title, value in kpi_specs:
             accent = card_id == "total_profit"
-            self._widget_pool[card_id] = self._create_card(
+            card = self._create_card(
                 title,
                 value,
                 accent=accent,
             )
+            if card_id == "status":
+                value.setObjectName("dashboardKpiStatusValue")
+            self._widget_pool[card_id] = card
 
         self.session_label = QLabel("KEINE SITZUNG")
-        self.crew_info_label = QLabel("0")
-        self.status_info_label = QLabel("LEERLAUF")
-        self.rmc_info_label = QLabel("0 SCU")
-        self.cm_info_label = QLabel("0 SCU")
-        self.refinery_info_label = QLabel("0")
-        self.session_rubble_info_label = QLabel("0 SCU")
-        self.session_scraps_info_label = QLabel("0 SCU")
-        self.session_salvage_info_label = QLabel("0 SCU")
+        self.crew_info_label = AnimatedDashboardValue("0")
+        self.status_info_label = DashboardFitLabel(
+            "LEERLAUF",
+            max_lines=2,
+        )
+        self.rmc_info_label = AnimatedDashboardValue("0 SCU")
+        self.cm_info_label = AnimatedDashboardValue("0 SCU")
+        self.refinery_info_label = AnimatedDashboardValue("0")
+        self.session_rubble_info_label = AnimatedDashboardValue("0 SCU")
+        self.session_scraps_info_label = AnimatedDashboardValue("0 SCU")
+        self.session_salvage_info_label = AnimatedDashboardValue("0 SCU")
 
         self.refinery_stats_label = QLabel("Noch keine abgeschlossenen Aufträge.")
         self.refinery_stats_label.setWordWrap(True)
@@ -262,21 +287,22 @@ class DashboardPage(QWidget):
         session_panel.setMinimumSize(0, 0)
         session_panel.setSizePolicy(
             QSizePolicy.Policy.Preferred,
-            QSizePolicy.Policy.Minimum,
+            QSizePolicy.Policy.Preferred,
         )
         session_layout = QGridLayout(session_panel)
-        session_layout.setContentsMargins(3, 3, 3, 3)
-        session_layout.setHorizontalSpacing(6)
-        session_layout.setVerticalSpacing(2)
+        session_layout.setContentsMargins(4, 4, 4, 4)
+        session_layout.setHorizontalSpacing(8)
+        session_layout.setVerticalSpacing(1)
 
         session_heading = QLabel("AKTIVE SITZUNG")
         session_heading.setObjectName("dashboardSessionHeading")
-        session_layout.addWidget(session_heading, 0, 0, 1, 2)
+        session_layout.addWidget(session_heading, 0, 0, 1, 4)
 
         session_fields = [
             ("Schiff", self.session_label),
             ("Crew", self.crew_info_label),
             ("Status", self.status_info_label),
+            ("Raffinerie", self.refinery_info_label),
             (material_label("RMC"), self.rmc_info_label),
             (material_label("CM"), self.cm_info_label),
             (
@@ -291,22 +317,35 @@ class DashboardPage(QWidget):
                 material_label("CM_SALVAGE"),
                 self.session_salvage_info_label,
             ),
-            ("Raffinerie", self.refinery_info_label),
         ]
 
-        for row, (field_title, value_label) in enumerate(
-            session_fields,
-            start=1,
-        ):
-            field_label = QLabel(f"{field_title}:")
-            field_label.setObjectName("dashboardStatLabel")
-            value_label.setObjectName("dashboardStatValue")
-            value_label.setWordWrap(True)
-            session_layout.addWidget(field_label, row, 0)
-            session_layout.addWidget(value_label, row, 1)
+        grid_row = 1
+        for index in range(0, len(session_fields), 2):
+            left_title, left_value = session_fields[index]
+            left_label = QLabel(f"{left_title}:")
+            left_label.setObjectName("dashboardStatLabel")
+            left_value.setObjectName("dashboardStatValue")
+            if not isinstance(left_value, DashboardFitLabel):
+                left_value.setWordWrap(False)
+            session_layout.addWidget(left_label, grid_row, 0)
+            session_layout.addWidget(left_value, grid_row, 1)
+
+            if index + 1 < len(session_fields):
+                right_title, right_value = session_fields[index + 1]
+                right_label = QLabel(f"{right_title}:")
+                right_label.setObjectName("dashboardStatLabel")
+                right_value.setObjectName("dashboardStatValue")
+                if not isinstance(right_value, DashboardFitLabel):
+                    right_value.setWordWrap(False)
+                session_layout.addWidget(right_label, grid_row, 2)
+                session_layout.addWidget(right_value, grid_row, 3)
+
+            grid_row += 1
 
         session_layout.setColumnStretch(0, 0)
         session_layout.setColumnStretch(1, 1)
+        session_layout.setColumnStretch(2, 0)
+        session_layout.setColumnStretch(3, 1)
         self._widget_pool["session"] = session_panel
 
         refinery_stats_panel = QFrame(self)
@@ -510,6 +549,27 @@ class DashboardPage(QWidget):
         )
         return card
 
+    def _update_session_status(self, status_code, status_text):
+        previous = self._last_session_status
+        status_card = self._widget_pool.get("status")
+
+        self.status_value.setText(status_text)
+        self.status_info_label.setText(status_text)
+
+        if (
+            previous is not None
+            and previous != status_code
+            and status_card is not None
+        ):
+            DashboardStatusAnimator.pulse(
+                status_card,
+                self.status_value,
+                status_code,
+                status_text,
+            )
+
+        self._last_session_status = status_code
+
     def refresh_dashboard(self):
         debug_log("REFRESH_DASHBOARD WIRD AUSGEFÜHRT")
 
@@ -534,33 +594,21 @@ class DashboardPage(QWidget):
             "CM_SALVAGE"
         )
 
-        self.rmc_value.setText(
-            f"{format_number_de(rmc_storage)} SCU"
+        self.rmc_value.animate_to(rmc_storage, suffix=" SCU")
+        self.cm_value.animate_to(cm_storage, suffix=" SCU")
+        self.rubble_value.animate_to(lifetime_rubble, suffix=" SCU")
+        self.scraps_value.animate_to(lifetime_scraps, suffix=" SCU")
+        self.salvage_value.animate_to(lifetime_salvage, suffix=" SCU")
+        self.sold_sessions_value.animate_to(sold_sessions)
+        self.active_sessions_value.animate_to(active_sessions)
+        self.total_sessions_value.animate_to(total_sessions)
+        self.ready_sessions_value.animate_to(storage_scu)
+        self.refinery_jobs_value.animate_to(open_refinery_jobs)
+        self.total_sales_value.animate_to(
+            total_sales, suffix=" aUEC"
         )
-        self.cm_value.setText(
-            f"{format_number_de(cm_storage)} SCU"
-        )
-        self.rubble_value.setText(
-            f"{format_number_de(lifetime_rubble)} SCU"
-        )
-        self.scraps_value.setText(
-            f"{format_number_de(lifetime_scraps)} SCU"
-        )
-        self.salvage_value.setText(
-            f"{format_number_de(lifetime_salvage)} SCU"
-        )
-        self.sold_sessions_value.setText(str(sold_sessions))
-        self.active_sessions_value.setText(str(active_sessions))
-        self.total_sessions_value.setText(str(total_sessions))
-        self.ready_sessions_value.setText(
-            format_number_de(storage_scu)
-        )
-        self.refinery_jobs_value.setText(str(open_refinery_jobs))
-        self.total_sales_value.setText(
-            f"{format_number_de(total_sales)} aUEC"
-        )
-        self.total_profit_value.setText(
-            f"{format_number_de(total_profit)} aUEC"
+        self.total_profit_value.animate_to(
+            total_profit, suffix=" aUEC"
         )
 
         self._refresh_refinery_stats()
@@ -568,18 +616,17 @@ class DashboardPage(QWidget):
         session = self.db.get_dashboard_session()
 
         if not session:
-            self.status_value.setText("LEERLAUF")
-            self.crew_value.setText("0")
+            self._update_session_status("IDLE", "LEERLAUF")
+            self.crew_value.animate_to(0)
             self.session_label.setText("KEINE SITZUNG")
-            self.crew_info_label.setText("0")
-            self.status_info_label.setText("LEERLAUF")
-            self.rmc_info_label.setText("0 SCU")
-            self.cm_info_label.setText("0 SCU")
-            self.session_rubble_info_label.setText("0 SCU")
-            self.session_scraps_info_label.setText("0 SCU")
-            self.session_salvage_info_label.setText("0 SCU")
-            self.refinery_info_label.setText(
-                f"{open_refinery_jobs} offen"
+            self.crew_info_label.animate_to(0)
+            self.rmc_info_label.animate_to(0, suffix=" SCU")
+            self.cm_info_label.animate_to(0, suffix=" SCU")
+            self.session_rubble_info_label.animate_to(0, suffix=" SCU")
+            self.session_scraps_info_label.animate_to(0, suffix=" SCU")
+            self.session_salvage_info_label.animate_to(0, suffix=" SCU")
+            self.refinery_info_label.animate_to(
+                open_refinery_jobs, suffix=" offen"
             )
             self.canvas.reflow_content_sizes()
             return
@@ -608,28 +655,27 @@ class DashboardPage(QWidget):
         )
         crew = self.db.get_crew_members(session_id)
 
-        self.status_value.setText(status_text)
-        self.crew_value.setText(str(len(crew)))
+        self._update_session_status(status, status_text)
+        self.crew_value.animate_to(len(crew))
         self.session_label.setText(ship_name)
-        self.crew_info_label.setText(str(len(crew)))
-        self.status_info_label.setText(status_text)
-        self.rmc_info_label.setText(
-            f"{format_number_de(session_rmc, 1)} SCU"
+        self.crew_info_label.animate_to(len(crew))
+        self.rmc_info_label.animate_to(
+            session_rmc, suffix=" SCU", decimals=1
         )
-        self.cm_info_label.setText(
-            f"{format_number_de(session_cm, 1)} SCU"
+        self.cm_info_label.animate_to(
+            session_cm, suffix=" SCU", decimals=1
         )
-        self.session_rubble_info_label.setText(
-            f"{format_number_de(session_rubble, 1)} SCU"
+        self.session_rubble_info_label.animate_to(
+            session_rubble, suffix=" SCU", decimals=1
         )
-        self.session_scraps_info_label.setText(
-            f"{format_number_de(session_scraps, 1)} SCU"
+        self.session_scraps_info_label.animate_to(
+            session_scraps, suffix=" SCU", decimals=1
         )
-        self.session_salvage_info_label.setText(
-            f"{format_number_de(session_salvage, 1)} SCU"
+        self.session_salvage_info_label.animate_to(
+            session_salvage, suffix=" SCU", decimals=1
         )
-        self.refinery_info_label.setText(
-            f"{open_refinery_jobs} offen"
+        self.refinery_info_label.animate_to(
+            open_refinery_jobs, suffix=" offen"
         )
         self.canvas.reflow_content_sizes()
 

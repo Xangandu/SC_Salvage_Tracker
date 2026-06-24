@@ -1,2 +1,0 @@
--- Audit-Spalten werden per Python-Migration ergänzt,
--- da SQLite keine bedingten ALTER TABLE unterstützt.

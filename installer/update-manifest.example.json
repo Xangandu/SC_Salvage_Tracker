@@ -1,44 +1,40 @@
 {
   "schema_version": 1,
-  "app": "SC Salvage Tracker",
-  "version": "0.14.3",
-  "version_display": "0.14.3 Alpha",
-  "build": "2026.07",
-  "codename": "Design Control",
-  "tag": "v0.14.3",
-  "published_at": "2026-06-23T12:00:00Z",
+  "app": "SC Salvage Tracker - SOLO Version",
+  "version": "0.15.0",
+  "version_display": "0.15.0 Beta",
+  "build": "2026.08",
+  "codename": "Edition Foundation",
+  "tag": "v0.15.0",
+  "published_at": "2026-06-24T12:00:00Z",
   "mandatory": false,
   "min_version": "0.8.0",
-  "channel": "stable",
+  "channel": "beta",
   "download": {
-    "filename": "SC_Salvage_Tracker_Setup_0.14.3.exe",
-    "url": "https://github.com/Xangandu/SC_Salvage_Tracker/releases/download/v0.14.3/SC_Salvage_Tracker_Setup_0.14.3.exe",
+    "filename": "SC_Salvage_Tracker_Setup_0.15.0.exe",
+    "url": "https://github.com/Xangandu/SC_Salvage_Tracker/releases/download/v0.15.0/SC_Salvage_Tracker_Setup_0.15.0.exe",
     "size_bytes": 0,
     "sha256": "REPLACE_WITH_SHA256_FROM_BUILD"
   },
   "release_notes": {
     "de": {
-      "title": "SC Salvage Tracker 0.14.3 Alpha — Design Control",
-      "summary": "Umfangreiche Design-Einstellungen: Schriften, Farben, Dichte, Transparenz und Fenster-Geometrie.",
+      "title": "SC Salvage Tracker 0.15.0 Beta — Edition Foundation",
+      "summary": "Beta-Start: SOLO Version kostenlos, CREW Edition für Mehrspieler-Vernetzung, ORGA geplant.",
       "highlights": [
-        "Design-Tab: Erscheinungsbild, Dichte, Farben, Dashboard, Organisation",
-        "10 Schriftarten — Oxanium als Standard nach Installation",
-        "Tabellen-Dichte, Fenster- und Panel-Transparenz",
-        "Fensterposition wird gespeichert (auch Monitor 2)",
-        "Moderner Farbwähler, Navigationsbreite, orange Überschriften"
+        "Produkt-Editionen SOLO / CREW / ORGA",
+        "Vernetzung in SOLO gesperrt mit Teaser",
+        "Dokumentation Changelogs/EDITIONS.txt"
       ]
     },
     "en": {
-      "title": "SC Salvage Tracker 0.14.3 Alpha — Design Control",
-      "summary": "Extensive design settings: fonts, colors, density, transparency, and window geometry.",
+      "title": "SC Salvage Tracker 0.15.0 Beta — Edition Foundation",
+      "summary": "Beta launch: SOLO Version free, CREW Edition for multiplayer networking, ORGA planned.",
       "highlights": [
-        "Design tab: appearance, density, colors, dashboard, organization",
-        "10 font families — Oxanium default on fresh install",
-        "Table density, window and panel transparency",
-        "Window position saved (including second monitor)",
-        "Modern color picker, nav width, scaled orange headings"
+        "Product editions SOLO / CREW / ORGA",
+        "Networking locked in SOLO with teaser",
+        "See Changelogs/EDITIONS.txt"
       ]
     }
   },
-  "release_notes_url": "https://github.com/Xangandu/SC_Salvage_Tracker/releases/tag/v0.14.3"
+  "release_notes_url": "https://github.com/Xangandu/SC_Salvage_Tracker/releases/tag/v0.15.0"
 }

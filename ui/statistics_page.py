@@ -32,6 +32,7 @@ from database.payout_repository import (
     UNASSIGNED_COST_PAYERS,
 )
 from config.dates import format_date
+from config.strings_de import format_number_de, parse_number_de
 
 from config.permissions import apply_widget_permissions
 
@@ -595,7 +596,7 @@ class StatisticsPage(QWidget):
 
             f"Ausstehende Verkäufe: {len(unpaid)} | "
 
-            f"Ausgezahlt gesamt: {paid_total:,.0f} aUEC"
+            f"Ausgezahlt gesamt: {format_number_de(paid_total)} aUEC"
 
         )
 
@@ -668,7 +669,7 @@ class StatisticsPage(QWidget):
 
                 QTableWidgetItem(
 
-                    f"{sale['total_amount']:,.0f} aUEC"
+                    f"{format_number_de(sale['total_amount'])} aUEC"
 
                 ),
 
@@ -690,7 +691,7 @@ class StatisticsPage(QWidget):
 
                 f"#{sale['id']} | {sale['location']} | "
 
-                f"{sale['total_amount']:,.0f} aUEC"
+                f"{format_number_de(sale['total_amount'])} aUEC"
 
             )
 
@@ -750,7 +751,7 @@ class StatisticsPage(QWidget):
 
                 QTableWidgetItem(
 
-                    f"{entry['total']:,.0f} aUEC"
+                    f"{format_number_de(entry['total'])} aUEC"
 
                 ),
 
@@ -836,7 +837,7 @@ class StatisticsPage(QWidget):
 
                 QTableWidgetItem(
 
-                    f"{payout['payout_total']:,.0f} aUEC"
+                    f"{format_number_de(payout['payout_total'])} aUEC"
 
                 ),
 
@@ -1236,7 +1237,7 @@ class StatisticsPage(QWidget):
 
         refunds_text = ", ".join(
 
-            f"{name}: {amount:,.0f} aUEC"
+            f"{name}: {format_number_de(amount)} aUEC"
 
             for name, amount in sorted(
 
@@ -1266,27 +1267,27 @@ class StatisticsPage(QWidget):
 
             f"Verkauf #{proposal['sale_id']} | "
 
-            f"Umsatz: {proposal['revenue']:,.0f} aUEC\n"
+            f"Umsatz: {format_number_de(proposal['revenue'])} aUEC\n"
 
             f"Sitzungen: {sessions}\n"
 
-            f"Sitzungskosten: {session_costs:,.0f} aUEC\n"
+            f"Sitzungskosten: {format_number_de(session_costs)} aUEC\n"
 
-            f"Raffineriekosten: {refinery_costs:,.0f} aUEC\n"
+            f"Raffineriekosten: {format_number_de(refinery_costs)} aUEC\n"
 
             f"Kosten gesamt: "
 
-            f"{proposal['total_costs']:,.0f} aUEC\n"
+            f"{format_number_de(proposal['total_costs'])} aUEC\n"
 
             f"Kostenerstattungen: {refunds_text}\n"
 
             f"Gewinnanteil je Crew: "
 
-            f"{proposal['equal_share']:,.0f} aUEC\n"
+            f"{format_number_de(proposal['equal_share'])} aUEC\n"
 
             f"Verteilt gesamt: "
 
-            f"{proposal['distributed_total']:,.0f} aUEC"
+            f"{format_number_de(proposal['distributed_total'])} aUEC"
 
             f"{cost_note}"
 
@@ -1324,7 +1325,7 @@ class StatisticsPage(QWidget):
 
             amount_item = QTableWidgetItem(
 
-                f"{item['amount']:,.0f}"
+                format_number_de(item['amount'])
 
             )
 
@@ -1437,33 +1438,14 @@ class StatisticsPage(QWidget):
 
             member = member_item.text().strip()
 
-
-
-            try:
-
-                amount = float(
-
-                    amount_item.text()
-
-                    .replace(",", "")
-
-                )
-
-            except ValueError:
-
+            amount = parse_number_de(amount_item.text())
+            if amount is None:
                 QMessageBox.warning(
-
                     self,
-
                     "Fehler",
-
                     f"Ungültiger Betrag für {member}.",
-
                 )
-
                 return
-
-
 
             items.append({
 

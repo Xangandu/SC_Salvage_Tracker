@@ -84,6 +84,10 @@ DASHBOARD_FONT_BASE_RULES = (
     ("QLabel#dashboardKpiTitle", 10),
     ("QLabel#dashboardKpiValue", 16),
     ("QLabel#dashboardKpiValueAccent", 16),
+    ("QLabel#dashboardKpiStatusValue", 13),
+    ("QLabel#dashboardKpiDigit", 16),
+    ("QLabel#dashboardKpiDigitAccent", 16),
+    ("QLabel#dashboardStatDigit", 12),
     ("QLabel#dashboardSessionHeading", 10),
     ("QLabel#dashboardStatLabel", 11),
     ("QLabel#dashboardStatValue", 12),
@@ -836,6 +840,8 @@ class ThemeManager:
         body_font = resolve_body_font(family_id)
         label_fonts = dashboard_label_fonts(family_id)
 
+        from ui.dashboard_fit_label import DashboardFitLabel
+
         for label in root_widget.findChildren(QLabel):
             name = label.objectName()
             if name == "pageTitle":
@@ -856,7 +862,10 @@ class ThemeManager:
                 cls._scaled_dashboard_px(base_px, widget_scale),
             )
             font.setBold(True)
-            label.setFont(font)
+            if isinstance(label, DashboardFitLabel):
+                label.apply_theme_font(font)
+            else:
+                label.setFont(font)
 
         button_px = cls._scaled_dashboard_px(16, button_scale)
         for button in root_widget.findChildren(QPushButton):

@@ -1,3 +1,0 @@
--- Raffinerie: cm_raf_output + refinery_method + cost_paid_by
--- Spalten werden zur Laufzeit in Database._upgrade_refinery_output_fields()
--- angelegt und bestehende Jobs backgefüllt (siehe database.py).
