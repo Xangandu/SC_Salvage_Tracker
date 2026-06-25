@@ -103,6 +103,20 @@ def format_date(value):
         return text
 
 
+def _parse_iso_datetime(text: str) -> datetime | None:
+    """ISO-8601 (z. B. alte UTC-Speicherung) in lokale Anzeigezeit."""
+    cleaned = text.strip()
+    if not cleaned or "T" not in cleaned:
+        return None
+    try:
+        parsed = datetime.fromisoformat(cleaned.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is not None:
+        parsed = parsed.astimezone().replace(tzinfo=None)
+    return parsed
+
+
 def format_datetime(value, with_seconds=False):
     if value is None:
         return "—"
@@ -123,7 +137,9 @@ def format_datetime(value, with_seconds=False):
     try:
         parsed = parse_datetime(text)
     except ValueError:
-        return format_date(text)
+        parsed = _parse_iso_datetime(text)
+        if parsed is None:
+            return format_date(text)
 
     fmt = (
         DISPLAY_DATETIME_SECONDS_FMT

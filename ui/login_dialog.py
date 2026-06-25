@@ -24,13 +24,9 @@ from PySide6.QtCore import Qt
 
 
 
-from config.setup import (
+from config.setup import SUPERADMIN_USERNAME
 
-    DEFAULT_SUPERADMIN_PASSWORD,
-
-    SUPERADMIN_USERNAME,
-
-)
+from config.i18n import tr
 
 from database.access import get_database
 
@@ -86,7 +82,7 @@ class LoginDialog(MobiglasFramelessMixin, QDialog):
 
         self.setObjectName("mobiglasDialog")
 
-        self.setWindowTitle("Anmeldung")
+        self.setWindowTitle(tr("login.title"))
 
         self.setModal(True)
 
@@ -102,53 +98,25 @@ class LoginDialog(MobiglasFramelessMixin, QDialog):
 
 
 
-        if self._is_initial_setup_pending():
+        recovery_hint = QLabel(
 
-            first_start_banner = QLabel(
+            tr(
 
-                "ERSTINSTALLATION\n"
+                "login.recovery.hint",
 
-                f"Benutzer: {SUPERADMIN_USERNAME}  ·  "
-
-                f"Passwort: {DEFAULT_SUPERADMIN_PASSWORD}\n"
-
-                "Nach der Anmeldung musst du dein Passwort "
-
-                "ändern und einen Organisations-Administrator "
-
-                "anlegen."
+                username=SUPERADMIN_USERNAME,
 
             )
 
-            first_start_banner.setWordWrap(True)
+        )
 
-            first_start_banner.setObjectName("warningBanner")
+        recovery_hint.setWordWrap(True)
 
-            first_start_banner.setAlignment(Qt.AlignCenter)
+        recovery_hint.setObjectName("mutedLabel")
 
-            layout.addWidget(first_start_banner)
+        recovery_hint.setAlignment(Qt.AlignCenter)
 
-        else:
-
-            recovery_hint = QLabel(
-
-                "NOTFALL-WARTUNG\n"
-
-                f"Der Super-Administrator ({SUPERADMIN_USERNAME}) "
-
-                "kann sich jederzeit anmelden, um Benutzer "
-
-                "oder Administratoren zu reparieren."
-
-            )
-
-            recovery_hint.setWordWrap(True)
-
-            recovery_hint.setObjectName("mutedLabel")
-
-            recovery_hint.setAlignment(Qt.AlignCenter)
-
-            layout.addWidget(recovery_hint)
+        layout.addWidget(recovery_hint)
 
 
 
@@ -173,7 +141,7 @@ class LoginDialog(MobiglasFramelessMixin, QDialog):
 
 
 
-        tagline = QLabel("BERGUNGS-TRACKER")
+        tagline = QLabel(tr("login.tagline"))
 
         tagline.setObjectName("loginTagline")
 
@@ -193,7 +161,7 @@ class LoginDialog(MobiglasFramelessMixin, QDialog):
 
         self.username_input = QLineEdit()
 
-        self.username_input.setPlaceholderText("Benutzername")
+        self.username_input.setPlaceholderText(tr("login.username"))
 
 
 
@@ -201,7 +169,7 @@ class LoginDialog(MobiglasFramelessMixin, QDialog):
 
         self.password_input.setEchoMode(QLineEdit.Password)
 
-        self.password_input.setPlaceholderText("Passwort")
+        self.password_input.setPlaceholderText(tr("login.password"))
 
 
 
@@ -209,7 +177,7 @@ class LoginDialog(MobiglasFramelessMixin, QDialog):
 
             card_layout,
 
-            "Benutzername",
+            tr("login.username"),
 
             self.username_input,
 
@@ -219,7 +187,7 @@ class LoginDialog(MobiglasFramelessMixin, QDialog):
 
             card_layout,
 
-            "Passwort",
+            tr("login.password"),
 
             self.password_input,
 
@@ -229,7 +197,7 @@ class LoginDialog(MobiglasFramelessMixin, QDialog):
 
         self.remember_checkbox = QCheckBox(
 
-            "Angemeldet bleiben"
+            tr("login.remember")
 
         )
 
@@ -241,7 +209,7 @@ class LoginDialog(MobiglasFramelessMixin, QDialog):
 
 
 
-        self.login_button = primary_button("ANMELDEN")
+        self.login_button = primary_button(tr("login.button"))
 
         self.login_button.clicked.connect(
 
@@ -289,7 +257,7 @@ class LoginDialog(MobiglasFramelessMixin, QDialog):
 
             self,
 
-            title="Anmeldung",
+            title=tr("login.title"),
 
             dialog=True,
 

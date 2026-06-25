@@ -47,6 +47,16 @@ from config.editions import (
     enforce_standalone_network,
     has_feature,
 )
+from config.i18n import (
+    DEFAULT_LANGUAGE,
+    init_language_from_db,
+    is_language_confirmed,
+    normalize_language,
+    save_language_choice,
+    set_language,
+    tr,
+)
+from ui.language_dialog import LanguageDialog
 
 
 class SalvageTrackerApp:
@@ -213,8 +223,47 @@ class SalvageTrackerApp:
 
         start_host_relay_if_enabled(self.db, server)
 
+    def _ensure_language_selected(self):
+        init_language_from_db(self.db)
+
+        if not is_language_confirmed(self.db):
+            set_language(DEFAULT_LANGUAGE)
+            dialog = LanguageDialog()
+            if dialog.exec() != QDialog.DialogCode.Accepted:
+                return False
+            save_language_choice(self.db, dialog.selected_language)
+        else:
+            init_language_from_db(self.db)
+
+        return True
+
+    def _run_initial_setup_if_needed(self):
+        if self.db.is_initial_setup_complete():
+            return True
+
+        if not self._run_initial_setup_wizard():
+            return False
+
+        clear_remember_data()
+        created_user = (
+            self._initial_setup_created_username
+            or "Administrator"
+        )
+        QMessageBox.information(
+            None,
+            tr("setup.complete.title"),
+            tr("setup.complete.message", username=created_user),
+        )
+        return True
+
     def run(self):
         run_startup_splash(self._initialize_backend)
+
+        if not self._ensure_language_selected():
+            return 0
+
+        if not self._run_initial_setup_if_needed():
+            return 0
 
         while True:
             user = self._try_remembered_login()
@@ -255,26 +304,6 @@ class SalvageTrackerApp:
                         user_session.get_login_id(),
                     )
 
-            if not self.db.is_initial_setup_complete():
-                if not self._run_initial_setup_wizard():
-                    user_session.clear_session()
-                    continue
-
-                created_user = (
-                    self._initial_setup_created_username
-                )
-                user_session.clear_session()
-                clear_remember_data()
-
-                QMessageBox.information(
-                    None,
-                    "Erstinstallation abgeschlossen",
-                    "Die Erstinstallation ist abgeschlossen.\n\n"
-                    f"Melde dich jetzt als "
-                    f"„{created_user or 'Administrator'}“ an.",
-                )
-                continue
-
             if not self.db.can_use_main_application(user):
                 if (
                     is_super_administrator(user)
@@ -296,6 +325,12 @@ class SalvageTrackerApp:
                 continue
 
             self._apply_user_theme(user)
+            effective = self.db.settings.resolve_effective_settings(
+                user["id"]
+            )
+            set_language(
+                normalize_language(effective.get("language"))
+            )
             self._load_saved_network_mode()
 
             if not self._offer_connection_assistant():

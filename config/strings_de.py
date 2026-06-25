@@ -10,7 +10,9 @@ STATUS_LABELS = {
 
 
 def status_label(status):
-    return STATUS_LABELS.get(status, status)
+    from config.i18n import status_label as localized_status_label
+
+    return localized_status_label(status)
 
 
 def format_number_de(value, decimals=0):

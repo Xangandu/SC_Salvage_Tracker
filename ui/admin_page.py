@@ -28,6 +28,13 @@ from ui.mobiglas_input_dialog import (
     MobiglasTextInputDialog,
 )
 from config.dates import format_datetime
+from config.i18n import (
+    SUPPORTED_LANGUAGES,
+    normalize_language,
+    save_language_choice,
+    set_language,
+    tr,
+)
 from database.access import get_database
 from config.permissions import (
     has_permission,
@@ -446,6 +453,13 @@ class AdminPage(QWidget):
         for theme_id, label in ThemeManager.available_themes():
             self.theme_combo.addItem(label, theme_id)
 
+        self.language_combo = QComboBox()
+        for lang_code in SUPPORTED_LANGUAGES:
+            self.language_combo.addItem(
+                tr(f"language.name.{lang_code}"),
+                lang_code,
+            )
+
         self.font_size_combo = QComboBox()
         for key, label in FONT_SIZE_LABELS.items():
             self.font_size_combo.addItem(label, key)
@@ -469,6 +483,7 @@ class AdminPage(QWidget):
         grid.setColumnStretch(1, 1)
 
         appearance_fields = [
+            (tr("admin.language"), self.language_combo),
             ("Theme", self.theme_combo),
             ("Schriftgröße", self.font_size_combo),
             ("Schriftart", self.font_family_combo),
@@ -1078,6 +1093,10 @@ class AdminPage(QWidget):
         )
 
         self._set_combo_by_data(
+            self.language_combo,
+            normalize_language(effective.get("language")),
+        )
+        self._set_combo_by_data(
             self.theme_combo,
             effective.get("theme"),
         )
@@ -1171,6 +1190,7 @@ class AdminPage(QWidget):
 
     def _collect_theme_form(self):
         return {
+            "language": self.language_combo.currentData(),
             "theme": self.theme_combo.currentData(),
             "font_size": self.font_size_combo.currentData(),
             "font_family": self.font_family_combo.currentData(),
@@ -1326,10 +1346,14 @@ class AdminPage(QWidget):
 
         theme = self._collect_theme_form()
         accent = theme.get("accent_color") or None
+        selected_language = normalize_language(theme.get("language"))
+        save_language_choice(self.db, selected_language)
+        set_language(selected_language)
 
         self.db.settings.save_user_settings(
             self.current_user["id"],
             {
+                "language": selected_language,
                 "theme": theme["theme"],
                 "font_size": theme["font_size"],
                 "font_family": theme["font_family"],
@@ -1357,7 +1381,8 @@ class AdminPage(QWidget):
         QMessageBox.information(
             self,
             "Design",
-            "Deine Design-Einstellungen wurden gespeichert.",
+            "Deine Design-Einstellungen wurden gespeichert.\n\n"
+            f"{tr('admin.language.restart_hint')}",
         )
 
     def preview_dashboard_settings(self):

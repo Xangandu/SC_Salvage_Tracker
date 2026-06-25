@@ -5,7 +5,7 @@ from config.font_families import DEFAULT_FONT_FAMILY
 
 DEFAULT_APP_SETTINGS = {
     "theme": "star_citizen",
-    "language": "de",
+    "language": "en",
     "font_size": "normal",
     "font_family": DEFAULT_FONT_FAMILY,
     "accent_color": "",
@@ -24,6 +24,7 @@ DEFAULT_APP_SETTINGS = {
     "update_auto_check": "1",
     "update_skipped_version": "",
     "update_last_check": "",
+    "language_confirmed": "0",
 }
 
 DEFAULT_USER_SETTINGS = {

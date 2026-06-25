@@ -5,7 +5,6 @@ from __future__ import annotations
 import hashlib
 import subprocess
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable
 from urllib.error import URLError
@@ -59,8 +58,9 @@ def get_last_check(db) -> str:
 
 
 def record_last_check(db) -> None:
-    timestamp = datetime.now(timezone.utc).isoformat(timespec="seconds")
-    db.settings.set_app_setting(SETTING_LAST_CHECK, timestamp)
+    from config.dates import now_db_timestamp
+
+    db.settings.set_app_setting(SETTING_LAST_CHECK, now_db_timestamp())
 
 
 def should_offer_update(db, manifest: UpdateManifest) -> bool:

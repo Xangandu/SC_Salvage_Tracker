@@ -22,6 +22,7 @@ from config.editions import (
     effective_edition,
     resolve_app_name,
 )
+from config.i18n import tr
 from config.version import format_version_nav_html
 from config.permissions import can_access
 
@@ -198,27 +199,27 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
         brand_layout.addWidget(user_panel)
         brand_outer.addWidget(brand_card)
 
-        self.btn_dashboard = QPushButton("Übersicht")
+        self.btn_dashboard = QPushButton(tr("nav.dashboard"))
         self.btn_dashboard.setObjectName(
             "navButton"
         )
 
-        self.btn_session = QPushButton("Sitzung")
+        self.btn_session = QPushButton(tr("nav.session"))
         self.btn_session.setObjectName("navButton")
 
-        self.btn_refinery = QPushButton("Raffinerie")
+        self.btn_refinery = QPushButton(tr("nav.refinery"))
         self.btn_refinery.setObjectName("navButton")
 
-        self.btn_sales = QPushButton("Verkäufe")
+        self.btn_sales = QPushButton(tr("nav.sales"))
         self.btn_sales.setObjectName("navButton")
 
-        self.btn_stats = QPushButton("Auszahlung")
+        self.btn_stats = QPushButton(tr("nav.payout"))
         self.btn_stats.setObjectName("navButton")
 
-        self.btn_history = QPushButton("Historie")
+        self.btn_history = QPushButton(tr("nav.history"))
         self.btn_history.setObjectName("navButton")
 
-        self.btn_admin = QPushButton("Einstellungen")
+        self.btn_admin = QPushButton(tr("nav.settings"))
         self.btn_admin.setObjectName("navButton")
 
         self.pages = QStackedWidget()
@@ -392,7 +393,7 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
             title=resolve_app_name(self.db),
         )
         title_bar.add_action_button(
-            "Abmelden",
+            tr("nav.logout"),
             self.logout,
         )
 

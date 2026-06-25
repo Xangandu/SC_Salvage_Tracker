@@ -66,7 +66,8 @@ GitHub Release hoch (Voraussetzung: `gh auth login`).
 
 **Vollautomatisch (empfohlen):**
 
-Doppelklick auf **`Release_veroeffentlichen.bat`** im Projektroot — **keine Eingaben nötig**.
+Doppelklick auf **`Release_veroeffentlichen.bat`** im Projektroot — oeffnet ein **blaues PowerShell-Fenster** (kein schwarzes CMD).
+Alternativ direkt: **`Release_veroeffentlichen.ps1`**
 
 Das Skript erledigt automatisch:
 1. Version aus `config/version.py` lesen  
