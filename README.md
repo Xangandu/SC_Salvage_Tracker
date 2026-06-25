@@ -5,13 +5,8 @@ Salvage**\
 Sitzungen, Materialfluss, Raffinerie, Verkäufe, Kosten und
 Crew-Auszahlungen.
 
-```{=html}
-<p align="center">
-```
-`<img src="grafik.png" alt="SC Salvage Tracker" width="1000">`{=html}
-```{=html}
-</p>
-```
+![SC Salvage Tracker](grafik.png)
+
 > **Download (kostenlos):** [Latest Release --- SOLO
 > Version](https://github.com/Xangandu/SC_Salvage_Tracker/releases/latest)
 
