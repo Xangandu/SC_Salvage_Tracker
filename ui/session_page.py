@@ -340,6 +340,7 @@ class SessionPage(QWidget):
 
     def apply_permissions(self, user, page_name="session"):
         apply_widget_permissions(self, user, page_name)
+        self.refresh_session()
 
     def _on_host_ship_changed(self, ship_name):
         if not self.is_network_client:
@@ -763,13 +764,9 @@ class SessionPage(QWidget):
                     member,
                 )
 
-            self.active_ship_label.setText(ship)
-            self.active_status_label.setText("AKTIV")
-            self.finish_button.setEnabled(True)
-            self.end_session_button.setEnabled(True)
+            self.refresh_session()
             self._refresh_delete_sessions()
             self._refresh_mission_costs(session_id)
-            self._apply_material_fields_for_ship(ship)
 
             main_window = self.window()
             if hasattr(main_window, "dashboard_page"):

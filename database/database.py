@@ -729,6 +729,9 @@ class Database(UserAuthMixin, InitialSetupMixin):
         WHERE status = 'ACTIVE'
         """
 
+        if "is_deleted" in self._table_columns("sessions"):
+            query += " AND is_deleted = 0"
+
         if (
             restrict_user is not None
             and "created_by" in self._table_columns("sessions")
@@ -1576,7 +1579,12 @@ class Database(UserAuthMixin, InitialSetupMixin):
         if session:
             return session
 
-        return self.get_latest_session()
+        latest = self.get_latest_session()
+
+        if latest and latest[2] == "SOLD":
+            return None
+
+        return latest
     
     def get_total_profit(self):
 

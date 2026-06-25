@@ -1574,14 +1574,10 @@ class StatisticsPage(QWidget):
 
 
         if hasattr(
-
             main_window,
-
             "dashboard_page"
-
         ):
-
-            main_window.dashboard_page.refresh_dashboard()
+            main_window.dashboard_page.on_payout_saved()
 
 
 

@@ -142,6 +142,7 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "status.REFINERY_COMPLETED": "READY FOR SALE",
         "status.SOLD": "SOLD",
         "status.IDLE": "IDLE",
+        "dashboard.status.cycle_complete": "COMPLETE",
     },
     "de": {
         "language.dialog.title": "Sprache wählen",
@@ -278,6 +279,7 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "status.REFINERY_COMPLETED": "VERKAUFSBEREIT",
         "status.SOLD": "VERKAUFT",
         "status.IDLE": "LEERLAUF",
+        "dashboard.status.cycle_complete": "ABGESCHLOSSEN",
     },
 }
 

@@ -4,11 +4,17 @@ from PySide6.QtWidgets import (
     QVBoxLayout
 )
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 
+from database.access import get_database
 from ui.mobiglas_window_frame import (
     MobiglasFramelessMixin,
     apply_mobiglas_window_frame,
+)
+from ui.window_geometry import (
+    restore_dashboard_window_geometry,
+    save_dashboard_window_geometry,
+    set_dashboard_open_on_startup,
 )
 
 
@@ -37,11 +43,6 @@ class DashboardWindow(MobiglasFramelessMixin, QMainWindow):
             640
         )
 
-        self.resize(
-            1800,
-            1000
-        )
-        
         self.setWindowFlag(
             Qt.WindowStaysOnTopHint,
             False
@@ -50,6 +51,13 @@ class DashboardWindow(MobiglasFramelessMixin, QMainWindow):
         self.setAttribute(
             Qt.WA_QuitOnClose,
             False,
+        )
+
+        self._geometry_timer = QTimer(self)
+        self._geometry_timer.setSingleShot(True)
+        self._geometry_timer.setInterval(400)
+        self._geometry_timer.timeout.connect(
+            self._save_geometry
         )
 
         central_widget = QWidget()
@@ -74,11 +82,41 @@ class DashboardWindow(MobiglasFramelessMixin, QMainWindow):
             title="MobiGlas Salvage-Übersicht",
         )
 
+        restore_dashboard_window_geometry(
+            self,
+            get_database(),
+        )
+
         self.hide()
 
-    def show_dashboard(self):
+    def _save_geometry(self):
+        if not self.isVisible():
+            return
 
-        self.dashboard_page.apply_dashboard_layout()
+        save_dashboard_window_geometry(
+            self,
+            get_database(),
+        )
+
+    def _schedule_geometry_save(self):
+        if self.isVisible():
+            self._geometry_timer.start()
+
+    def moveEvent(self, event):
+        super().moveEvent(event)
+        self._schedule_geometry_save()
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self._schedule_geometry_save()
+
+    def show_dashboard(self):
+        restore_dashboard_window_geometry(
+            self,
+            get_database(),
+        )
+
+        self.dashboard_page.reload_user_layout()
         self.dashboard_page.refresh_dashboard()
 
         self.dashboard_page.update()
@@ -96,9 +134,16 @@ class DashboardWindow(MobiglasFramelessMixin, QMainWindow):
 
         self.activateWindow()
 
-    def hide_dashboard(self):
-
+    def hide_dashboard(self, *, user_action=True):
+        self._save_geometry()
+        self.dashboard_page.persist_layout()
         self.dashboard_page.mark_as_embedded()
+
+        if user_action:
+            set_dashboard_open_on_startup(
+                get_database(),
+                False,
+            )
 
         self.hide()
 
@@ -128,8 +173,8 @@ class DashboardWindow(MobiglasFramelessMixin, QMainWindow):
         self,
         event
     ):
-
-        self.dashboard_page.apply_dashboard_layout()
+        self._save_geometry()
+        self.dashboard_page.persist_layout()
         self.dashboard_page.refresh_dashboard()
 
         self.dashboard_page.mark_as_embedded()

@@ -51,6 +51,8 @@ from ui.update_manager import UpdateManager
 from ui.window_geometry import (
     restore_window_geometry,
     save_window_geometry,
+    dashboard_open_on_startup,
+    set_dashboard_open_on_startup,
 )
 from ui.theme_manager import NAV_WIDTH_PX
 
@@ -424,6 +426,9 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
         self.apply_nav_width(settings.get("nav_width", "normal"))
         restore_window_geometry(self, db)
 
+        if dashboard_open_on_startup(db):
+            QTimer.singleShot(0, self.show_dashboard_window)
+
     def apply_nav_width(self, nav_width: str = "normal"):
         if nav_width not in NAV_WIDTH_PX:
             nav_width = "normal"
@@ -738,20 +743,23 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
                 )
             )
 
-    def _close_detached_dashboard(self):
+    def _close_detached_dashboard(self, *, user_action=True):
         if not self.dashboard_window.isVisible():
             return
 
-        if self.dashboard_page.is_ready_for_attach():
-            self.dashboard_page.mark_as_embedded()
-
-        self.dashboard_window.hide()
+        self.dashboard_window.hide_dashboard(
+            user_action=user_action
+        )
 
     def closeEvent(self, event):
-        self._close_detached_dashboard()
         from database.access import get_database
 
-        save_window_geometry(self, get_database())
+        db = get_database()
+        if self.dashboard_window.isVisible():
+            set_dashboard_open_on_startup(db, True)
+        self._close_detached_dashboard(user_action=False)
+        self.dashboard_page.persist_layout()
+        save_window_geometry(self, db)
         super().closeEvent(event)
 
     def logout(self):
@@ -868,6 +876,7 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
 
             self.dashboard_page.mark_as_detached()
 
+        set_dashboard_open_on_startup(self.db, True)
         self.dashboard_window.show_dashboard()
 
         self.btn_dashboard.setText(
@@ -883,6 +892,7 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
 
             self.dashboard_page.mark_as_embedded()
 
+        set_dashboard_open_on_startup(self.db, False)
         self.dashboard_window.hide_dashboard()
 
         self.btn_dashboard.setText(

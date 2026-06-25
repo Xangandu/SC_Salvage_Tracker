@@ -15,6 +15,7 @@ from PySide6.QtCore import Qt, QTimer
 
 from database.access import get_database, get_dashboard_layout_repository
 from config.strings_de import status_label, format_number_de
+from config.i18n import tr
 from config.materials import material_total_label, material_label
 from config.debug import debug_log
 from config.permissions import apply_widget_permissions
@@ -53,6 +54,14 @@ class DashboardPage(QWidget):
 
         self._widget_pool: dict[str, QFrame] = {}
         self._last_session_status = None
+        self._status_cycle_animating = False
+        self._layout_dirty = False
+        self._layout_autosave_timer = QTimer(self)
+        self._layout_autosave_timer.setSingleShot(True)
+        self._layout_autosave_timer.setInterval(400)
+        self._layout_autosave_timer.timeout.connect(
+            self._autosave_layout
+        )
         self._build_widget_pool()
 
         root = QVBoxLayout(self)
@@ -124,6 +133,9 @@ class DashboardPage(QWidget):
         self.canvas.layout_changed.connect(
             self._sync_catalog
         )
+        self.canvas.layout_changed.connect(
+            self._on_layout_changed
+        )
 
         body.addWidget(scroll, 1)
         body.addWidget(self.catalog)
@@ -138,6 +150,69 @@ class DashboardPage(QWidget):
         self._load_initial_layout()
         self.refresh_dashboard()
         ThemeManager.refresh_dashboard_font_scale()
+
+    def reload_user_layout(self):
+        if self._edit_mode:
+            return
+
+        user_id = self._user_id()
+        if user_id is None:
+            return
+
+        saved = self._layout_repo().get_active_layout(user_id)
+        if saved is not None:
+            self.canvas.load_layout_data(saved)
+            self._saved_layout_snapshot = saved
+            self._layout_dirty = False
+        else:
+            layout = default_classic_layout()
+            self.canvas.load_layout_data(layout)
+            self._saved_layout_snapshot = layout
+            self._layout_dirty = False
+
+        self._sync_catalog()
+        self._update_layout_dirty_hint()
+        self.canvas.reflow_content_sizes()
+
+    def persist_layout(self):
+        user_id = self._user_id()
+        if user_id is None:
+            return False
+
+        layout = self.canvas.get_layout_data()
+        self._layout_repo().save_active_layout(
+            user_id,
+            layout,
+        )
+        self._saved_layout_snapshot = layout
+        self._layout_dirty = False
+        self._update_layout_dirty_hint()
+        return True
+
+    def _autosave_layout(self):
+        if not self._layout_dirty:
+            return
+
+        if self.persist_layout():
+            debug_log("Dashboard-Layout automatisch gespeichert")
+
+    def _on_layout_changed(self):
+        if not self._edit_mode:
+            return
+
+        self._layout_dirty = True
+        self._update_layout_dirty_hint()
+        self._layout_autosave_timer.start()
+
+    def _update_layout_dirty_hint(self):
+        if self._edit_mode and self._layout_dirty:
+            self.edit_toggle_button.setText(
+                "Dashboard anpassen ●"
+            )
+        else:
+            self.edit_toggle_button.setText(
+                "Dashboard anpassen"
+            )
 
     def apply_font_scale(self, scales=None):
         ThemeManager.apply_dashboard_fonts(self, scales)
@@ -369,14 +444,18 @@ class DashboardPage(QWidget):
 
     def _load_initial_layout(self):
         user_id = self._user_id()
-        layout = None
         if user_id is not None:
-            layout = self._layout_repo().get_active_layout(
+            saved = self._layout_repo().get_active_layout(
                 user_id
             )
-        if layout is None:
-            layout = default_classic_layout()
-        self.canvas.load_layout_data(layout)
+            if saved is not None:
+                self.canvas.load_layout_data(saved)
+                self._saved_layout_snapshot = saved
+                self._sync_catalog()
+                return
+
+        self.canvas.load_layout_data(default_classic_layout())
+        self._saved_layout_snapshot = None
         self._sync_catalog()
 
     def _sync_catalog(self):
@@ -400,6 +479,8 @@ class DashboardPage(QWidget):
         self.save_layout_button.show()
         self.cancel_layout_button.show()
         self.preset_button.setEnabled(True)
+        self._layout_dirty = False
+        self._update_layout_dirty_hint()
 
     def _leave_edit_mode(self):
         self._edit_mode = False
@@ -409,6 +490,8 @@ class DashboardPage(QWidget):
         self.edit_toggle_button.setText("Dashboard anpassen")
         self.save_layout_button.hide()
         self.cancel_layout_button.hide()
+        if self._layout_dirty:
+            self.persist_layout()
 
     def _save_layout(self):
         user_id = self._user_id()
@@ -420,12 +503,9 @@ class DashboardPage(QWidget):
             )
             return
 
-        layout = self.canvas.get_layout_data()
-        self._layout_repo().save_active_layout(
-            user_id,
-            layout,
-        )
-        self._saved_layout_snapshot = layout
+        if not self.persist_layout():
+            return
+
         self._leave_edit_mode()
         QMessageBox.information(
             self,
@@ -438,6 +518,8 @@ class DashboardPage(QWidget):
             self.canvas.load_layout_data(
                 self._saved_layout_snapshot
             )
+        self._layout_dirty = False
+        self._update_layout_dirty_hint()
         self._leave_edit_mode()
         self._sync_catalog()
 
@@ -465,11 +547,14 @@ class DashboardPage(QWidget):
 
     def showEvent(self, event):
         super().showEvent(event)
+        if not self._edit_mode:
+            self.reload_user_layout()
         self.refresh_dashboard()
         self._refresh_timer.start()
 
     def hideEvent(self, event):
         self._refresh_timer.stop()
+        self.persist_layout()
         super().hideEvent(event)
 
     def apply_permissions(self, user, page_name="dashboard"):
@@ -486,12 +571,7 @@ class DashboardPage(QWidget):
             button.setEnabled(can_use)
 
         if user and not self._edit_mode:
-            saved = self._layout_repo().get_active_layout(
-                user["id"]
-            )
-            if saved:
-                self.canvas.load_layout_data(saved)
-                self._sync_catalog()
+            self.reload_user_layout()
 
     def apply_dashboard_layout(self, layout_id=None):
         """Legacy-Hook — Presets über Preset-Dialog."""
@@ -570,6 +650,36 @@ class DashboardPage(QWidget):
 
         self._last_session_status = status_code
 
+    def on_payout_saved(self):
+        self.refresh_dashboard()
+        self.start_payout_cycle_complete_animation()
+
+    def start_payout_cycle_complete_animation(self):
+        status_card = self._widget_pool.get("status")
+        if status_card is None:
+            return
+
+        idle_text = status_label("IDLE")
+        payout_text = status_label("WAITING_FOR_PAYOUT")
+        complete_text = tr("dashboard.status.cycle_complete")
+
+        self._status_cycle_animating = True
+
+        def on_finished():
+            self._status_cycle_animating = False
+            self._last_session_status = "IDLE"
+            self.status_value.setText(idle_text)
+            self.status_info_label.setText(idle_text)
+            self.refresh_dashboard()
+
+        DashboardStatusAnimator.cycle_complete(
+            status_card,
+            self.status_value,
+            payout_text,
+            complete_text,
+            on_finished,
+        )
+
     def refresh_dashboard(self):
         debug_log("REFRESH_DASHBOARD WIRD AUSGEFÜHRT")
 
@@ -616,7 +726,8 @@ class DashboardPage(QWidget):
         session = self.db.get_dashboard_session()
 
         if not session:
-            self._update_session_status("IDLE", "LEERLAUF")
+            if not self._status_cycle_animating:
+                self._update_session_status("IDLE", status_label("IDLE"))
             self.crew_value.animate_to(0)
             self.session_label.setText("KEINE SITZUNG")
             self.crew_info_label.animate_to(0)
@@ -655,7 +766,8 @@ class DashboardPage(QWidget):
         )
         crew = self.db.get_crew_members(session_id)
 
-        self._update_session_status(status, status_text)
+        if not self._status_cycle_animating:
+            self._update_session_status(status, status_text)
         self.crew_value.animate_to(len(crew))
         self.session_label.setText(ship_name)
         self.crew_info_label.animate_to(len(crew))
