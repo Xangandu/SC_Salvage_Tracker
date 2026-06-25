@@ -1,5 +1,7 @@
 # SC Salvage Tracker
 
+SC Salvage Tracker ist ein Desktop-Tool für Star Citizen, das den kompletten Salvage-Workflow organisiert – von der Mission über Raffinerie und Materialverwaltung bis zum Verkauf und der Gewinnberechnung.
+
 **Beta** · MobiGlas-inspiriertes Desktop-Tool für **Star Citizen
 Salvage**\
 Sitzungen, Materialfluss, Raffinerie, Verkäufe, Kosten und
