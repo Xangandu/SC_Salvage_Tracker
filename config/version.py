@@ -40,9 +40,9 @@ EDITION_TITLES = {
     "orga": "ORGA Version",
 }
 
-APP_VERSION = "0.15.0 Beta"
-APP_BUILD = "2026.08"
-APP_CODENAME = "Edition Foundation"
+APP_VERSION = "0.15.1 Beta"
+APP_BUILD = "2026.09"
+APP_CODENAME = "SOLO BUGFIX"
 
 DEVELOPER_NAME = "Christian"
 DEVELOPER_ALIAS = "Xan-Gan-Du"

@@ -1,6 +1,31 @@
 SC SALVAGE TRACKER – PATCHNOTES
 ================================
 
+VERSION 0.15.1 Beta | Build 2026.09 | Codename: SOLO BUGFIX
+--------------------------------------------------------------------
+
+NEU — DASHBOARD-VERBESSERUNGEN
+• Verbesserung der Persistenz des Dashboards für eine stabilere Benutzererfahrung
+• Optimierung des Rückmeldungszyklus bei Auszahlungen für mehr Transparenz
+
+NEU — INTERNATIONALISIERUNG
+• Einführung von i18n zur Unterstützung mehrerer Sprachen
+• Verbesserter Setup-Prozess bei der ersten Nutzung zur besseren Benutzerführung
+
+FIXES
+• Behebung eines Fehlers im In-App Update-Check zur Vermeidung von Konflikten mit SQLite
+• Korrekturen in der Benutzeroberfläche für eine konsistentere Darstellung
+• Fehlerbehebung in der initialen Setup-Routine zur Vermeidung von Abstürzen
+
+DOKUMENTATION
+• Aktualisierte Anleitungen und Changelogs in den entsprechenden Verzeichnissen
+• Einführung von neuen Dokumenten zur Unterstützung des Entwicklungsprozesses
+
+HINWEIS
+• Änderungen an den internen Skripten zur Unterstützung der neuen Funktionen
+• Überprüfung der Benutzeroberfläche empfohlen, um die neuen Features optimal zu nutzen
+
+
 VERSION 0.15.0 Beta | Build 2026.08 | Codename: Edition Foundation
 --------------------------------------------------------------------
 
