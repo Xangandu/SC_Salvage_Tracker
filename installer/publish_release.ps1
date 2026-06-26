@@ -250,9 +250,17 @@ if (Test-CommandExists "git") {
     }
 }
 
-gh release view $ReleaseTag 2>$null | Out-Null
-if ($LASTEXITCODE -eq 0) {
-    $releaseExists = $true
+$releaseExists = $false
+$prevErrorAction = $ErrorActionPreference
+$ErrorActionPreference = "Continue"
+try {
+    gh release view $ReleaseTag 2>$null | Out-Null
+    if ($LASTEXITCODE -eq 0) {
+        $releaseExists = $true
+    }
+}
+finally {
+    $ErrorActionPreference = $prevErrorAction
 }
 
 if ($tagExists -or $releaseExists) {
