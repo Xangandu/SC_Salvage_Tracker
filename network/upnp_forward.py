@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import socket
 
+from config.i18n import tr
+
 
 def try_forward_port(
     port: int,
@@ -18,20 +20,11 @@ def try_forward_port(
         import sys
 
         version = f"{sys.version_info.major}.{sys.version_info.minor}"
-        hint = (
-            "UPnP-Bibliothek nicht installiert.\n\n"
-            f"Aktuelle Python-Version: {version}\n"
-        )
+        hint = tr("admin.network.upnp.msg.lib_missing", version=version)
         if sys.version_info >= (3, 14):
-            hint += (
-                "Unter Python 3.14 gibt es noch kein fertiges "
-                "miniupnpc-Wheel.\n"
-                "Optional: Python 3.12/3.13 installieren und dort "
-                "'pip install miniupnpc' ausführen,\n"
-                "oder UPnP manuell am Router einrichten."
-            )
+            hint += tr("admin.network.upnp.msg.lib_missing_py314")
         else:
-            hint += "Installation: pip install miniupnpc"
+            hint += tr("admin.network.upnp.msg.install_pip")
         return False, hint
 
     if internal_host is None:
@@ -42,7 +35,7 @@ def try_forward_port(
     try:
         devices = upnp.discover()
         if not devices:
-            return False, "Kein UPnP-Router im Netzwerk gefunden."
+            return False, tr("admin.network.upnp.msg.no_router")
         upnp.selectigd()
         upnp.addportmapping(
             port,
@@ -52,11 +45,16 @@ def try_forward_port(
             description,
             "",
         )
-        return True, (
-            f"Port {port} wurde per UPnP auf {internal_host} weitergeleitet."
+        return True, tr(
+            "admin.network.upnp.msg.success",
+            port=port,
+            host=internal_host,
         )
     except Exception as error:
-        return False, f"UPnP fehlgeschlagen: {error}"
+        return False, tr(
+            "admin.network.upnp.msg.failed",
+            error=error,
+        )
 
 
 def try_remove_port_forward(port: int) -> None:

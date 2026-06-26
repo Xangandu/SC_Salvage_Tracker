@@ -341,9 +341,9 @@ class LoginDialog(MobiglasFramelessMixin, QDialog):
 
                 self,
 
-                "Anmeldung",
+                tr("login.error.blocked_title"),
 
-                "Bitte Benutzername und Passwort eingeben."
+                tr("login.error.empty"),
 
             )
 
@@ -367,9 +367,9 @@ class LoginDialog(MobiglasFramelessMixin, QDialog):
 
                 self,
 
-                "Anmeldung fehlgeschlagen",
+                tr("login.error.failed_title"),
 
-                "Benutzername oder Passwort ist ungültig."
+                tr("login.error.invalid_credentials"),
 
             )
 
@@ -389,23 +389,11 @@ class LoginDialog(MobiglasFramelessMixin, QDialog):
 
             if self._is_initial_setup_pending():
 
-                detail = (
-
-                    "Während der Erstinstallation kann sich "
-
-                    "nur der Super-Administrator anmelden."
-
-                )
+                detail = tr("login.error.blocked_setup")
 
             else:
 
-                detail = (
-
-                    "Dieser Benutzer darf sich derzeit "
-
-                    "nicht anmelden."
-
-                )
+                detail = tr("login.error.blocked")
 
 
 
@@ -413,7 +401,7 @@ class LoginDialog(MobiglasFramelessMixin, QDialog):
 
                 self,
 
-                "Anmeldung nicht möglich",
+                tr("login.error.blocked_title"),
 
                 detail,
 

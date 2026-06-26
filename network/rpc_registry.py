@@ -1,5 +1,6 @@
 """RPC-Pfad-Regeln und Berechtigungsprüfung auf dem Host."""
 
+from config.i18n import tr
 from config.permissions import (
     PERM_CREW_MANAGE,
     PERM_DASHBOARD_VIEW,
@@ -93,12 +94,14 @@ GUEST_PERMISSIONS = (
 )
 
 
-def build_guest_user(client_name: str = "Gast") -> dict:
+def build_guest_user(client_name: str = "") -> dict:
+    guest_label = tr("network.guest.username")
+    name = (client_name or "").strip() or guest_label
     return {
         "id": 0,
-        "username": client_name or "Gast",
-        "display_name": client_name or "Gast",
-        "role_name": "Gast (Netzwerk)",
+        "username": name,
+        "display_name": name,
+        "role_name": tr("network.guest.role_name"),
         "active": 1,
         "must_change_password": 0,
         "permissions": list(GUEST_PERMISSIONS),
@@ -151,11 +154,13 @@ def check_rpc_permission(
     kwargs=None,
 ) -> None:
     if not is_rpc_path_allowed(path):
-        raise PermissionError(f"RPC-Pfad nicht erlaubt: {path}")
+        raise PermissionError(
+            tr("network.error.rpc_path_denied", path=path)
+        )
 
     if user.get("is_network_guest"):
         if is_write and not guest_has_write_permission(path):
-            raise PermissionError("Gast hat keine Berechtigung für diese Aktion")
+            raise PermissionError(tr("network.error.guest_no_permission"))
         return
 
     method = path.split(".")[-1]
@@ -174,7 +179,7 @@ def check_rpc_permission(
             and target_id != actor_id
             and not has_permission(PERM_USERS_MANAGE, user)
         ):
-            raise PermissionError("Keine Berechtigung")
+            raise PermissionError(tr("network.error.no_permission"))
         return
 
     required = WRITE_RPC_RULES.get(method)
@@ -191,8 +196,8 @@ def check_rpc_permission(
             path.startswith(p)
             for p in ("settings.", "permissions.", "dashboard_layouts.")
         ):
-            raise PermissionError("Schreibzugriff nicht freigegeben")
+            raise PermissionError(tr("network.error.write_not_allowed"))
         return
 
     if not _user_has_any_permission(user, required):
-        raise PermissionError("Keine Berechtigung")
+        raise PermissionError(tr("network.error.no_permission"))

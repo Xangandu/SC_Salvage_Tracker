@@ -7,6 +7,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, QTimer
 
 from database.access import get_database
+from config.i18n import tr
 from ui.mobiglas_window_frame import (
     MobiglasFramelessMixin,
     apply_mobiglas_window_frame,
@@ -31,7 +32,7 @@ class DashboardWindow(MobiglasFramelessMixin, QMainWindow):
         )
 
         self.setWindowTitle(
-            "MobiGlas Salvage-Übersicht"
+            tr("dashboard.window.title")
         )
 
         self.setObjectName(
@@ -79,7 +80,7 @@ class DashboardWindow(MobiglasFramelessMixin, QMainWindow):
 
         apply_mobiglas_window_frame(
             self,
-            title="MobiGlas Salvage-Übersicht",
+            title=tr("dashboard.window.title"),
         )
 
         restore_dashboard_window_geometry(
@@ -187,7 +188,7 @@ class DashboardWindow(MobiglasFramelessMixin, QMainWindow):
         if parent_window:
 
             parent_window.btn_dashboard.setText(
-                "Übersicht"
+                tr("nav.dashboard")
             )
 
         super().closeEvent(

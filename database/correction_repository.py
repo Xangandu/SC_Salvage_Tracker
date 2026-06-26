@@ -5,6 +5,7 @@ Soft-Delete mit Bestandsrückbuchung, wo möglich.
 """
 
 import auth.session as user_session
+from config.i18n import tr
 
 
 class CorrectionRepository:
@@ -169,19 +170,13 @@ class CorrectionRepository:
         row = self.cursor.fetchone()
 
         if not row:
-            return False, "Sitzung nicht gefunden."
+            return False, tr("error.session.not_found")
 
         if self._session_has_refinery_jobs(session_id):
-            return False, (
-                "Sitzung hat Raffinerieaufträge. "
-                "Bitte zuerst die Aufträge stornieren."
-            )
+            return False, tr("error.session.has_refinery_jobs")
 
         if self._session_has_sales(session_id):
-            return False, (
-                "Sitzung ist mit Verkäufen verknüpft. "
-                "Bitte zuerst die Verkäufe stornieren."
-            )
+            return False, tr("error.session.has_sales")
 
         return True, None
 
@@ -317,13 +312,10 @@ class CorrectionRepository:
         row = self.cursor.fetchone()
 
         if not row:
-            return False, "Raffinerieauftrag nicht gefunden."
+            return False, tr("error.refinery.not_found")
 
         if row[0] not in self.ACTIVE_REFINERY_STATUSES:
-            return False, (
-                "Nur laufende oder abholbereite "
-                "Aufträge können storniert werden."
-            )
+            return False, tr("error.refinery.cancel.only_active")
 
         return True, None
 
@@ -380,14 +372,10 @@ class CorrectionRepository:
         row = self.cursor.fetchone()
 
         if not row:
-            return False, "Raffinerieauftrag nicht gefunden."
+            return False, tr("error.refinery.not_found")
 
         if row[0] != "COMPLETED":
-            return False, (
-                "Nur abgeschlossene Aufträge können "
-                "hier gelöscht werden. "
-                "Laufende Aufträge bitte stornieren."
-            )
+            return False, tr("error.refinery.delete.only_completed")
 
         storage_rows = self.db.materials.get_storage_by_source(
             "REFINERY",
@@ -399,11 +387,7 @@ class CorrectionRepository:
             sold = self._storage_sold_quantity(storage_id)
 
             if sold > 0:
-                return False, (
-                    "Das raffinierte Material wurde "
-                    "bereits verkauft. "
-                    "Bitte zuerst den Verkauf stornieren."
-                )
+                return False, tr("error.refinery.delete.already_sold")
 
         return True, None
 
@@ -466,11 +450,7 @@ class CorrectionRepository:
 
     def can_void_sale(self, sale_id):
         if self.db.payouts.sale_has_payout(sale_id):
-            return False, (
-                "Für diesen Verkauf existiert "
-                "bereits eine Auszahlung. "
-                "Bitte zuerst die Auszahlung stornieren."
-            )
+            return False, tr("error.sale.has_payout_void")
 
         columns = self.db._table_columns("sales")
         deleted_filter = ""
@@ -486,7 +466,7 @@ class CorrectionRepository:
         """, (sale_id,))
 
         if not self.cursor.fetchone():
-            return False, "Verkauf nicht gefunden."
+            return False, tr("error.sale.not_found")
 
         return True, None
 
@@ -549,7 +529,7 @@ class CorrectionRepository:
         row = self.cursor.fetchone()
 
         if not row:
-            return False, "Auszahlung nicht gefunden."
+            return False, tr("error.payout.not_found")
 
         return True, None
 

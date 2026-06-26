@@ -17,10 +17,14 @@ from PySide6.QtWidgets import (
 
 from config.permissions import (
     PERMISSION_GROUPS,
-    PERMISSION_LABELS,
     PERM_DATABASE_RESET,
     ROLE_ADMIN,
     ALL_PERMISSION_NAMES,
+)
+from config.i18n import (
+    permission_group_label,
+    permission_label,
+    tr,
 )
 from ui.page_layout import (
     add_form_field,
@@ -85,10 +89,15 @@ class RoleEditDialog(MobiglasFramelessMixin, QDialog):
         )
 
         is_edit = bool(role)
-        title = "Rolle bearbeiten" if is_edit else "Neue Rolle"
-
         if read_only:
-            title = f"Rolle: {role.get('role_name', '')}"
+            title = tr(
+                "role.dialog.view",
+                name=role.get("role_name", ""),
+            )
+        elif is_edit:
+            title = tr("role.dialog.edit")
+        else:
+            title = tr("role.dialog.new")
 
         self.setObjectName("mobiglasDialog")
         self.setWindowTitle(title)
@@ -113,36 +122,44 @@ class RoleEditDialog(MobiglasFramelessMixin, QDialog):
         form.setContentsMargins(16, 16, 16, 16)
 
         self.name_input = QLineEdit()
-        self.name_input.setPlaceholderText("z. B. Officer")
+        self.name_input.setPlaceholderText(
+            tr("role.dialog.placeholder.name")
+        )
         if role:
             self.name_input.setText(role.get("role_name", ""))
-        add_form_field(form, "Rollenname", self.name_input)
+        add_form_field(form, tr("role.dialog.label.name"), self.name_input)
 
         self.description_input = QLineEdit()
-        self.description_input.setPlaceholderText("Optional")
+        self.description_input.setPlaceholderText(
+            tr("role.dialog.placeholder.description")
+        )
         if role:
             self.description_input.setText(
                 role.get("description", "")
             )
-        add_form_field(form, "Beschreibung", self.description_input)
+        add_form_field(
+            form,
+            tr("role.dialog.label.description"),
+            self.description_input,
+        )
 
         layout.addWidget(panel)
 
-        layout.addWidget(subsection_title("◆ RECHTE"))
+        layout.addWidget(subsection_title(tr("role.dialog.section.permissions")))
         layout.addLayout(hud_divider())
 
         if not read_only:
             preset_row = QHBoxLayout()
             preset_row.setSpacing(8)
 
-            all_button = QPushButton("Alle auswählen")
+            all_button = QPushButton(tr("role.dialog.select_all"))
             all_button.setObjectName("secondaryAction")
             all_button.clicked.connect(
                 lambda: self._set_all_permissions(True)
             )
             preset_row.addWidget(all_button)
 
-            none_button = QPushButton("Alle abwählen")
+            none_button = QPushButton(tr("role.dialog.select_none"))
             none_button.setObjectName("secondaryAction")
             none_button.clicked.connect(
                 lambda: self._set_all_permissions(False)
@@ -150,7 +167,7 @@ class RoleEditDialog(MobiglasFramelessMixin, QDialog):
             preset_row.addWidget(none_button)
 
             except_db_button = QPushButton(
-                "Alle außer Datenbank"
+                tr("role.dialog.select_except_db")
             )
             except_db_button.setObjectName("secondaryAction")
             except_db_button.clicked.connect(
@@ -160,19 +177,13 @@ class RoleEditDialog(MobiglasFramelessMixin, QDialog):
             preset_row.addStretch()
             layout.addLayout(preset_row)
 
-            scroll_hint = QLabel(
-                "Weitere Rechte unten — Scrollbalken oder "
-                "Mausrad über der Liste nutzen."
-            )
+            scroll_hint = QLabel(tr("role.dialog.scroll_hint"))
             scroll_hint.setObjectName("mutedLabel")
             scroll_hint.setWordWrap(True)
             layout.addWidget(scroll_hint)
 
             if len(self._grantable) < len(ALL_PERMISSION_NAMES):
-                limit_hint = QLabel(
-                    "Ausgegraute Rechte hast du selbst nicht — "
-                    "du kannst sie weder vergeben noch entfernen."
-                )
+                limit_hint = QLabel(tr("role.dialog.limit_hint"))
                 limit_hint.setObjectName("mutedLabel")
                 limit_hint.setWordWrap(True)
                 layout.addWidget(limit_hint)
@@ -254,17 +265,17 @@ class RoleEditDialog(MobiglasFramelessMixin, QDialog):
         buttons.addStretch()
 
         if read_only:
-            close_button = QPushButton("Schließen")
+            close_button = QPushButton(tr("common.close"))
             close_button.setObjectName("secondaryAction")
             close_button.clicked.connect(self.reject)
             buttons.addWidget(close_button)
         else:
-            cancel_button = QPushButton("Abbrechen")
+            cancel_button = QPushButton(tr("common.cancel"))
             cancel_button.setObjectName("secondaryAction")
             cancel_button.clicked.connect(self.reject)
             buttons.addWidget(cancel_button)
 
-            save_button = primary_button("Speichern")
+            save_button = primary_button(tr("common.save"))
             save_button.clicked.connect(
                 self._validate_and_accept
             )
@@ -308,15 +319,14 @@ class RoleEditDialog(MobiglasFramelessMixin, QDialog):
         group_layout.setContentsMargins(12, 10, 12, 12)
         group_layout.setSpacing(8)
 
-        group_label = QLabel(f"◆ {group_name}")
+        group_label = QLabel(
+            f"◆ {permission_group_label(group_name)}"
+        )
         group_label.setObjectName("subSectionTitle")
         group_layout.addWidget(group_label)
 
         for permission_name in permission_names:
-            label = PERMISSION_LABELS.get(
-                permission_name,
-                permission_name,
-            )
+            label = permission_label(permission_name)
             checkbox = QCheckBox(label)
             checkbox.setChecked(
                 permission_name in assigned
@@ -326,13 +336,11 @@ class RoleEditDialog(MobiglasFramelessMixin, QDialog):
                     checkbox.setEnabled(False)
                     if permission_name in assigned:
                         checkbox.setToolTip(
-                            "Der Rolle zugewiesen — du darfst "
-                            "dieses Recht nicht ändern."
+                            tr("role.dialog.tooltip.assigned_locked")
                         )
                     else:
                         checkbox.setToolTip(
-                            "Du hast dieses Recht selbst nicht "
-                            "und kannst es nicht vergeben."
+                            tr("role.dialog.tooltip.not_grantable")
                         )
             self._checkboxes[permission_name] = checkbox
             group_layout.addWidget(checkbox)
@@ -354,8 +362,8 @@ class RoleEditDialog(MobiglasFramelessMixin, QDialog):
         if not self.name_input.text().strip():
             QMessageBox.warning(
                 self,
-                "Rolle",
-                "Bitte einen Rollennamen eingeben.",
+                tr("role.dialog.msg.title"),
+                tr("role.dialog.msg.name_required"),
             )
             return
 
@@ -365,9 +373,8 @@ class RoleEditDialog(MobiglasFramelessMixin, QDialog):
         ):
             QMessageBox.warning(
                 self,
-                "Rolle",
-                "Der Name „Administrator“ ist "
-                "systemseitig reserviert.",
+                tr("role.dialog.msg.title"),
+                tr("role.dialog.msg.admin_reserved"),
             )
             return
 

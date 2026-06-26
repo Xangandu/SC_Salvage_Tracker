@@ -7,8 +7,10 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QPushButton,
     QVBoxLayout,
+    QMessageBox,
 )
 
+from config.i18n import tr
 from network.simple_connect import connect_client_simple
 from ui.mobiglas_window_frame import (
     MobiglasFramelessMixin,
@@ -26,7 +28,7 @@ class QuickJoinDialog(MobiglasFramelessMixin, QDialog):
         self._client_connection = None
 
         self.setObjectName("mobiglasDialog")
-        self.setWindowTitle("Crew beitreten")
+        self.setWindowTitle(tr("network.quick_join.window_title"))
         self.setModal(True)
         self.resize(480, 280)
 
@@ -34,20 +36,19 @@ class QuickJoinDialog(MobiglasFramelessMixin, QDialog):
         layout.setSpacing(12)
         layout.setContentsMargins(24, 24, 24, 24)
 
-        hint = QLabel(
-            "Gib den 6-stelligen Code vom Host ein — "
-            "oder füge die Einladung ein."
-        )
+        hint = QLabel(tr("network.quick_join.hint"))
         hint.setWordWrap(True)
         hint.setObjectName("mutedLabel")
 
         self.code_input = QLineEdit()
-        self.code_input.setPlaceholderText("z. B. K7M2XP")
+        self.code_input.setPlaceholderText(
+            tr("network.quick_join.placeholder.code")
+        )
         self.code_input.setMaxLength(512)
 
         self.name_input = QLineEdit()
         self.name_input.setPlaceholderText(
-            "Dein Name in der Crew (optional)"
+            tr("network.quick_join.placeholder.name")
         )
         saved_name = db.settings.get_app_setting(
             "network_client_name",
@@ -56,10 +57,12 @@ class QuickJoinDialog(MobiglasFramelessMixin, QDialog):
         if saved_name:
             self.name_input.setText(saved_name)
 
-        self.join_button = primary_button("Beitreten")
+        self.join_button = primary_button(
+            tr("network.quick_join.button.join")
+        )
         self.join_button.clicked.connect(self._on_join)
 
-        cancel = QPushButton("Abbrechen")
+        cancel = QPushButton(tr("common.cancel"))
         cancel.setObjectName("secondaryAction")
         cancel.clicked.connect(self.reject)
 
@@ -68,19 +71,19 @@ class QuickJoinDialog(MobiglasFramelessMixin, QDialog):
         row.addWidget(cancel)
         row.addWidget(self.join_button)
 
-        layout.addWidget(page_title("CREW BEITRETEN"))
+        layout.addWidget(page_title(tr("network.quick_join.title")))
         layout.addWidget(hint)
         layout.addLayout(hud_divider())
-        layout.addWidget(form_label("Beitrittscode"))
+        layout.addWidget(form_label(tr("network.quick_join.label.code")))
         layout.addWidget(self.code_input)
-        layout.addWidget(form_label("Anzeigename"))
+        layout.addWidget(form_label(tr("network.quick_join.label.display_name")))
         layout.addWidget(self.name_input)
         layout.addLayout(row)
         self.setLayout(layout)
 
         apply_mobiglas_window_frame(
             self,
-            title="Crew beitreten",
+            title=tr("network.quick_join.window_title"),
             dialog=True,
         )
         self.code_input.setFocus()
@@ -88,17 +91,15 @@ class QuickJoinDialog(MobiglasFramelessMixin, QDialog):
     def _on_join(self) -> None:
         text = self.code_input.text().strip()
         if not text:
-            from PySide6.QtWidgets import QMessageBox
-
             QMessageBox.warning(
                 self,
-                "Beitritt",
-                "Bitte Beitrittscode eingeben.",
+                tr("network.assistant.msg.join_title"),
+                tr("network.assistant.msg.code_required"),
             )
             return
 
         self.join_button.setEnabled(False)
-        self.join_button.setText("Verbinde…")
+        self.join_button.setText(tr("common.connecting"))
 
         result = connect_client_simple(
             self.db,
@@ -108,7 +109,7 @@ class QuickJoinDialog(MobiglasFramelessMixin, QDialog):
         )
 
         self.join_button.setEnabled(True)
-        self.join_button.setText("Beitreten")
+        self.join_button.setText(tr("network.quick_join.button.join"))
 
         if not result:
             return

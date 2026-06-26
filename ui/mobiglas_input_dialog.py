@@ -22,6 +22,7 @@ from ui.mobiglas_window_frame import (
     MobiglasFramelessMixin,
     apply_mobiglas_window_frame,
 )
+from config.i18n import tr
 from config.strings_de import parse_number_de
 
 
@@ -93,10 +94,10 @@ class MobiglasTextInputDialog(MobiglasFramelessMixin, QDialog):
         button_row = QHBoxLayout()
         button_row.setSpacing(12)
 
-        cancel_button = _secondary_button("Abbrechen")
+        cancel_button = _secondary_button(tr("common.cancel"))
         cancel_button.clicked.connect(self.reject)
 
-        confirm_button = primary_button("OK")
+        confirm_button = primary_button(tr("common.ok"))
         confirm_button.clicked.connect(self.accept)
         confirm_button.setDefault(True)
 
@@ -176,10 +177,10 @@ class MobiglasItemInputDialog(MobiglasFramelessMixin, QDialog):
         button_row = QHBoxLayout()
         button_row.setSpacing(12)
 
-        cancel_button = _secondary_button("Abbrechen")
+        cancel_button = _secondary_button(tr("common.cancel"))
         cancel_button.clicked.connect(self.reject)
 
-        confirm_button = primary_button("OK")
+        confirm_button = primary_button(tr("common.ok"))
         confirm_button.clicked.connect(self.accept)
         confirm_button.setDefault(True)
 
@@ -271,7 +272,7 @@ class MobiglasDoubleInputDialog(MobiglasFramelessMixin, QDialog):
             panel_layout.addWidget(hint)
 
         self.input = QLineEdit()
-        self.input.setPlaceholderText("Menge in SCU")
+        self.input.setPlaceholderText(tr("sales.placeholder.quantity"))
         formatted = (
             f"{float(value):.{self._decimals}f}"
             .rstrip("0")
@@ -285,10 +286,10 @@ class MobiglasDoubleInputDialog(MobiglasFramelessMixin, QDialog):
         button_row = QHBoxLayout()
         button_row.setSpacing(12)
 
-        cancel_button = _secondary_button("Abbrechen")
+        cancel_button = _secondary_button(tr("common.cancel"))
         cancel_button.clicked.connect(self.reject)
 
-        confirm_button = primary_button("OK")
+        confirm_button = primary_button(tr("common.ok"))
         confirm_button.clicked.connect(self._accept_value)
         confirm_button.setDefault(True)
 
@@ -320,8 +321,8 @@ class MobiglasDoubleInputDialog(MobiglasFramelessMixin, QDialog):
         if not text:
             QMessageBox.warning(
                 self,
-                "Eingabe",
-                "Bitte eine gültige Menge eingeben.",
+                tr("input.msg.title"),
+                tr("input.msg.quantity_required"),
             )
             return
 
@@ -329,8 +330,8 @@ class MobiglasDoubleInputDialog(MobiglasFramelessMixin, QDialog):
         if parsed is None:
             QMessageBox.warning(
                 self,
-                "Eingabe",
-                "Bitte eine gültige Zahl eingeben.",
+                tr("input.msg.title"),
+                tr("input.msg.number_required"),
             )
             return
 
@@ -339,10 +340,12 @@ class MobiglasDoubleInputDialog(MobiglasFramelessMixin, QDialog):
         if parsed < self._minimum or parsed > self._maximum:
             QMessageBox.warning(
                 self,
-                "Eingabe",
-                f"Die Menge muss zwischen "
-                f"{self._minimum:g} und "
-                f"{self._maximum:g} SCU liegen.",
+                tr("input.msg.title"),
+                tr(
+                    "input.msg.range",
+                    minimum=self._minimum,
+                    maximum=self._maximum,
+                ),
             )
             return
 

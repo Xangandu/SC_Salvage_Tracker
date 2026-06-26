@@ -131,12 +131,15 @@ def has_feature(feature_id: str, db=None) -> bool:
 
 
 def feature_teaser_text(feature_id: str) -> str:
+    from config.i18n import tr
+
     needed = required_edition(feature_id)
-    return TEASER_TEXT.get(
+    fallback = TEASER_TEXT.get(
         needed,
         f"Verfügbar in der SC Salvage Tracker - "
         f"{edition_title(needed)}.",
     )
+    return tr(f"edition.teaser.{needed}", default=fallback)
 
 
 def enforce_standalone_network(db) -> None:
@@ -153,24 +156,26 @@ def enforce_standalone_network(db) -> None:
 def apply_supporter_key(db, raw_key: str) -> tuple[bool, str]:
     """Supporter-Key prüfen und edition_unlock speichern."""
     from config.edition_keys import edition_for_supporter_key
+    from config.i18n import tr
 
     edition = edition_for_supporter_key(raw_key)
     if edition is None:
-        return False, "Der Supporter-Key ist ungültig."
+        return False, tr("edition.key.invalid")
 
     ceiling = build_edition()
     unlocked = max_edition(ceiling, edition)
     db.settings.set_app_setting(SETTING_EDITION_UNLOCK, edition)
 
     if unlocked == edition:
-        message = (
-            f"Freigeschaltet: {edition_title(edition)}. "
-            "Vernetzung ist jetzt verfügbar."
+        message = tr(
+            "edition.key.unlocked",
+            edition=edition_title(edition),
         )
     else:
-        message = (
-            f"Key gespeichert ({edition_title(edition)}), "
-            f"diese Installation bleibt bei {edition_title(ceiling)}."
+        message = tr(
+            "edition.key.stored_ceiling",
+            edition=edition_title(edition),
+            ceiling=edition_title(ceiling),
         )
 
     return True, message

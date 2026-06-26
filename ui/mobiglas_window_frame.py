@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import sys
 
+from config.i18n import tr
 from PySide6.QtCore import Qt, QPoint, QSize, QEvent
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
@@ -267,7 +268,7 @@ class MobiglasTitleBar(QWidget):
             self._min_button = _make_control_button(
                 "mobiglasTitleMin",
                 "minimize",
-                "Minimieren",
+                tr("common.minimize"),
             )
             self._min_button.clicked.connect(
                 self._window.showMinimized
@@ -278,7 +279,7 @@ class MobiglasTitleBar(QWidget):
             self._max_button = _make_control_button(
                 "mobiglasTitleMax",
                 "maximize",
-                "Maximieren",
+                tr("common.maximize"),
             )
             self._max_button.clicked.connect(
                 self._toggle_maximize
@@ -289,7 +290,7 @@ class MobiglasTitleBar(QWidget):
             self._close_button = _make_control_button(
                 "mobiglasTitleClose",
                 "close",
-                "Schließen",
+                tr("common.close"),
             )
             if isinstance(self._window, QDialog):
                 self._close_button.clicked.connect(
@@ -352,11 +353,11 @@ class MobiglasTitleBar(QWidget):
 
         if self._is_window_maximized():
             self._max_button.setIcon(_window_icon("restore"))
-            self._max_button.setToolTip("Wiederherstellen")
+            self._max_button.setToolTip(tr("common.restore"))
         else:
             self._custom_maximized = False
             self._max_button.setIcon(_window_icon("maximize"))
-            self._max_button.setToolTip("Maximieren")
+            self._max_button.setToolTip(tr("common.maximize"))
 
     def _toggle_maximize(self):
         if self._max_button is None:

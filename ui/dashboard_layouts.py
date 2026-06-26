@@ -1,16 +1,12 @@
-"""Dashboard-Layout-Konfigurationen."""
+"""Dashboard-Layout-Konfigurationen (Struktur; Labels über i18n)."""
 
 DASHBOARD_LAYOUTS = {
     "blank": {
-        "label": "Leer",
-        "description": "Keine Widgets — leeres Dashboard",
         "order": (),
         "stretch": {},
         "cards": None,
     },
     "classic": {
-        "label": "Classic",
-        "description": "Alle Bereiche gleich gewichtet",
         "order": (
             "operation",
             "materials",
@@ -30,8 +26,6 @@ DASHBOARD_LAYOUTS = {
         "cards": None,
     },
     "operations": {
-        "label": "Operations",
-        "description": "Fokus: aktive Session, Crew, Material",
         "order": (
             "operation",
             "session",
@@ -64,8 +58,6 @@ DASHBOARD_LAYOUTS = {
         },
     },
     "refinery": {
-        "label": "Refinery",
-        "description": "Fokus: Raffinerie-Jobs und Rohmaterial",
         "order": (
             "materials",
             "operation",
@@ -95,8 +87,6 @@ DASHBOARD_LAYOUTS = {
         },
     },
     "storage": {
-        "label": "Storage",
-        "description": "Fokus: Lager, Verkäufe, Gewinn",
         "order": (
             "overview",
             "finance",
@@ -151,3 +141,15 @@ SECTION_CARD_KEYS = {
         "total_profit",
     ),
 }
+
+
+def dashboard_preset_label(preset_id: str) -> str:
+    from config.i18n import tr
+
+    return tr(f"dashboard.preset.{preset_id}.label", default=preset_id)
+
+
+def dashboard_preset_description(preset_id: str) -> str:
+    from config.i18n import tr
+
+    return tr(f"dashboard.preset.{preset_id}.description", default="")

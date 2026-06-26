@@ -6,6 +6,7 @@ Session → material_batches → refinery_jobs → refinery_job_items → storag
 
 import auth.session as user_session
 
+from config.i18n import tr
 from config.materials import (
     RAW_CM_MATERIAL_CODES,
     REFINERY_OUTPUT_CODE,
@@ -130,10 +131,7 @@ class RefineryRepository:
             created_by = user_session.get_user_id()
 
         if not batch_lines:
-            raise ValueError(
-                "Mindestens ein Material-Batch "
-                "ist erforderlich."
-            )
+            raise ValueError(tr("error.refinery.batch_required"))
 
         try:
             self.connection.execute(
@@ -150,8 +148,7 @@ class RefineryRepository:
 
                 if input_quantity <= 0:
                     raise ValueError(
-                        "Eingabemenge muss größer "
-                        "als 0 sein."
+                        tr("error.refinery.input_must_be_positive")
                     )
 
                 material_code = (
@@ -165,8 +162,10 @@ class RefineryRepository:
                     not in RAW_CM_MATERIAL_CODES
                 ):
                     raise ValueError(
-                        f"Batch #{batch_id} ist kein "
-                        f"Rohmaterial für die Raffinerie."
+                        tr(
+                            "error.refinery.batch_not_raw",
+                            batch_id=batch_id,
+                        )
                     )
 
                 available = self._get_batch_available(
@@ -178,10 +177,13 @@ class RefineryRepository:
                         material_code
                     )
                     raise ValueError(
-                        f"Nicht genug Material in Batch "
-                        f"#{batch_id} ({label}). "
-                        f"Verfügbar: {available:g} SCU, "
-                        f"angefordert: {input_quantity:g} SCU."
+                        tr(
+                            "error.refinery.insufficient_batch",
+                            batch_id=batch_id,
+                            label=label,
+                            available=f"{available:g}",
+                            requested=f"{input_quantity:g}",
+                        )
                     )
 
                 validated_lines.append({
@@ -196,8 +198,7 @@ class RefineryRepository:
 
             if job_cost > 0 and not payer:
                 raise ValueError(
-                    "Bitte angeben, wer die "
-                    "Raffinerie-Kosten bezahlt hat."
+                    tr("error.refinery.cost_payer_required")
                 )
 
             if job_cost <= 0:
@@ -475,7 +476,7 @@ class RefineryRepository:
 
         if output_quantity <= 0:
             raise ValueError(
-                "Ausgabemenge muss größer als 0 sein."
+                tr("error.refinery.output_must_be_positive")
             )
 
         self.cursor.execute("""
@@ -487,14 +488,10 @@ class RefineryRepository:
         job_row = self.cursor.fetchone()
 
         if not job_row:
-            raise ValueError(
-                "Raffinerieauftrag nicht gefunden."
-            )
+            raise ValueError(tr("error.refinery.not_found"))
 
         if job_row[0] == "COMPLETED":
-            raise ValueError(
-                "Auftrag ist bereits abgeschlossen."
-            )
+            raise ValueError(tr("error.refinery.already_completed"))
 
         self.cursor.execute("""
         SELECT
@@ -508,9 +505,7 @@ class RefineryRepository:
         items = self.cursor.fetchall()
 
         if not items:
-            raise ValueError(
-                "Auftrag enthält keine Positionen."
-            )
+            raise ValueError(tr("error.refinery.no_items"))
 
         total_input = sum(
             row[1] for row in items
@@ -518,7 +513,7 @@ class RefineryRepository:
 
         if total_input <= 0:
             raise ValueError(
-                "Ungültige Eingabemenge im Auftrag."
+                tr("error.refinery.invalid_input_quantity")
             )
 
         yield_percent = calc_refinery_efficiency(

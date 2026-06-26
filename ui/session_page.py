@@ -13,7 +13,8 @@ from PySide6.QtWidgets import (
 )
 
 from database.access import get_database
-from config.strings_de import status_label, format_number_de, parse_int_de, parse_number_de
+from config.i18n import tr, format_number, status_label
+from config.strings_de import parse_int_de, parse_number_de
 from config.materials import (
     material_label,
     material_codes_for_ship,
@@ -73,16 +74,10 @@ class SessionPage(QWidget):
         )
 
         self.crew_input = QTextEdit()
-        self.crew_input.setPlaceholderText(
-            "Ein Name pro Zeile\n\n"
-            "Beispiel:\n"
-            "Xangandu\n"
-            "Pilot2\n"
-            "Pilot3"
-        )
+        self.crew_input.setPlaceholderText(tr("session.crew.placeholder"))
         self.crew_input.setMinimumHeight(100)
 
-        self.start_button = primary_button("Sitzung starten")
+        self.start_button = primary_button(tr("session.button.start"))
         self.start_button.clicked.connect(self.start_session)
 
         self.client_session_combo = QComboBox()
@@ -91,8 +86,7 @@ class SessionPage(QWidget):
         )
 
         self.client_session_empty = empty_info_panel(
-            "Keine aktive Sitzung auf dem Host.\n"
-            "Der Host muss zuerst eine Sitzung starten.",
+            tr("session.client.empty"),
             "assets/images/icons/info.svg",
         )
 
@@ -101,12 +95,16 @@ class SessionPage(QWidget):
 
         self.mission_cost_input = QLineEdit()
         self.mission_cost_input.setPlaceholderText(
-            "Kosten dieser Mission in aUEC"
+            tr("session.placeholder.mission_cost")
         )
 
         self.mission_cost_paid_by = QComboBox()
         self.mission_costs_total_label = QLabel(
-            "Missionskosten: 0 aUEC"
+            tr(
+                "session.mission.costs_total",
+                mission_total=format_number(0),
+                session_total=format_number(0),
+            )
         )
         self.mission_costs_total_label.setObjectName("statValue")
         self.mission_costs_list_label = QLabel("")
@@ -114,14 +112,14 @@ class SessionPage(QWidget):
         self.mission_costs_list_label.setWordWrap(True)
 
         self.add_mission_cost_button = primary_button(
-            "Mission erfassen"
+            tr("session.button.add_mission")
         )
         self.add_mission_cost_button.clicked.connect(
             self.add_mission_cost
         )
 
         self.rmc_input = QLineEdit()
-        self.rmc_input.setPlaceholderText("RMC SCU")
+        self.rmc_input.setPlaceholderText(tr("session.placeholder.rmc"))
 
         self.cm_rubble_input = QLineEdit()
         self.cm_rubble_input.setPlaceholderText(
@@ -138,12 +136,12 @@ class SessionPage(QWidget):
             f"{material_label('CM_SALVAGE')} SCU"
         )
 
-        self.finish_button = primary_button("Einsatz speichern")
+        self.finish_button = primary_button(tr("session.button.save_run"))
         self.finish_button.clicked.connect(self.complete_run)
         self.finish_button.setEnabled(False)
 
         self.end_session_button = _secondary_button(
-            "Sitzung beenden"
+            tr("session.button.end")
         )
         self.end_session_button.clicked.connect(
             self.end_session
@@ -152,7 +150,7 @@ class SessionPage(QWidget):
 
         self.delete_session_combo = QComboBox()
         self.delete_session_button = _secondary_button(
-            "Sitzung löschen"
+            tr("session.button.delete")
         )
         self.delete_session_button.clicked.connect(
             self.delete_selected_session
@@ -163,7 +161,7 @@ class SessionPage(QWidget):
         delete_row.setContentsMargins(0, 0, 0, 0)
         delete_row.setSpacing(12)
         delete_row.addWidget(
-            form_label("Fehlerhafte Sitzung:")
+            form_label(tr("session.label.deletable_session"))
         )
         delete_row.addWidget(
             self.delete_session_combo,
@@ -175,30 +173,25 @@ class SessionPage(QWidget):
         self.delete_session_panel.hide()
 
         content, layout = page_content_widget()
-        layout.addWidget(page_title("SITZUNG"))
+        layout.addWidget(page_title(tr("session.title")))
         layout.addWidget(
-            section_accent("◆ SALVAGE-EINSATZ VERWALTEN")
+            section_accent(tr("session.section.manage"))
         )
         layout.addLayout(hud_divider())
 
         self.start_panel, start_layout = info_panel()
         start_layout.addWidget(
-            subsection_title("◆ NEUE SITZUNG")
+            subsection_title(tr("session.section.new"))
         )
         start_layout.addLayout(hud_divider())
 
         for label_text, widget in [
-            ("Schiff", self.ship_combo),
-            ("Crew (ein Name pro Zeile)", self.crew_input),
+            (tr("session.label.ship"), self.ship_combo),
+            (tr("session.label.crew"), self.crew_input),
         ]:
             add_form_field(start_layout, label_text, widget)
 
-        start_hint = QLabel(
-            "Missionskosten werden während der laufenden Sitzung "
-            "erfasst — pro angenommener Mission einzeln. "
-            "Bis der Laderaum voll ist, können mehrere Missionen "
-            "und Material-Einsätze zur gleichen Sitzung gehören."
-        )
+        start_hint = QLabel(tr("session.hint.start"))
         start_hint.setWordWrap(True)
         start_hint.setObjectName("mutedLabel")
         start_layout.addWidget(start_hint)
@@ -208,20 +201,16 @@ class SessionPage(QWidget):
 
         self.client_session_panel, client_layout = info_panel()
         client_layout.addWidget(
-            subsection_title("◆ NETZWERK-SITZUNG")
+            subsection_title(tr("session.section.network"))
         )
         client_layout.addLayout(hud_divider())
-        client_hint = QLabel(
-            "Wähle die laufende Sitzung des Hosts. "
-            "Die Materialfelder richten sich automatisch "
-            "nach dem Schiff dieser Sitzung."
-        )
+        client_hint = QLabel(tr("session.hint.client"))
         client_hint.setWordWrap(True)
         client_hint.setObjectName("mutedLabel")
         client_layout.addWidget(client_hint)
         add_form_field(
             client_layout,
-            "Aktive Sitzung",
+            tr("session.label.active_session"),
             self.client_session_combo,
         )
         client_layout.addWidget(self.client_session_empty)
@@ -231,13 +220,13 @@ class SessionPage(QWidget):
         active_panel, active_layout = page_panel()
         active_layout.setContentsMargins(16, 16, 16, 16)
         active_layout.addWidget(
-            subsection_title("◆ AKTIVE SITZUNG")
+            subsection_title(tr("session.section.active"))
         )
         active_layout.addLayout(hud_divider())
 
         for label_text, widget in [
-            ("Schiff", self.active_ship_label),
-            ("Status", self.active_status_label),
+            (tr("session.label.ship"), self.active_ship_label),
+            (tr("session.label.status"), self.active_status_label),
         ]:
             add_form_field(active_layout, label_text, widget)
 
@@ -245,22 +234,19 @@ class SessionPage(QWidget):
 
         self.mission_costs_panel, mission_layout = info_panel()
         mission_layout.addWidget(
-            subsection_title("◆ MISSIONEN (KOSTEN)")
+            subsection_title(tr("session.section.missions"))
         )
         mission_layout.addLayout(hud_divider())
 
-        mission_hint = QLabel(
-            "Pro angenommener Mission die Kosten erfassen. "
-            "Alle Missionen einer Sitzung werden summiert."
-        )
+        mission_hint = QLabel(tr("session.hint.mission"))
         mission_hint.setWordWrap(True)
         mission_hint.setObjectName("mutedLabel")
         mission_layout.addWidget(mission_hint)
 
         for label_text, widget in [
-            ("Missionskosten (aUEC)", self.mission_cost_input),
+            (tr("session.label.mission_cost"), self.mission_cost_input),
             (
-                "Bezahlt von",
+                tr("session.label.paid_by"),
                 self.mission_cost_paid_by,
             ),
         ]:
@@ -274,7 +260,7 @@ class SessionPage(QWidget):
 
         material_panel, material_layout = info_panel()
         material_layout.addWidget(
-            subsection_title("◆ MATERIALIEN ERFASSEN")
+            subsection_title(tr("session.section.materials"))
         )
         material_layout.addLayout(hud_divider())
 
@@ -373,13 +359,17 @@ class SessionPage(QWidget):
 
         if self._material_ship_name:
             self.material_ship_hint.setText(
-                f"Erfassbar mit {self._material_ship_name}: "
-                f"{materials_summary_for_ship(self._material_ship_name)}"
+                tr(
+                    "session.hint.material_ship",
+                    ship=self._material_ship_name,
+                    materials=materials_summary_for_ship(
+                        self._material_ship_name
+                    ),
+                )
             )
         else:
             self.material_ship_hint.setText(
-                "Materialfelder richten sich nach dem Schiff "
-                "der aktiven Sitzung."
+                tr("session.hint.material_default")
             )
 
         for code, field in self._material_inputs.items():
@@ -432,7 +422,7 @@ class SessionPage(QWidget):
                 label = (
                     f"#{session['id']} · {session['name']} · "
                     f"{status_label(session['status'])} · "
-                    f"{format_number_de(session['total_scu'])} SCU"
+                    f"{format_number(session['total_scu'])} SCU"
                 )
                 self.client_session_combo.addItem(
                     label,
@@ -473,7 +463,9 @@ class SessionPage(QWidget):
 
         self.mission_cost_paid_by.blockSignals(True)
         self.mission_cost_paid_by.clear()
-        self.mission_cost_paid_by.addItem("— Bitte wählen —")
+        self.mission_cost_paid_by.addItem(
+            tr("session.mission.paid_by.placeholder")
+        )
 
         for member in crew:
             self.mission_cost_paid_by.addItem(member[0])
@@ -493,7 +485,11 @@ class SessionPage(QWidget):
             self.mission_cost_input.clear()
             self.mission_cost_paid_by.clear()
             self.mission_costs_total_label.setText(
-                "Missionskosten: 0 aUEC"
+                tr(
+                    "session.mission.costs_total",
+                    mission_total=format_number(0),
+                    session_total=format_number(0),
+                )
             )
             self.mission_costs_list_label.setText("")
             return
@@ -533,13 +529,21 @@ class SessionPage(QWidget):
         session_total = self.db.get_total_costs(session_id)
 
         self.mission_costs_total_label.setText(
-            f"Missionskosten: {format_number_de(mission_total)} aUEC · "
-            f"Gesamtkosten Sitzung: {format_number_de(session_total)} aUEC"
+            tr(
+                "session.mission.costs_total",
+                mission_total=format_number(mission_total),
+                session_total=format_number(session_total),
+            )
         )
 
         if mission_costs:
             lines = [
-                f"Mission {index}: {format_number_de(amount)} aUEC ({paid_by})"
+                tr(
+                    "session.mission.line",
+                    index=index,
+                    amount=format_number(amount),
+                    paid_by=paid_by,
+                )
                 for index, (_, amount, paid_by) in enumerate(
                     mission_costs,
                     start=1,
@@ -550,7 +554,7 @@ class SessionPage(QWidget):
             )
         else:
             self.mission_costs_list_label.setText(
-                "Noch keine Missionen erfasst."
+                tr("session.mission.none")
             )
 
     def add_mission_cost(self):
@@ -559,17 +563,16 @@ class SessionPage(QWidget):
         if not session_id:
             QMessageBox.warning(
                 self,
-                "Fehler",
-                "Keine aktive Sitzung — bitte zuerst eine Sitzung "
-                "starten.",
+                tr("common.error"),
+                tr("session.msg.no_session"),
             )
             return
 
         if self.mission_cost_paid_by.currentIndex() <= 0:
             QMessageBox.warning(
                 self,
-                "Fehler",
-                "Bitte angeben, wer die Missionskosten bezahlt hat.",
+                tr("common.error"),
+                tr("session.msg.paid_by_required"),
             )
             return
 
@@ -577,16 +580,16 @@ class SessionPage(QWidget):
         if amount is None:
             QMessageBox.warning(
                 self,
-                "Fehler",
-                "Bitte gültige Missionskosten eingeben.",
+                tr("common.error"),
+                tr("session.msg.invalid_mission_cost"),
             )
             return
 
         if amount <= 0:
             QMessageBox.warning(
                 self,
-                "Fehler",
-                "Bitte einen Betrag größer als 0 eingeben.",
+                tr("common.error"),
+                tr("session.msg.amount_positive"),
             )
             return
 
@@ -606,9 +609,11 @@ class SessionPage(QWidget):
 
         QMessageBox.information(
             self,
-            "Mission erfasst",
-            f"Missionskosten {format_number_de(amount)} aUEC wurden zur Sitzung "
-            "hinzugefügt.",
+            tr("session.msg.mission_added.title"),
+            tr(
+                "session.msg.mission_added.message",
+                amount=format_number(amount),
+            ),
         )
 
     def refresh_session(self):
@@ -678,18 +683,18 @@ class SessionPage(QWidget):
         if session_id is None:
             QMessageBox.warning(
                 self,
-                "Hinweis",
-                "Keine löschbare Sitzung ausgewählt.",
+                tr("common.hint"),
+                tr("session.msg.no_deletable"),
             )
             return
 
         answer = QMessageBox.question(
             self,
-            "Sitzung löschen",
-            f"Sitzung #{session_id} wirklich löschen?\n\n"
-            "Material, Kosten und Crew-Einträge "
-            "dieser Sitzung werden entfernt. "
-            "Nur möglich ohne Raffinerie und Verkauf.",
+            tr("session.msg.delete_confirm.title"),
+            tr(
+                "session.msg.delete_confirm.message",
+                session_id=session_id,
+            ),
             QMessageBox.Yes | QMessageBox.No,
             QMessageBox.No,
         )
@@ -702,15 +707,15 @@ class SessionPage(QWidget):
         except ValueError as error:
             QMessageBox.warning(
                 self,
-                "Nicht möglich",
+                tr("common.not_possible"),
                 str(error),
             )
             return
         except Exception as error:
             QMessageBox.critical(
                 self,
-                "Fehler",
-                f"Löschen fehlgeschlagen:\n\n{error}",
+                tr("common.error"),
+                tr("session.msg.delete_failed", error=error),
             )
             return
 
@@ -725,8 +730,11 @@ class SessionPage(QWidget):
 
         QMessageBox.information(
             self,
-            "Gelöscht",
-            f"Sitzung #{session_id} wurde gelöscht.",
+            tr("session.msg.deleted.title"),
+            tr(
+                "session.msg.deleted.message",
+                session_id=session_id,
+            ),
         )
 
     def start_session(self):
@@ -743,9 +751,8 @@ class SessionPage(QWidget):
             if not crew_members:
                 QMessageBox.warning(
                     self,
-                    "Fehler",
-                    "Bitte mindestens ein Crew-Mitglied "
-                    "angeben.",
+                    tr("common.error"),
+                    tr("session.msg.no_crew"),
                 )
                 return
 
@@ -774,17 +781,15 @@ class SessionPage(QWidget):
 
             QMessageBox.information(
                 self,
-                "Sitzung gestartet",
-                "Die Salvage-Sitzung wurde gestartet.\n\n"
-                "Erfasse unter „Missionen (Kosten)“ jede "
-                "angenommene Mission einzeln.",
+                tr("session.msg.started.title"),
+                tr("session.msg.started.message"),
             )
 
         except Exception as error:
             QMessageBox.critical(
                 self,
-                "Fehler",
-                f"Sitzung konnte nicht gestartet werden:\n\n{error}",
+                tr("common.error"),
+                tr("session.msg.start_failed", error=error),
             )
 
     def _session_ship_name(self):
@@ -803,8 +808,8 @@ class SessionPage(QWidget):
         if not session_id:
             QMessageBox.warning(
                 self,
-                "Fehler",
-                "Keine aktive Sitzung ausgewählt",
+                tr("common.error"),
+                tr("session.msg.no_active_selected"),
             )
             return
 
@@ -820,8 +825,8 @@ class SessionPage(QWidget):
             if amount is None:
                 QMessageBox.warning(
                     self,
-                    "Fehler",
-                    "Bitte gültige Zahlen eingeben",
+                    tr("common.error"),
+                    tr("session.msg.invalid_numbers"),
                 )
                 return
             material_values[code] = amount
@@ -829,9 +834,8 @@ class SessionPage(QWidget):
         if not any(amount > 0 for amount in material_values.values()):
             QMessageBox.warning(
                 self,
-                "Fehler",
-                "Bitte mindestens ein Material mit Menge > 0 "
-                "eingeben.",
+                tr("common.error"),
+                tr("session.msg.material_required"),
             )
             return
 
@@ -841,11 +845,13 @@ class SessionPage(QWidget):
             if not ship_supports_material(ship_name, code):
                 QMessageBox.warning(
                     self,
-                    "Fehler",
-                    f"{material_label(code)} kann mit "
-                    f"{ship_name or 'diesem Schiff'} nicht erfasst "
-                    "werden.\n\n"
-                    f"Erlaubt: {materials_summary_for_ship(ship_name)}",
+                    tr("common.error"),
+                    tr(
+                        "session.msg.material_not_allowed",
+                        material=material_label(code),
+                        ship=ship_name or tr("session.ship.unnamed"),
+                        allowed=materials_summary_for_ship(ship_name),
+                    ),
                 )
                 return
 
@@ -864,8 +870,8 @@ class SessionPage(QWidget):
 
         QMessageBox.information(
             self,
-            "Erfolg",
-            "Materialien gespeichert",
+            tr("session.msg.material_saved.title"),
+            tr("session.msg.material_saved.message"),
         )
 
     def end_session(self):
@@ -874,8 +880,8 @@ class SessionPage(QWidget):
         if not session:
             QMessageBox.warning(
                 self,
-                "Fehler",
-                "Keine aktive Sitzung gefunden",
+                tr("common.error"),
+                tr("session.msg.no_active_found"),
             )
             return
 
@@ -889,6 +895,6 @@ class SessionPage(QWidget):
 
         QMessageBox.information(
             self,
-            "Sitzung beendet",
-            "Die Sitzung wartet nun auf die Raffinerie.",
+            tr("session.msg.ended.title"),
+            tr("session.msg.ended.message"),
         )

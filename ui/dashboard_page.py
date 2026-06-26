@@ -14,11 +14,11 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, QTimer
 
 from database.access import get_database, get_dashboard_layout_repository
-from config.strings_de import status_label, format_number_de
-from config.i18n import tr
+from config.i18n import tr, format_number, status_label
 from config.materials import material_total_label, material_label
 from config.debug import debug_log
 from config.permissions import apply_widget_permissions
+from ui.dashboard_widget_registry import widget_definitions
 from ui.page_layout import (
     page_title,
     subsection_title,
@@ -73,27 +73,27 @@ class DashboardPage(QWidget):
         header_layout = QHBoxLayout(header_host)
         header_layout.setContentsMargins(20, 14, 20, 6)
 
-        self._title = page_title("SALVAGE-ÜBERSICHT")
+        self._title = page_title(tr("dashboard.title"))
         header_layout.addWidget(self._title)
         header_layout.addStretch()
 
-        self.preset_button = QPushButton("Presets")
+        self.preset_button = QPushButton(tr("dashboard.button.presets"))
         self.preset_button.setObjectName("secondaryAction")
         self.preset_button.clicked.connect(self._open_presets)
 
-        self.edit_toggle_button = QPushButton("Dashboard anpassen")
+        self.edit_toggle_button = QPushButton(tr("dashboard.button.customize"))
         self.edit_toggle_button.setObjectName("secondaryAction")
         self.edit_toggle_button.clicked.connect(
             self._toggle_edit_mode
         )
 
-        self.save_layout_button = primary_button("Speichern")
+        self.save_layout_button = primary_button(tr("dashboard.button.save"))
         self.save_layout_button.clicked.connect(
             self._save_layout
         )
         self.save_layout_button.hide()
 
-        self.cancel_layout_button = QPushButton("Abbrechen")
+        self.cancel_layout_button = QPushButton(tr("dashboard.button.cancel"))
         self.cancel_layout_button.setObjectName("secondaryAction")
         self.cancel_layout_button.clicked.connect(
             self._cancel_edit
@@ -207,11 +207,11 @@ class DashboardPage(QWidget):
     def _update_layout_dirty_hint(self):
         if self._edit_mode and self._layout_dirty:
             self.edit_toggle_button.setText(
-                "Dashboard anpassen ●"
+                tr("dashboard.button.customize_dirty")
             )
         else:
             self.edit_toggle_button.setText(
-                "Dashboard anpassen"
+                tr("dashboard.button.customize")
             )
 
     def apply_font_scale(self, scales=None):
@@ -221,61 +221,79 @@ class DashboardPage(QWidget):
         stats = self.db.get_refinery_statistics()
         if not stats.get("job_count"):
             self.refinery_stats_label.setText(
-                "Noch keine abgeschlossenen Raffinerieaufträge."
+                tr("dashboard.refinery_stats.empty")
             )
             return
 
         avg = stats.get("avg_efficiency_percent")
         avg_text = (
-            f"{format_number_de(avg, 1)} %"
+            f"{format_number(avg, 1)} %"
             if avg is not None
             else "—"
         )
 
         lines = [
-            f"Aufträge: {stats['job_count']}",
-            (
-                f"Input: {format_number_de(stats['total_input'])} SCU · "
-                f"Output: {format_number_de(stats['total_output'])} SCU"
+            tr(
+                "dashboard.refinery_stats.jobs",
+                count=stats["job_count"],
             ),
-            f"Ø Effizienz: {avg_text}",
+            tr(
+                "dashboard.refinery_stats.io",
+                input_scu=format_number(stats["total_input"]),
+                output_scu=format_number(stats["total_output"]),
+            ),
+            tr(
+                "dashboard.refinery_stats.efficiency",
+                value=avg_text,
+            ),
         ]
 
         if stats.get("by_material"):
             lines.append("")
-            lines.append("Nach Material:")
+            lines.append(tr("dashboard.refinery_stats.by_material"))
             for row in stats["by_material"]:
                 eff = row.get("efficiency_percent")
                 eff_label = (
-                    f"{format_number_de(eff, 1)} %"
+                    f"{format_number(eff, 1)} %"
                     if eff is not None
                     else "—"
                 )
                 lines.append(
-                    f"  {material_label(row['material_code'])}: "
-                    f"{eff_label} ({row['job_count']}×)"
+                    tr(
+                        "dashboard.refinery_stats.detail_line",
+                        label=material_label(row["material_code"]),
+                        efficiency=eff_label,
+                        count=row["job_count"],
+                    )
                 )
 
         if stats.get("by_method"):
             lines.append("")
-            lines.append("Nach Methode:")
+            lines.append(tr("dashboard.refinery_stats.by_method"))
             for row in stats["by_method"]:
                 eff = row.get("efficiency_percent")
                 eff_label = (
-                    f"{format_number_de(eff, 1)} %"
+                    f"{format_number(eff, 1)} %"
                     if eff is not None
                     else "—"
                 )
                 lines.append(
-                    f"  {row['refinery_method']}: "
-                    f"{eff_label} ({row['job_count']}×)"
+                    tr(
+                        "dashboard.refinery_stats.detail_line",
+                        label=row["refinery_method"],
+                        efficiency=eff_label,
+                        count=row["job_count"],
+                    )
                 )
 
         self.refinery_stats_label.setText("\n".join(lines))
 
     def _build_widget_pool(self):
+        defs = widget_definitions()
+        idle_text = status_label("IDLE")
+
         self.status_value = DashboardFitLabel(
-            "LEERLAUF",
+            idle_text,
             max_lines=2,
         )
         self.crew_value = AnimatedDashboardValue("0")
@@ -293,40 +311,60 @@ class DashboardPage(QWidget):
         self.total_profit_value = AnimatedDashboardValue("0")
 
         kpi_specs = [
-            ("status", "STATUS", self.status_value),
-            ("crew", "CREW", self.crew_value),
-            ("rmc", material_total_label("RMC"), self.rmc_value),
-            ("cm", material_total_label("CM"), self.cm_value),
+            ("status", defs["status"]["title"], self.status_value),
+            ("crew", defs["crew"]["title"], self.crew_value),
+            ("rmc", defs["rmc"]["title"], self.rmc_value),
+            ("cm", defs["cm"]["title"], self.cm_value),
             (
                 "rubble",
-                material_total_label("CM_RUBBLE"),
+                defs["rubble"]["title"],
                 self.rubble_value,
             ),
             (
                 "scraps",
-                material_total_label("CM_SCRAPS"),
+                defs["scraps"]["title"],
                 self.scraps_value,
             ),
             (
                 "salvage",
-                material_total_label("CM_SALVAGE"),
+                defs["salvage"]["title"],
                 self.salvage_value,
             ),
-            ("refinery_jobs", "RAFFINERIE", self.refinery_jobs_value),
-            ("active_sessions", "AKTIV", self.active_sessions_value),
+            (
+                "refinery_jobs",
+                defs["refinery_jobs"]["title"],
+                self.refinery_jobs_value,
+            ),
+            (
+                "active_sessions",
+                defs["active_sessions"]["title"],
+                self.active_sessions_value,
+            ),
             (
                 "total_sessions",
-                "SITZUNGEN",
+                defs["total_sessions"]["title"],
                 self.total_sessions_value,
             ),
-            ("sold_sessions", "VERKÄUFE", self.sold_sessions_value),
+            (
+                "sold_sessions",
+                defs["sold_sessions"]["title"],
+                self.sold_sessions_value,
+            ),
             (
                 "ready_sessions",
-                "LAGER (SCU)",
+                defs["ready_sessions"]["title"],
                 self.ready_sessions_value,
             ),
-            ("total_sales", "UMSATZ", self.total_sales_value),
-            ("total_profit", "GEWINN", self.total_profit_value),
+            (
+                "total_sales",
+                defs["total_sales"]["title"],
+                self.total_sales_value,
+            ),
+            (
+                "total_profit",
+                defs["total_profit"]["title"],
+                self.total_profit_value,
+            ),
         ]
 
         for card_id, title, value in kpi_specs:
@@ -340,10 +378,10 @@ class DashboardPage(QWidget):
                 value.setObjectName("dashboardKpiStatusValue")
             self._widget_pool[card_id] = card
 
-        self.session_label = QLabel("KEINE SITZUNG")
+        self.session_label = QLabel(tr("dashboard.session.none"))
         self.crew_info_label = AnimatedDashboardValue("0")
         self.status_info_label = DashboardFitLabel(
-            "LEERLAUF",
+            idle_text,
             max_lines=2,
         )
         self.rmc_info_label = AnimatedDashboardValue("0 SCU")
@@ -353,7 +391,9 @@ class DashboardPage(QWidget):
         self.session_scraps_info_label = AnimatedDashboardValue("0 SCU")
         self.session_salvage_info_label = AnimatedDashboardValue("0 SCU")
 
-        self.refinery_stats_label = QLabel("Noch keine abgeschlossenen Aufträge.")
+        self.refinery_stats_label = QLabel(
+            tr("dashboard.refinery_stats.empty_short")
+        )
         self.refinery_stats_label.setWordWrap(True)
         self.refinery_stats_label.setObjectName("dashboardStatValue")
 
@@ -369,15 +409,15 @@ class DashboardPage(QWidget):
         session_layout.setHorizontalSpacing(8)
         session_layout.setVerticalSpacing(1)
 
-        session_heading = QLabel("AKTIVE SITZUNG")
+        session_heading = QLabel(tr("dashboard.session.active"))
         session_heading.setObjectName("dashboardSessionHeading")
         session_layout.addWidget(session_heading, 0, 0, 1, 4)
 
         session_fields = [
-            ("Schiff", self.session_label),
-            ("Crew", self.crew_info_label),
-            ("Status", self.status_info_label),
-            ("Raffinerie", self.refinery_info_label),
+            (tr("dashboard.label.ship"), self.session_label),
+            (tr("dashboard.label.crew"), self.crew_info_label),
+            (tr("dashboard.label.status"), self.status_info_label),
+            (tr("dashboard.label.refinery"), self.refinery_info_label),
             (material_label("RMC"), self.rmc_info_label),
             (material_label("CM"), self.cm_info_label),
             (
@@ -427,7 +467,7 @@ class DashboardPage(QWidget):
         refinery_stats_panel.setObjectName("dashboardSessionPanel")
         refinery_stats_layout = QVBoxLayout(refinery_stats_panel)
         refinery_stats_layout.setContentsMargins(8, 8, 8, 8)
-        refinery_heading = QLabel("RAFFINERIE-STATISTIK")
+        refinery_heading = QLabel(tr("dashboard.refinery_stats.title"))
         refinery_heading.setObjectName("dashboardSessionHeading")
         refinery_stats_layout.addWidget(refinery_heading)
         refinery_stats_layout.addWidget(self.refinery_stats_label)
@@ -487,7 +527,7 @@ class DashboardPage(QWidget):
         self.canvas.set_edit_mode(False)
         self.catalog.hide()
         self.edit_toggle_button.show()
-        self.edit_toggle_button.setText("Dashboard anpassen")
+        self.edit_toggle_button.setText(tr("dashboard.button.customize"))
         self.save_layout_button.hide()
         self.cancel_layout_button.hide()
         if self._layout_dirty:
@@ -498,8 +538,8 @@ class DashboardPage(QWidget):
         if user_id is None:
             QMessageBox.warning(
                 self,
-                "Dashboard",
-                "Kein Benutzer angemeldet.",
+                tr("nav.dashboard"),
+                tr("dashboard.msg.no_user"),
             )
             return
 
@@ -509,8 +549,8 @@ class DashboardPage(QWidget):
         self._leave_edit_mode()
         QMessageBox.information(
             self,
-            "Dashboard",
-            "Dashboard-Layout wurde gespeichert.",
+            tr("nav.dashboard"),
+            tr("dashboard.msg.layout_saved"),
         )
 
     def _cancel_edit(self):
@@ -729,7 +769,7 @@ class DashboardPage(QWidget):
             if not self._status_cycle_animating:
                 self._update_session_status("IDLE", status_label("IDLE"))
             self.crew_value.animate_to(0)
-            self.session_label.setText("KEINE SITZUNG")
+            self.session_label.setText(tr("dashboard.session.none"))
             self.crew_info_label.animate_to(0)
             self.rmc_info_label.animate_to(0, suffix=" SCU")
             self.cm_info_label.animate_to(0, suffix=" SCU")
@@ -737,7 +777,8 @@ class DashboardPage(QWidget):
             self.session_scraps_info_label.animate_to(0, suffix=" SCU")
             self.session_salvage_info_label.animate_to(0, suffix=" SCU")
             self.refinery_info_label.animate_to(
-                open_refinery_jobs, suffix=" offen"
+                open_refinery_jobs,
+                suffix=tr("dashboard.refinery.open_suffix"),
             )
             self.canvas.reflow_content_sizes()
             return
@@ -787,7 +828,8 @@ class DashboardPage(QWidget):
             session_salvage, suffix=" SCU", decimals=1
         )
         self.refinery_info_label.animate_to(
-            open_refinery_jobs, suffix=" offen"
+            open_refinery_jobs,
+            suffix=tr("dashboard.refinery.open_suffix"),
         )
         self.canvas.reflow_content_sizes()
 

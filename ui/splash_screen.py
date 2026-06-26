@@ -29,6 +29,7 @@ from PySide6.QtWidgets import (
 )
 
 from config.paths import asset_path
+from config.i18n import tr
 from config.version import (
     DEVELOPER_NAME,
     DEVELOPER_ALIAS,
@@ -168,7 +169,7 @@ class MobiglasLoadingPanel(QFrame):
 
     def __init__(
         self,
-        status_text="INITIALISIERE SALVAGE TRACKER...",
+        status_text=None,
         parent=None,
     ):
         super().__init__(parent)
@@ -178,6 +179,9 @@ class MobiglasLoadingPanel(QFrame):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(10, 8, 10, 8)
         layout.setSpacing(6)
+
+        if status_text is None:
+            status_text = tr("splash.initializing")
 
         self.status_label = QLabel(status_text)
         self.status_label.setObjectName("splashStatus")
@@ -311,7 +315,11 @@ class SplashScreen(QWidget):
         self.version_label.setAutoFillBackground(False)
 
         self.developer_label = QLabel(
-            f"Created by {DEVELOPER_NAME} · {DEVELOPER_ALIAS}",
+            tr(
+                "splash.created_by",
+                name=DEVELOPER_NAME,
+                alias=DEVELOPER_ALIAS,
+            ),
             self,
         )
         self.developer_label.setObjectName("splashDeveloper")
@@ -364,7 +372,7 @@ class SplashScreen(QWidget):
     def notify_init_complete(self):
         self._init_complete = True
         self._custom_status_active = True
-        self.progress_panel.set_status("SYSTEMCHECK ABGESCHLOSSEN")
+        self.progress_panel.set_status(tr("splash.complete"))
         self.progress_panel.set_progress(
             max(self._progress_value, 92)
         )
@@ -624,7 +632,7 @@ class SplashScreen(QWidget):
             and not self._custom_status_active
         ):
             self.progress_panel.set_status(
-                "SYSTEMCHECK ABGESCHLOSSEN"
+                tr("splash.complete")
             )
 
         if self._progress_value >= 100:

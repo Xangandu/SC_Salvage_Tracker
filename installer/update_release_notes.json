@@ -1,4 +1,28 @@
 {
+  "0.15.2": {
+    "de": {
+      "title": "SC Salvage Tracker 0.15.2 Beta — Global Interface",
+      "summary": "Vollständige Internationalisierung: Englisch (Standard) und Deutsch in der gesamten Oberfläche, inklusive Fehlermeldungen und Netzwerk-Texte.",
+      "highlights": [
+        "Sprachauswahl beim ersten Start und unter Einstellungen → Design",
+        "Alle Hauptseiten, Dialoge und Admin-Bereich übersetzt",
+        "Datenbank-Fehlermeldungen (error.*) lokalisiert",
+        "Vernetzung: Szenarien, Assistent, RPC- und UPnP-Meldungen",
+        "Nach Sprachwechsel App neu starten für vollständige Aktualisierung"
+      ]
+    },
+    "en": {
+      "title": "SC Salvage Tracker 0.15.2 Beta — Global Interface",
+      "summary": "Complete internationalization: English (default) and German across the entire UI, including error messages and networking texts.",
+      "highlights": [
+        "Language selection on first launch and under Settings → Design",
+        "All main pages, dialogs, and admin area translated",
+        "Database error messages (error.*) localized",
+        "Networking: scenarios, assistant, RPC and UPnP messages",
+        "Restart the app after changing language for a full UI refresh"
+      ]
+    }
+  },
   "0.15.0": {
     "de": {
       "title": "SC Salvage Tracker 0.15.0 Beta — Edition Foundation",

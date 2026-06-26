@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt
 
 from database.access import get_database
+from config.i18n import tr
 import auth.session as user_session
 from ui.page_layout import (
     primary_button,
@@ -40,10 +41,10 @@ class ChangePasswordDialog(MobiglasFramelessMixin, QDialog):
 
         if required:
             self.setWindowTitle(
-                "Erstanmeldung — Neues Passwort erforderlich"
+                tr("password.required.window_title")
             )
         else:
-            self.setWindowTitle("Passwort ändern")
+            self.setWindowTitle(tr("password.change.title"))
 
         self.setModal(True)
         self.resize(520, 480 if required else 380)
@@ -53,22 +54,23 @@ class ChangePasswordDialog(MobiglasFramelessMixin, QDialog):
         layout.setContentsMargins(24, 24, 24, 24)
 
         if required:
-            title = QLabel("ERSTANMELDUNG")
+            title = QLabel(tr("password.required.banner_title"))
             title.setObjectName("warningBannerTitle")
             layout.addWidget(title)
 
             banner = QLabel(
-                "Du hast dich mit dem Standardpasswort "
-                "angemeldet.\n\n"
-                "Bevor du das Programm nutzen kannst, musst du "
-                "jetzt ein eigenes Passwort setzen.\n\n"
-                f"Angemeldet als: {user.get('username', 'admin')}"
+                tr(
+                    "password.required.banner",
+                    username=user.get("username", "admin"),
+                )
             )
             banner.setWordWrap(True)
             banner.setObjectName("warningBanner")
             layout.addWidget(banner)
         else:
-            layout.addWidget(page_title("PASSWORT ÄNDERN"))
+            layout.addWidget(
+                page_title(tr("password.change.title").upper())
+            )
 
         layout.addLayout(hud_divider())
 
@@ -78,10 +80,7 @@ class ChangePasswordDialog(MobiglasFramelessMixin, QDialog):
         panel_layout.setSpacing(10)
 
         if required:
-            step_hint = QLabel(
-                "Schritt 1 von 1 — Neues Passwort wählen "
-                "(mindestens 6 Zeichen)"
-            )
+            step_hint = QLabel(tr("password.required.step"))
             step_hint.setObjectName("formLabel")
             panel_layout.addWidget(step_hint)
 
@@ -90,11 +89,11 @@ class ChangePasswordDialog(MobiglasFramelessMixin, QDialog):
             QLineEdit.Password
         )
         self.password_input.setPlaceholderText(
-            "Neues Passwort eingeben"
+            tr("password.placeholder.new")
         )
         add_form_field(
             panel_layout,
-            "Neues Passwort",
+            tr("password.label.new"),
             self.password_input,
         )
 
@@ -103,18 +102,18 @@ class ChangePasswordDialog(MobiglasFramelessMixin, QDialog):
             QLineEdit.Password
         )
         self.confirm_input.setPlaceholderText(
-            "Passwort wiederholen"
+            tr("password.placeholder.confirm")
         )
         add_form_field(
             panel_layout,
-            "Passwort bestätigen",
+            tr("password.label.confirm"),
             self.confirm_input,
         )
 
         button_label = (
-            "Neues Passwort setzen und fortfahren"
+            tr("password.button.set_and_continue")
             if required
-            else "Speichern"
+            else tr("common.save")
         )
         self.save_button = primary_button(button_label)
         self.save_button.clicked.connect(
@@ -123,7 +122,7 @@ class ChangePasswordDialog(MobiglasFramelessMixin, QDialog):
         panel_layout.addWidget(self.save_button)
 
         if not required:
-            cancel_button = QPushButton("Abbrechen")
+            cancel_button = QPushButton(tr("common.cancel"))
             cancel_button.setObjectName("secondaryAction")
             cancel_button.clicked.connect(
                 self.reject
@@ -146,9 +145,9 @@ class ChangePasswordDialog(MobiglasFramelessMixin, QDialog):
             )
 
         frame_title = (
-            "Erstanmeldung — Neues Passwort"
+            tr("password.required.frame_title")
             if required
-            else "Passwort ändern"
+            else tr("password.change.title")
         )
         apply_mobiglas_window_frame(
             self,
@@ -161,10 +160,8 @@ class ChangePasswordDialog(MobiglasFramelessMixin, QDialog):
         if self.required:
             QMessageBox.warning(
                 self,
-                "Erstanmeldung",
-                "Ohne neues Passwort kann das Programm "
-                "nicht gestartet werden.\n\n"
-                "Bitte ein Passwort setzen.",
+                tr("password.msg.blocked.title"),
+                tr("password.msg.blocked"),
             )
             event.ignore()
             return
@@ -175,10 +172,8 @@ class ChangePasswordDialog(MobiglasFramelessMixin, QDialog):
         if self.required:
             QMessageBox.warning(
                 self,
-                "Erstanmeldung",
-                "Ohne neues Passwort kann das Programm "
-                "nicht gestartet werden.\n\n"
-                "Bitte ein Passwort setzen.",
+                tr("password.msg.blocked.title"),
+                tr("password.msg.blocked"),
             )
             return
 
@@ -191,17 +186,16 @@ class ChangePasswordDialog(MobiglasFramelessMixin, QDialog):
         if len(password) < 6:
             QMessageBox.warning(
                 self,
-                "Passwort",
-                "Das Passwort muss mindestens "
-                "6 Zeichen lang sein."
+                tr("password.msg.title"),
+                tr("password.msg.length"),
             )
             return
 
         if password != confirm:
             QMessageBox.warning(
                 self,
-                "Passwort",
-                "Die Passwörter stimmen nicht überein."
+                tr("password.msg.title"),
+                tr("password.msg.mismatch"),
             )
             return
 
@@ -231,15 +225,14 @@ class ChangePasswordDialog(MobiglasFramelessMixin, QDialog):
             self.user = updated_user
 
         success_title = (
-            "Erstanmeldung abgeschlossen"
+            tr("password.msg.required_success.title")
             if self.required
-            else "Passwort"
+            else tr("password.msg.title")
         )
         success_text = (
-            "Dein Passwort wurde gespeichert.\n\n"
-            "Das Programm startet jetzt."
+            tr("password.msg.required_success")
             if self.required
-            else "Das Passwort wurde geändert."
+            else tr("password.msg.changed")
         )
 
         QMessageBox.information(

@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
 )
 
 from config.update import UpdateManifest
+from config.i18n import tr
 from config.version import format_version_subtitle
 from ui.mobiglas_window_frame import (
     MobiglasFramelessMixin,
@@ -49,7 +50,7 @@ def _notes_tab(manifest: UpdateManifest, language: str) -> QWidget:
 
     notes = manifest.notes(language)
     if not notes:
-        empty = QLabel("Keine Release Notes verfügbar.")
+        empty = QLabel(tr("update.available.notes_empty"))
         empty.setObjectName("mutedLabel")
         layout.addWidget(empty)
         return tab
@@ -92,31 +93,41 @@ class UpdateAvailableDialog(MobiglasFramelessMixin, QDialog):
         self.result_action = UpdateDialogResult.LATER
 
         self.setObjectName("mobiglasDialog")
-        self.setWindowTitle("Update verfügbar")
+        self.setWindowTitle(tr("update.available.title"))
         self.resize(760, 560)
 
         layout = QVBoxLayout()
         layout.setContentsMargins(24, 24, 24, 24)
         layout.setSpacing(16)
 
-        layout.addWidget(page_title("UPDATE VERFÜGBAR"))
+        layout.addWidget(page_title(tr("update.available.page_title")))
 
         version_line = QLabel(
-            f"{manifest.version_display} · Build {manifest.build} · "
-            f"{manifest.codename}"
+            tr(
+                "update.available.version_line",
+                version=manifest.version_display,
+                build=manifest.build,
+                codename=manifest.codename,
+            )
         )
         version_line.setObjectName("mutedLabel")
         layout.addWidget(version_line)
 
         local_line = QLabel(
-            f"Aktuell installiert: {format_version_subtitle()}"
+            tr(
+                "update.available.installed",
+                version=format_version_subtitle(),
+            )
         )
         local_line.setObjectName("mutedLabel")
         layout.addWidget(local_line)
 
         size_line = QLabel(
-            f"Download: {manifest.download.filename} "
-            f"({_format_size(manifest.download.size_bytes)})"
+            tr(
+                "update.available.download",
+                filename=manifest.download.filename,
+                size=_format_size(manifest.download.size_bytes),
+            )
         )
         size_line.setObjectName("mutedLabel")
         layout.addWidget(size_line)
@@ -125,24 +136,24 @@ class UpdateAvailableDialog(MobiglasFramelessMixin, QDialog):
         tabs = QTabWidget()
         tabs.setObjectName("changelogTabs")
         configure_aaa_tabs(tabs)
-        tabs.addTab(_notes_tab(manifest, "de"), "Deutsch")
-        tabs.addTab(_notes_tab(manifest, "en"), "English")
+        tabs.addTab(_notes_tab(manifest, "de"), tr("update.tab.de"))
+        tabs.addTab(_notes_tab(manifest, "en"), tr("update.tab.en"))
         layout.addWidget(tabs, 1)
 
         button_row = QHBoxLayout()
         button_row.setSpacing(8)
 
-        self.install_button = primary_button("Jetzt installieren")
+        self.install_button = primary_button(tr("update.button.install"))
         self.install_button.clicked.connect(self._choose_install)
         button_row.addWidget(self.install_button)
 
         if not manifest.mandatory:
-            later_button = QPushButton("Später")
+            later_button = QPushButton(tr("update.button.later"))
             later_button.setObjectName("secondaryAction")
             later_button.clicked.connect(self._choose_later)
             button_row.addWidget(later_button)
 
-            skip_button = QPushButton("Diese Version überspringen")
+            skip_button = QPushButton(tr("update.button.skip"))
             skip_button.setObjectName("secondaryAction")
             skip_button.clicked.connect(self._choose_skip)
             button_row.addWidget(skip_button)
@@ -153,7 +164,7 @@ class UpdateAvailableDialog(MobiglasFramelessMixin, QDialog):
         self.setLayout(layout)
         apply_mobiglas_window_frame(
             self,
-            title="Update verfügbar",
+            title=tr("update.available.title"),
             dialog=True,
         )
 
@@ -176,7 +187,7 @@ class UpdateDownloadDialog(MobiglasFramelessMixin, QDialog):
         super().__init__(parent)
 
         self.setObjectName("mobiglasDialog")
-        self.setWindowTitle("Update wird heruntergeladen")
+        self.setWindowTitle(tr("update.download.title"))
         self.setModal(True)
         self.resize(520, 180)
 
@@ -184,10 +195,13 @@ class UpdateDownloadDialog(MobiglasFramelessMixin, QDialog):
         layout.setContentsMargins(24, 24, 24, 24)
         layout.setSpacing(12)
 
-        layout.addWidget(page_title("DOWNLOAD"))
+        layout.addWidget(page_title(tr("update.download.page_title")))
 
         self.status_label = QLabel(
-            f"{manifest.download.filename} wird geladen …"
+            tr(
+                "update.download.status",
+                filename=manifest.download.filename,
+            )
         )
         self.status_label.setObjectName("mutedLabel")
         self.status_label.setWordWrap(True)
@@ -202,7 +216,7 @@ class UpdateDownloadDialog(MobiglasFramelessMixin, QDialog):
         self.setLayout(layout)
         apply_mobiglas_window_frame(
             self,
-            title="Download",
+            title=tr("update.download.page_title"),
             dialog=True,
         )
 
@@ -210,7 +224,10 @@ class UpdateDownloadDialog(MobiglasFramelessMixin, QDialog):
         if total <= 0:
             self.progress_bar.setRange(0, 0)
             self.status_label.setText(
-                f"{received // (1024 * 1024)} MB heruntergeladen …"
+                tr(
+                    "update.download.indeterminate",
+                    mb=received // (1024 * 1024),
+                )
             )
             return
 
@@ -218,6 +235,10 @@ class UpdateDownloadDialog(MobiglasFramelessMixin, QDialog):
         self.progress_bar.setRange(0, 100)
         self.progress_bar.setValue(percent)
         self.status_label.setText(
-            f"{_format_size(received)} / {_format_size(total)} "
-            f"({percent} %)"
+            tr(
+                "update.download.progress",
+                received=_format_size(received),
+                total=_format_size(total),
+                percent=percent,
+            )
         )

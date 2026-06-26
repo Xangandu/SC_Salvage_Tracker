@@ -19,7 +19,8 @@ from config.dates import (
     today_display,
 )
 from config.materials import material_label
-from config.strings_de import format_number_de, parse_int_de, parse_number_de
+from config.i18n import tr, format_number
+from config.strings_de import parse_number_de
 from config.permissions import apply_widget_permissions
 from ui.table_utils import (
     configure_mobiglas_table,
@@ -54,9 +55,9 @@ class SalesPage(QWidget):
 
         content, layout = page_content_widget()
 
-        layout.addWidget(page_title("VERKÄUFE"))
+        layout.addWidget(page_title(tr("sales.title")))
         layout.addWidget(
-            section_accent("◆ VERFÜGBARER LAGERBESTAND")
+            section_accent(tr("sales.section.inventory"))
         )
 
         self.inventory_container = QVBoxLayout()
@@ -67,8 +68,8 @@ class SalesPage(QWidget):
         self.inventory_table = QTableWidget()
         self.inventory_table.setColumnCount(2)
         self.inventory_table.setHorizontalHeaderLabels([
-            "Material",
-            "Verfügbar (SCU)",
+            tr("sales.table.material"),
+            tr("sales.table.available_scu"),
         ])
         configure_mobiglas_table(
             self.inventory_table,
@@ -77,7 +78,7 @@ class SalesPage(QWidget):
         self.inventory_table.setMinimumHeight(160)
 
         self.inventory_empty_panel = empty_info_panel(
-            "Kein verkaufbares Material im Lager.",
+            tr("sales.inventory.empty"),
             "assets/images/icons/info.svg",
         )
         self.inventory_container.addWidget(
@@ -90,17 +91,17 @@ class SalesPage(QWidget):
 
         form_panel, form_layout = info_panel()
         form_layout.addWidget(
-            subsection_title("◆ NEUER VERKAUF")
+            subsection_title(tr("sales.section.new"))
         )
 
         self.location_input = QLineEdit()
         self.location_input.setPlaceholderText(
-            "z.B. Area18"
+            tr("sales.placeholder.location")
         )
 
         self.sale_date_input = QLineEdit()
         self.sale_date_input.setPlaceholderText(
-            "TT.MM.JJJJ"
+            tr("sales.placeholder.date")
         )
         self.sale_date_input.setText(today_display())
 
@@ -108,33 +109,35 @@ class SalesPage(QWidget):
 
         self.quantity_input = QLineEdit()
         self.quantity_input.setPlaceholderText(
-            "Menge in SCU"
+            tr("sales.placeholder.quantity")
         )
 
         self.unit_price_input = QLineEdit()
         self.unit_price_input.setPlaceholderText(
-            "Preis pro SCU (aUEC)"
+            tr("sales.placeholder.unit_price")
         )
 
-        self.total_label = QLabel("Gesamt: 0 aUEC")
+        self.total_label = QLabel(
+            tr("sales.line_total", total=format_number(0))
+        )
         self.total_label.setObjectName("profitLabel")
 
         self.notes_input = QLineEdit()
         self.notes_input.setPlaceholderText(
-            "Notiz (optional)"
+            tr("sales.placeholder.notes")
         )
 
         self.save_button = primary_button(
-            "Verkauf speichern"
+            tr("sales.button.save")
         )
 
         for label_text, widget in [
-            ("Verkaufsort", self.location_input),
-            ("Datum", self.sale_date_input),
-            ("Material", self.material_combo),
-            ("Menge (SCU)", self.quantity_input),
-            ("Stückpreis (aUEC)", self.unit_price_input),
-            ("Notiz", self.notes_input),
+            (tr("sales.label.location"), self.location_input),
+            (tr("sales.label.date"), self.sale_date_input),
+            (tr("sales.label.material"), self.material_combo),
+            (tr("sales.label.quantity"), self.quantity_input),
+            (tr("sales.label.unit_price"), self.unit_price_input),
+            (tr("sales.label.notes"), self.notes_input),
         ]:
             add_form_field(
                 form_layout,
@@ -152,24 +155,33 @@ class SalesPage(QWidget):
         profit_layout.setSpacing(8)
 
         profit_layout.addWidget(
-            subsection_title("◆ FINANZÜBERSICHT")
+            subsection_title(tr("sales.section.finance"))
         )
         profit_layout.addLayout(hud_divider())
 
         self.revenue_summary_label = QLabel(
-            "Gesamtumsatz (alle Verkäufe): 0 aUEC"
+            tr(
+                "sales.summary.revenue",
+                amount=format_number(0),
+            )
         )
         self.revenue_summary_label.setObjectName(
             "statValue"
         )
 
         self.costs_summary_label = QLabel(
-            "Gesamtkosten: 0 aUEC"
+            tr(
+                "sales.summary.costs",
+                amount=format_number(0),
+            )
         )
         self.costs_summary_label.setObjectName("statLabel")
 
         self.profit_summary_label = QLabel(
-            "Gewinn: 0 aUEC"
+            tr(
+                "sales.summary.profit",
+                amount=format_number(0),
+            )
         )
         self.profit_summary_label.setObjectName(
             "profitLabel"
@@ -187,18 +199,18 @@ class SalesPage(QWidget):
         layout.addWidget(profit_panel)
 
         layout.addWidget(
-            section_accent("◆ VERKAUFSHISTORIE")
+            section_accent(tr("sales.section.history"))
         )
 
         self.history_table = QTableWidget()
         self.history_table.setColumnCount(6)
         self.history_table.setHorizontalHeaderLabels([
-            "Nr.",
-            "Datum",
-            "Ort",
-            "Materialien",
-            "Umsatz",
-            "Verkäufer",
+            tr("sales.history.no"),
+            tr("sales.history.date"),
+            tr("sales.history.location"),
+            tr("sales.history.materials"),
+            tr("sales.history.revenue"),
+            tr("sales.history.seller"),
         ])
         configure_mobiglas_table(
             self.history_table,
@@ -209,7 +221,7 @@ class SalesPage(QWidget):
         history_actions = QHBoxLayout()
         history_actions.setSpacing(12)
         self.void_sale_button = _secondary_button(
-            "Verkauf stornieren"
+            tr("sales.button.void")
         )
         self.void_sale_button.clicked.connect(
             self.void_selected_sale
@@ -286,12 +298,14 @@ class SalesPage(QWidget):
                     row,
                     1,
                     QTableWidgetItem(
-                        format_number_de(quantity, 1)
+                        format_number(quantity, 1)
                     ),
                 )
 
-                combo_label = (
-                    f"{label} — {format_number_de(quantity, 1)} SCU"
+                combo_label = tr(
+                    "sales.material.combo",
+                    material=label,
+                    quantity=format_number(quantity, 1),
                 )
                 self.material_combo.addItem(
                     combo_label,
@@ -312,8 +326,11 @@ class SalesPage(QWidget):
 
         for row, sale in enumerate(sales):
             items_text = ", ".join(
-                f"{item['quantity']:g} SCU "
-                f"{material_label(item['material_code'])}"
+                tr(
+                    "sales.history.item_line",
+                    quantity=f"{item['quantity']:g}",
+                    material=material_label(item["material_code"]),
+                )
                 for item in sale["items"]
             )
 
@@ -343,7 +360,7 @@ class SalesPage(QWidget):
                 row,
                 4,
                 QTableWidgetItem(
-                    f"{format_number_de(sale['total_amount'])} aUEC"
+                    f"{format_number(sale['total_amount'])} aUEC"
                 ),
             )
             self.history_table.setItem(
@@ -363,14 +380,22 @@ class SalesPage(QWidget):
         profit = revenue - costs
 
         self.revenue_summary_label.setText(
-            f"Gesamtumsatz (alle Verkäufe): "
-            f"{format_number_de(revenue)} aUEC"
+            tr(
+                "sales.summary.revenue",
+                amount=format_number(revenue),
+            )
         )
         self.costs_summary_label.setText(
-            f"Gesamtkosten: {format_number_de(costs)} aUEC"
+            tr(
+                "sales.summary.costs",
+                amount=format_number(costs),
+            )
         )
         self.profit_summary_label.setText(
-            f"Gewinn: {format_number_de(profit)} aUEC"
+            tr(
+                "sales.summary.profit",
+                amount=format_number(profit),
+            )
         )
 
     def update_line_total(self):
@@ -378,13 +403,16 @@ class SalesPage(QWidget):
         unit_price = parse_number_de(self.unit_price_input.text(), default=0)
         if quantity is None or unit_price is None:
             self.total_label.setText(
-                "Gesamt: — aUEC"
+                tr("sales.line_total.invalid")
             )
             return
 
         total = quantity * unit_price
         self.total_label.setText(
-            f"Gesamt: {format_number_de(total)} aUEC"
+            tr(
+                "sales.line_total",
+                total=format_number(total),
+            )
         )
 
     def save_sale(self):
@@ -393,8 +421,8 @@ class SalesPage(QWidget):
         if not location:
             QMessageBox.warning(
                 self,
-                "Fehler",
-                "Bitte einen Verkaufsort angeben.",
+                tr("common.error"),
+                tr("sales.msg.no_location"),
             )
             return
 
@@ -405,7 +433,7 @@ class SalesPage(QWidget):
         except ValueError as error:
             QMessageBox.warning(
                 self,
-                "Fehler",
+                tr("common.error"),
                 str(error),
             )
             return
@@ -415,8 +443,8 @@ class SalesPage(QWidget):
         if material_code is None:
             QMessageBox.warning(
                 self,
-                "Fehler",
-                "Kein Material im Lager verfügbar.",
+                tr("common.error"),
+                tr("sales.msg.no_material"),
             )
             return
 
@@ -425,16 +453,16 @@ class SalesPage(QWidget):
         if quantity is None or unit_price is None:
             QMessageBox.warning(
                 self,
-                "Fehler",
-                "Bitte gültige Menge und Preis eingeben.",
+                tr("common.error"),
+                tr("sales.msg.invalid_quantity_price"),
             )
             return
 
         if quantity <= 0:
             QMessageBox.warning(
                 self,
-                "Fehler",
-                "Die Verkaufsmenge muss größer als 0 sein.",
+                tr("common.error"),
+                tr("sales.msg.quantity_positive"),
             )
             return
 
@@ -452,15 +480,15 @@ class SalesPage(QWidget):
         except ValueError as error:
             QMessageBox.warning(
                 self,
-                "Verkauf nicht möglich",
+                tr("sales.msg.not_possible.title"),
                 str(error),
             )
             return
         except Exception as error:
             QMessageBox.critical(
                 self,
-                "Fehler",
-                f"Verkauf konnte nicht gespeichert werden:\n\n{error}",
+                tr("common.error"),
+                tr("sales.msg.save_failed", error=error),
             )
             return
 
@@ -481,8 +509,8 @@ class SalesPage(QWidget):
 
         QMessageBox.information(
             self,
-            "Verkauf gespeichert",
-            "Der Verkauf wurde im Lager verbucht.",
+            tr("sales.msg.saved.title"),
+            tr("sales.msg.saved.message"),
         )
 
     def _selected_history_sale_id(self):
@@ -504,19 +532,18 @@ class SalesPage(QWidget):
         if sale_id is None:
             QMessageBox.warning(
                 self,
-                "Hinweis",
-                "Bitte zuerst einen Verkauf in der "
-                "Historie auswählen.",
+                tr("common.hint"),
+                tr("sales.msg.no_selection"),
             )
             return
 
         answer = QMessageBox.question(
             self,
-            "Verkauf stornieren",
-            f"Verkauf #{sale_id} wirklich stornieren?\n\n"
-            "Die verkaufte Menge wird dem Lager "
-            "zurückgebucht. "
-            "Nicht möglich, wenn bereits ausgezahlt.",
+            tr("sales.msg.void_confirm.title"),
+            tr(
+                "sales.msg.void_confirm.message",
+                sale_id=sale_id,
+            ),
             QMessageBox.Yes | QMessageBox.No,
             QMessageBox.No,
         )
@@ -529,15 +556,15 @@ class SalesPage(QWidget):
         except ValueError as error:
             QMessageBox.warning(
                 self,
-                "Nicht möglich",
+                tr("common.not_possible"),
                 str(error),
             )
             return
         except Exception as error:
             QMessageBox.critical(
                 self,
-                "Fehler",
-                f"Stornierung fehlgeschlagen:\n\n{error}",
+                tr("common.error"),
+                tr("sales.msg.void_failed", error=error),
             )
             return
 
@@ -552,6 +579,9 @@ class SalesPage(QWidget):
 
         QMessageBox.information(
             self,
-            "Storniert",
-            f"Verkauf #{sale_id} wurde storniert.",
+            tr("sales.msg.voided.title"),
+            tr(
+                "sales.msg.voided.message",
+                sale_id=sale_id,
+            ),
         )

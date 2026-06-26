@@ -1,5 +1,6 @@
 """Erstinstallation: Status und Organisations-Administratoren."""
 
+from config.i18n import tr
 from config.permissions import ROLE_ADMIN
 from config.setup import (
     DEFAULT_SUPERADMIN_PASSWORD,
@@ -110,21 +111,13 @@ class InitialSetupMixin:
     def set_superadmin_password_for_setup(self, new_password):
         """Notfall-Passwort während der Erstinstallation setzen."""
         if self.is_initial_setup_complete():
-            raise ValueError(
-                "Das Super-Administrator-Passwort kann nach der "
-                "Erstinstallation hier nicht mehr gesetzt werden."
-            )
+            raise ValueError(tr("error.setup.superadmin_after_complete"))
 
         if len(new_password) < 6:
-            raise ValueError(
-                "Das Passwort muss mindestens 6 Zeichen lang sein."
-            )
+            raise ValueError(tr("setup.error.password_length"))
 
         if new_password == DEFAULT_SUPERADMIN_PASSWORD:
-            raise ValueError(
-                "Bitte ein anderes Passwort als das "
-                "Standard-Passwort wählen."
-            )
+            raise ValueError(tr("error.setup.default_password_forbidden"))
 
         self.cursor.execute("""
         SELECT id
@@ -136,9 +129,7 @@ class InitialSetupMixin:
 
         row = self.cursor.fetchone()
         if not row:
-            raise ValueError(
-                "Der Super-Administrator wurde nicht gefunden."
-            )
+            raise ValueError(tr("error.setup.superadmin_not_found"))
 
         self.change_password(
             row[0],

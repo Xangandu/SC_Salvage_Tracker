@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
     QScrollArea,
 )
 
+from config.i18n import tr
 from ui.page_layout import primary_button, page_panel
 from ui.mobiglas_window_frame import (
     MobiglasFramelessMixin,
@@ -88,10 +89,10 @@ class MobiglasColorDialog(MobiglasFramelessMixin, QDialog):
         buttons.setSpacing(12)
         buttons.addStretch()
 
-        cancel_button = _secondary_button("Abbrechen")
+        cancel_button = _secondary_button(tr("common.cancel"))
         cancel_button.clicked.connect(self.reject)
 
-        confirm_button = primary_button("OK")
+        confirm_button = primary_button(tr("common.ok"))
         confirm_button.clicked.connect(self._accept_color)
         confirm_button.setDefault(True)
 

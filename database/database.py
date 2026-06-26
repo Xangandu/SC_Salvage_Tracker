@@ -4,6 +4,7 @@ from datetime import datetime
 from pathlib import Path
 
 from config.debug import debug_log
+from config.i18n import tr
 from config.paths import data_dir
 from database.user_auth import UserAuthMixin
 from database.initial_setup import InitialSetupMixin
@@ -102,14 +103,10 @@ class Database(UserAuthMixin, InitialSetupMixin):
         )
 
         if not BackupRepository._is_backup_file(backup_path):
-            raise ValueError(
-                "Ungültige Backup-Datei."
-            )
+            raise ValueError(tr("error.backup.invalid_file"))
 
         if not backup_path.exists():
-            raise FileNotFoundError(
-                "Backup nicht gefunden."
-            )
+            raise FileNotFoundError(tr("error.backup.not_found"))
 
         pre_restore_backup = Database.create_safety_backup(
             "pre_restore",
@@ -930,10 +927,7 @@ class Database(UserAuthMixin, InitialSetupMixin):
         to_payer = to_payer.strip()
 
         if not from_payer or not to_payer:
-            raise ValueError(
-                "Alter und neuer Zahler müssen "
-                "angegeben werden."
-            )
+            raise ValueError(tr("error.cost.payers_required"))
 
         cost_columns = self._table_columns("costs")
         has_paid_by = "paid_by" in cost_columns
@@ -1064,9 +1058,7 @@ class Database(UserAuthMixin, InitialSetupMixin):
                 paid_by,
             ))
         else:
-            raise ValueError(
-                "Unbekanntes Kosten-Schema"
-            )
+            raise ValueError(tr("error.cost.unknown_schema"))
 
         self.connection.commit()
 
@@ -1080,10 +1072,7 @@ class Database(UserAuthMixin, InitialSetupMixin):
         to_payer = to_payer.strip()
 
         if not from_payer or not to_payer:
-            raise ValueError(
-                "Alter und neuer Zahler müssen "
-                "angegeben werden."
-            )
+            raise ValueError(tr("error.cost.payers_required"))
 
         if not job_ids:
             return

@@ -7,6 +7,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from config.i18n import tr
 from config.version import (
     APP_NAME,
     format_version_subtitle,
@@ -33,7 +34,7 @@ class ChangelogDialog(MobiglasFramelessMixin, QDialog):
         super().__init__()
 
         self.setObjectName("mobiglasDialog")
-        self.setWindowTitle("Änderungsprotokoll")
+        self.setWindowTitle(tr("changelog.title"))
 
         self.resize(920, 640)
 
@@ -41,7 +42,9 @@ class ChangelogDialog(MobiglasFramelessMixin, QDialog):
         layout.setContentsMargins(24, 24, 24, 24)
         layout.setSpacing(16)
 
-        title = page_title(f"{APP_NAME} – PATCHNOTES & ROADMAP")
+        title = page_title(
+            tr("changelog.page_title", app_name=APP_NAME)
+        )
         layout.addWidget(title)
 
         subtitle = QLabel(format_version_subtitle())
@@ -63,14 +66,14 @@ class ChangelogDialog(MobiglasFramelessMixin, QDialog):
         roadmap_view.setReadOnly(True)
         roadmap_view.setPlainText(load_roadmap())
 
-        tabs.addTab(patchnotes_view, "Patchnotes")
-        tabs.addTab(roadmap_view, "Roadmap")
+        tabs.addTab(patchnotes_view, tr("changelog.tab.patchnotes"))
+        tabs.addTab(roadmap_view, tr("changelog.tab.roadmap"))
         layout.addWidget(tabs)
 
         self.setLayout(layout)
 
         apply_mobiglas_window_frame(
             self,
-            title="Änderungsprotokoll",
+            title=tr("changelog.title"),
             dialog=True,
         )

@@ -55,27 +55,27 @@ PERMISSION_LABELS = {
 }
 
 PERMISSION_GROUPS = (
-    ("Benutzer & System", (
+    ("users_system", (
         PERM_USERS_MANAGE,
         PERM_ROLES_MANAGE,
         PERM_SETTINGS_MANAGE,
         PERM_DATABASE_RESET,
     )),
-    ("Sitzungen & Crew", (
+    ("sessions_crew", (
         PERM_SESSIONS_MANAGE,
         PERM_SESSIONS_MANAGE_OWN,
         PERM_CREW_MANAGE,
     )),
-    ("Operationen", (
+    ("operations", (
         PERM_REFINERY_MANAGE,
         PERM_SALES_MANAGE,
     )),
-    ("Auszahlung", (
+    ("payouts", (
         PERM_PAYOUTS_MANAGE,
         PERM_PAYOUTS_APPROVE,
         PERM_PAYOUTS_VIEW_OWN,
     )),
-    ("Ansicht", (
+    ("views", (
         PERM_DASHBOARD_VIEW,
         PERM_STATISTICS_VIEW,
         PERM_HISTORY_VIEW,

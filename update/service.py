@@ -18,6 +18,7 @@ from config.update import (
     local_release_version,
 )
 from config.version import APP_BUILD
+from config.i18n import tr
 from database.access import get_client_connection, get_host_server
 from network.constants import NETWORK_MODE_CLIENT, NETWORK_MODE_HOST
 from network.network_state import get_network_state
@@ -102,18 +103,12 @@ def get_network_update_warning() -> str | None:
         and host
         and host.is_running()
     ):
-        return (
-            "Der Host-Modus ist aktiv. Clients sollten die Verbindung "
-            "trennen, bevor ein Update installiert wird."
-        )
+        return tr("update.warning.host_active")
 
     connection = get_client_connection()
     if state.mode == NETWORK_MODE_CLIENT and connection:
         if connection.is_connected:
-            return (
-                "Sie sind als Client mit einem Host verbunden. "
-                "Trennen Sie die Verbindung vor dem Update."
-            )
+            return tr("update.warning.client_connected")
     return None
 
 
@@ -165,15 +160,12 @@ def download_update_file(
         if destination.exists():
             destination.unlink(missing_ok=True)
         raise RuntimeError(
-            f"Download fehlgeschlagen: {error}"
+            tr("update.error.download_failed", error=error)
         ) from error
 
     if not verify_file_sha256(destination, download.sha256):
         destination.unlink(missing_ok=True)
-        raise RuntimeError(
-            "Die heruntergeladene Datei ist beschädigt "
-            "(SHA256-Prüfsumme stimmt nicht)."
-        )
+        raise RuntimeError(tr("update.error.checksum_failed"))
 
     return destination
 
@@ -184,10 +176,7 @@ def can_launch_installer() -> bool:
 
 def launch_installer(setup_path: Path) -> None:
     if not can_launch_installer():
-        raise RuntimeError(
-            "Updates können nur in der installierten Windows-App "
-            "automatisch installiert werden."
-        )
+        raise RuntimeError(tr("update.error.installer_frozen_only"))
 
     subprocess.Popen(
         [str(setup_path), *INSTALLER_SILENT_ARGS],

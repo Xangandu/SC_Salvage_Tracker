@@ -1,7 +1,7 @@
 SC SALVAGE TRACKER – PROJEKT-ZUSAMMENFASSUNG
 ==============================================
 
-Stand: Version 0.15.0 Beta | Build 2026.08 | Codename: Edition Foundation
+Stand: Version 0.15.2 Beta | Build 2026.10 | Codename: GLOBAL INTERFACE
 
 
 1. PROJEKTZIEL
@@ -51,6 +51,15 @@ Crew-Auszahlungen.
 
 3. WICHTIGE ÄNDERUNGEN NACH VERSION
 ------------------------------------
+
+v0.15.2 – Global Interface (i18n)
+• Vollständige UI-Internationalisierung: Englisch (Standard) und Deutsch
+• Sprachauswahl beim ersten Start; Umschaltung unter Einstellungen → Design
+• Fehlermeldungen, Netzwerk-Texte und Admin-Oberfläche lokalisiert
+
+v0.15.0 – Edition Foundation
+• Beta-Start; Produkt-Editionen SOLO / CREW / ORGA
+• Vernetzung in SOLO gesperrt mit Teaser; separate Installer
 
 v0.11.0 – Salvage-Relay + UPnP
 • Internet ohne IP: Host am Relay registrieren, Crew nur Relay + Code

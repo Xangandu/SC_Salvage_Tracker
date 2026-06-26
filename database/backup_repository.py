@@ -13,6 +13,7 @@ from datetime import datetime
 from pathlib import Path
 
 from config.paths import backups_dir
+from config.i18n import tr
 from database.migration_manager import (
     BACKUP_AUTO_BEFORE_RESET_KEY,
     BACKUP_AUTO_BEFORE_RESTORE_KEY,
@@ -105,9 +106,7 @@ class BackupRepository:
         source_path = self.db.database_path()
 
         if not source_path.exists():
-            raise FileNotFoundError(
-                "Datenbankdatei nicht gefunden."
-            )
+            raise FileNotFoundError(tr("error.database.not_found"))
 
         directory = self.backup_directory()
         directory.mkdir(parents=True, exist_ok=True)
@@ -167,14 +166,10 @@ class BackupRepository:
         path = self.backup_directory() / filename
 
         if not self._is_backup_file(path):
-            raise ValueError(
-                "Ungültige Backup-Datei."
-            )
+            raise ValueError(tr("error.backup.invalid_file"))
 
         if not path.exists():
-            raise FileNotFoundError(
-                "Backup nicht gefunden."
-            )
+            raise FileNotFoundError(tr("error.backup.not_found"))
 
         path.unlink()
 
@@ -182,14 +177,10 @@ class BackupRepository:
         path = self.backup_directory() / filename
 
         if not self._is_backup_file(path):
-            raise ValueError(
-                "Ungültige Backup-Datei."
-            )
+            raise ValueError(tr("error.backup.invalid_file"))
 
         if not path.exists():
-            raise FileNotFoundError(
-                "Backup nicht gefunden."
-            )
+            raise FileNotFoundError(tr("error.backup.not_found"))
 
         return path
 

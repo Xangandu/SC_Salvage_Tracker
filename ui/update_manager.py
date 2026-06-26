@@ -6,6 +6,7 @@ from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import QApplication, QMessageBox
 
 from config.update import UpdateManifest
+from config.i18n import tr
 from config.version import format_version_subtitle
 from ui.mobiglas_message_box import question as mobiglas_question
 from ui.update_dialog import (
@@ -68,8 +69,8 @@ class UpdateManager(QObject):
             if not silent:
                 QMessageBox.information(
                     self.parent,
-                    "Updates",
-                    "Es läuft bereits eine Update-Prüfung.",
+                    tr("update.manager.dialog.title"),
+                    tr("update.manager.check_running"),
                 )
             return
 
@@ -90,8 +91,8 @@ class UpdateManager(QObject):
             if not silent:
                 QMessageBox.warning(
                     self.parent,
-                    "Updates",
-                    f"Update-Prüfung fehlgeschlagen:\n\n{error}",
+                    tr("update.manager.dialog.title"),
+                    tr("update.manager.check_failed", error=error),
                 )
             return
 
@@ -99,8 +100,8 @@ class UpdateManager(QObject):
             if not silent:
                 QMessageBox.warning(
                     self.parent,
-                    "Updates",
-                    "Update-Manifest konnte nicht gelesen werden.",
+                    tr("update.manager.dialog.title"),
+                    tr("update.manager.manifest_failed"),
                 )
             return
 
@@ -119,9 +120,11 @@ class UpdateManager(QObject):
         if not silent:
             QMessageBox.information(
                 self.parent,
-                "Updates",
-                "Sie verwenden bereits die neueste Version.\n\n"
-                f"{format_version_subtitle()}",
+                tr("update.manager.dialog.title"),
+                tr(
+                    "update.manager.up_to_date",
+                    version=format_version_subtitle(),
+                ),
             )
 
     def _set_pending_update(self, manifest: UpdateManifest):
@@ -137,10 +140,12 @@ class UpdateManager(QObject):
     def _notify_update_available(self, manifest: UpdateManifest):
         answer = mobiglas_question(
             self.parent,
-            "Neues Update verfügbar",
-            f"Version {manifest.version_display} "
-            f"(Build {manifest.build}) ist auf GitHub verfügbar.\n\n"
-            "Möchten Sie die Update-Details anzeigen?",
+            tr("update.manager.notify.title"),
+            tr(
+                "update.manager.notify.message",
+                version=manifest.version_display,
+                build=manifest.build,
+            ),
             buttons=QMessageBox.StandardButton.Yes
             | QMessageBox.StandardButton.No,
             default_button=QMessageBox.StandardButton.Yes,
@@ -162,11 +167,11 @@ class UpdateManager(QObject):
         if not can_launch_installer():
             QMessageBox.information(
                 self.parent,
-                "Updates",
-                "Die automatische Installation ist nur in der "
-                "installierten Windows-Version verfügbar.\n\n"
-                f"Laden Sie das Update manuell herunter:\n"
-                f"{manifest.download.url}",
+                tr("update.manager.dialog.title"),
+                tr(
+                    "update.manager.installer_unavailable",
+                    url=manifest.download.url,
+                ),
             )
             return
 
@@ -174,8 +179,11 @@ class UpdateManager(QObject):
         if warning:
             answer = QMessageBox.question(
                 self.parent,
-                "Netzwerk aktiv",
-                f"{warning}\n\nTrotzdem fortfahren?",
+                tr("update.manager.network_active.title"),
+                tr(
+                    "update.manager.network_active.continue",
+                    warning=warning,
+                ),
                 QMessageBox.StandardButton.Yes
                 | QMessageBox.StandardButton.No,
                 QMessageBox.StandardButton.No,
@@ -185,9 +193,8 @@ class UpdateManager(QObject):
 
         confirm = QMessageBox.question(
             self.parent,
-            "Update installieren",
-            "Die App wird geschlossen und das Update im Hintergrund "
-            "installiert.\n\nFortfahren?",
+            tr("update.manager.install_confirm.title"),
+            tr("update.manager.install_confirm.message"),
             QMessageBox.StandardButton.Yes
             | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.Yes,
@@ -229,9 +236,8 @@ class UpdateManager(QObject):
         if error:
             QMessageBox.warning(
                 self.parent,
-                "Download",
-                f"Das Update konnte nicht heruntergeladen werden:\n\n"
-                f"{error}",
+                tr("update.manager.download.title"),
+                tr("update.manager.download.failed", error=error),
             )
             return
 
@@ -240,7 +246,7 @@ class UpdateManager(QObject):
         except RuntimeError as launch_error:
             QMessageBox.warning(
                 self.parent,
-                "Installation",
+                tr("update.manager.install.title"),
                 str(launch_error),
             )
             return

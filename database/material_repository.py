@@ -13,6 +13,7 @@ Mission -> Session -> Material Batch -> Storage
 """
 
 from config.debug import debug_log
+from config.i18n import tr
 from config.materials import REFINED_SELLABLE_CODES
 
 
@@ -124,16 +125,16 @@ class MaterialRepository:
             row = self.cursor.fetchone()
 
             if not row:
-                raise ValueError(
-                    "Material-Batch nicht gefunden."
-                )
+                raise ValueError(tr("error.material.batch_not_found"))
 
             available = row[0] or 0
 
             if quantity > available:
                 raise ValueError(
-                    f"Nicht genug Material im Batch "
-                    f"({available:g} SCU verfügbar)."
+                    tr(
+                        "error.material.insufficient_batch",
+                        available=f"{available:g}",
+                    )
                 )
 
             self.cursor.execute("""
@@ -301,16 +302,16 @@ class MaterialRepository:
         row = self.cursor.fetchone()
 
         if not row:
-            raise ValueError(
-                "Material-Batch nicht gefunden."
-            )
+            raise ValueError(tr("error.material.batch_not_found"))
 
         available = row[0]
 
         if quantity > available:
             raise ValueError(
-                f"Nicht genug Material im Batch "
-                f"({available:g} SCU verfügbar)."
+                tr(
+                    "error.material.insufficient_batch",
+                    available=f"{available:g}",
+                )
             )
 
         self.cursor.execute("""
@@ -569,10 +570,7 @@ class MaterialRepository:
         row = self.cursor.fetchone()
 
         if not row or row[0] < quantity:
-            raise ValueError(
-                "Lagerbestand hat sich geändert. "
-                "Bitte erneut versuchen."
-            )
+            raise ValueError(tr("error.material.storage_changed"))
 
         self.cursor.execute("""
         UPDATE storage_items
@@ -596,10 +594,7 @@ class MaterialRepository:
         notes=None,
     ):
         if not lines:
-            raise ValueError(
-                "Mindestens eine Verkaufsposition "
-                "ist erforderlich."
-            )
+            raise ValueError(tr("error.sale.line_required"))
 
         sale_item_records = []
 
@@ -615,22 +610,20 @@ class MaterialRepository:
 
                 if quantity <= 0:
                     raise ValueError(
-                        "Verkaufsmenge muss größer "
-                        "als 0 sein."
+                        tr("error.sale.quantity_must_be_positive")
                     )
 
                 if unit_price < 0:
                     raise ValueError(
-                        "Verkaufspreis darf nicht "
-                        "negativ sein."
+                        tr("error.sale.price_not_negative")
                     )
 
                 if material_code not in REFINED_SELLABLE_CODES:
                     raise ValueError(
-                        f"{material_code} ist kein "
-                        f"verkaufbares Material. "
-                        f"Rohmaterial muss zuerst "
-                        f"raffiniert werden."
+                        tr(
+                            "error.sale.material_not_sellable",
+                            material_code=material_code,
+                        )
                     )
 
                 remaining = quantity
@@ -668,9 +661,11 @@ class MaterialRepository:
 
                 if remaining > 0:
                     raise ValueError(
-                        f"Nicht genug Lagerbestand für "
-                        f"{material_code}. "
-                        f"Es fehlen {remaining:g} SCU."
+                        tr(
+                            "error.sale.insufficient_stock",
+                            material_code=material_code,
+                            remaining=f"{remaining:g}",
+                        )
                     )
 
             total_amount = sum(

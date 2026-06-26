@@ -410,8 +410,17 @@ class ThemeManager:
 
     @classmethod
     def available_themes(cls) -> list[tuple[str, str]]:
+        from config.i18n import theme_option_label
+
         return [
-            (theme_id, THEME_LABELS[theme_id])
+            (
+                theme_id,
+                theme_option_label(
+                    "palette",
+                    theme_id,
+                    THEME_LABELS[theme_id],
+                ),
+            )
             for theme_id in THEME_IDS
         ]
 

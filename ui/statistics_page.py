@@ -32,7 +32,8 @@ from database.payout_repository import (
     UNASSIGNED_COST_PAYERS,
 )
 from config.dates import format_date
-from config.strings_de import format_number_de, parse_number_de
+from config.i18n import tr, format_number
+from config.strings_de import parse_number_de
 
 from config.permissions import apply_widget_permissions
 
@@ -80,6 +81,10 @@ def _secondary_button(text):
 
 
 
+def _calc_placeholder():
+    return tr("payout.calc.placeholder")
+
+
 class StatisticsPage(QWidget):
 
 
@@ -101,10 +106,10 @@ class StatisticsPage(QWidget):
 
 
 
-        layout.addWidget(page_title("GEWINNVERTEILUNG"))
+        layout.addWidget(page_title(tr("payout.title")))
 
         layout.addWidget(
-            section_accent("◆ CREW-AUSZAHLUNG & STATISTIK")
+            section_accent(tr("payout.section.main"))
         )
 
         layout.addLayout(hud_divider())
@@ -123,7 +128,7 @@ class StatisticsPage(QWidget):
 
         summary_layout.addWidget(
 
-            subsection_title("◆ ÜBERSICHT")
+            subsection_title(tr("payout.section.summary"))
 
         )
 
@@ -133,9 +138,11 @@ class StatisticsPage(QWidget):
 
         self.summary_label = QLabel(
 
-            "Ausstehende Verkäufe: 0 | "
-
-            "Ausgezahlt gesamt: 0 aUEC"
+            tr(
+                "payout.summary",
+                count=0,
+                total=format_number(0),
+            )
 
         )
 
@@ -149,11 +156,7 @@ class StatisticsPage(QWidget):
 
         layout.addWidget(
 
-            section_accent(
-
-                "◆ OFFENE VERKÄUFE (NOCH NICHT AUSGEZAHLT)"
-
-            )
+            section_accent(tr("payout.section.unpaid"))
 
         )
 
@@ -173,15 +176,15 @@ class StatisticsPage(QWidget):
 
         self.unpaid_table.setHorizontalHeaderLabels([
 
-            "Nr.",
+            tr("payout.table.no"),
 
-            "Datum",
+            tr("payout.table.date"),
 
-            "Ort",
+            tr("payout.table.location"),
 
-            "Umsatz",
+            tr("payout.table.revenue"),
 
-            "Verkäufer",
+            tr("payout.table.seller"),
 
         ])
 
@@ -202,7 +205,7 @@ class StatisticsPage(QWidget):
         )
 
         self.unpaid_empty_panel = empty_info_panel(
-            "Keine offenen Verkäufe — alle Verkäufe sind ausgezahlt.",
+            tr("payout.unpaid.empty"),
             "assets/images/icons/info.svg",
         )
 
@@ -213,7 +216,7 @@ class StatisticsPage(QWidget):
 
         payout_panel, payout_layout = info_panel()
         payout_layout.addWidget(
-            subsection_title("◆ AUSZAHLUNG BERECHNEN")
+            subsection_title(tr("payout.section.calculate"))
         )
         payout_layout.addLayout(hud_divider())
 
@@ -225,7 +228,7 @@ class StatisticsPage(QWidget):
 
         self.calc_info_label = QLabel(
 
-            "Verkauf wählen, um Vorschlag zu laden."
+            _calc_placeholder()
 
         )
 
@@ -251,7 +254,7 @@ class StatisticsPage(QWidget):
 
         cost_payer_label = QLabel(
 
-            "Kostenerstattung an Crew-Mitglied:"
+            tr("payout.label.cost_payer")
 
         )
 
@@ -285,9 +288,9 @@ class StatisticsPage(QWidget):
 
         self.payout_table.setHorizontalHeaderLabels([
 
-            "Crew-Mitglied",
+            tr("payout.table.crew_member"),
 
-            "Betrag (aUEC)",
+            tr("payout.table.amount"),
 
         ])
 
@@ -315,14 +318,14 @@ class StatisticsPage(QWidget):
 
         self.notes_input.setPlaceholderText(
 
-            "Notiz (optional)"
+            tr("payout.placeholder.notes")
 
         )
 
 
 
         self.save_button = primary_button(
-            "Auszahlung speichern"
+            tr("payout.button.save")
         )
 
 
@@ -331,7 +334,7 @@ class StatisticsPage(QWidget):
 
             payout_layout,
 
-            "Verkauf",
+            tr("payout.label.sale"),
 
             self.sale_combo,
 
@@ -341,7 +344,7 @@ class StatisticsPage(QWidget):
 
             payout_layout,
 
-            "Notiz",
+            tr("payout.label.notes"),
 
             self.notes_input,
 
@@ -375,7 +378,7 @@ class StatisticsPage(QWidget):
 
         layout.addWidget(
 
-            section_accent("◆ CREW-GESAMTAUSZAHLUNGEN")
+            section_accent(tr("payout.section.crew_totals"))
 
         )
 
@@ -395,9 +398,9 @@ class StatisticsPage(QWidget):
 
         self.crew_totals_table.setHorizontalHeaderLabels([
 
-            "Crew-Mitglied",
+            tr("payout.table.crew_member"),
 
-            "Gesamt erhalten (aUEC)",
+            tr("payout.table.total_received"),
 
         ])
 
@@ -417,7 +420,7 @@ class StatisticsPage(QWidget):
 
         self.crew_empty_panel = empty_info_panel(
 
-            "Noch keine Crew-Auszahlungen erfasst.",
+            tr("payout.crew.empty"),
 
             "assets/images/icons/info.svg",
 
@@ -437,7 +440,7 @@ class StatisticsPage(QWidget):
 
         layout.addWidget(
 
-            section_accent("◆ AUSZAHLUNGS-HISTORIE")
+            section_accent(tr("payout.section.history"))
 
         )
 
@@ -457,17 +460,17 @@ class StatisticsPage(QWidget):
 
         self.history_table.setHorizontalHeaderLabels([
 
-            "Nr.",
+            tr("payout.table.no"),
 
-            "Verkauf",
+            tr("payout.table.sale"),
 
-            "Datum",
+            tr("payout.table.date"),
 
-            "Ort",
+            tr("payout.table.location"),
 
-            "Ausgezahlt",
+            tr("payout.table.paid_out"),
 
-            "Erstellt von",
+            tr("payout.table.created_by"),
 
         ])
 
@@ -485,7 +488,7 @@ class StatisticsPage(QWidget):
 
         self.payout_history_empty_panel = empty_info_panel(
 
-            "Noch keine Auszahlungen gespeichert.",
+            tr("payout.history.empty"),
 
             "assets/images/icons/info.svg",
 
@@ -495,7 +498,7 @@ class StatisticsPage(QWidget):
 
         self.void_payout_button = _secondary_button(
 
-            "Auszahlung stornieren"
+            tr("payout.button.void")
 
         )
 
@@ -594,9 +597,11 @@ class StatisticsPage(QWidget):
 
         self.summary_label.setText(
 
-            f"Ausstehende Verkäufe: {len(unpaid)} | "
-
-            f"Ausgezahlt gesamt: {format_number_de(paid_total)} aUEC"
+            tr(
+                "payout.summary",
+                count=len(unpaid),
+                total=format_number(paid_total),
+            )
 
         )
 
@@ -619,7 +624,7 @@ class StatisticsPage(QWidget):
 
         self.sale_combo.addItem(
 
-            "— Verkauf wählen —",
+            tr("payout.sale.placeholder"),
 
             None,
 
@@ -669,7 +674,7 @@ class StatisticsPage(QWidget):
 
                 QTableWidgetItem(
 
-                    f"{format_number_de(sale['total_amount'])} aUEC"
+                    f"{format_number(sale['total_amount'])} aUEC"
 
                 ),
 
@@ -687,11 +692,15 @@ class StatisticsPage(QWidget):
 
 
 
-            combo_text = (
+            combo_text = tr(
 
-                f"#{sale['id']} | {sale['location']} | "
+                "payout.sale.combo",
 
-                f"{format_number_de(sale['total_amount'])} aUEC"
+                sale_id=sale["id"],
+
+                location=sale["location"],
+
+                amount=format_number(sale["total_amount"]),
 
             )
 
@@ -751,7 +760,7 @@ class StatisticsPage(QWidget):
 
                 QTableWidgetItem(
 
-                    f"{format_number_de(entry['total'])} aUEC"
+                    f"{format_number(entry['total'])} aUEC"
 
                 ),
 
@@ -837,7 +846,7 @@ class StatisticsPage(QWidget):
 
                 QTableWidgetItem(
 
-                    f"{format_number_de(payout['payout_total'])} aUEC"
+                    f"{format_number(payout['payout_total'])} aUEC"
 
                 ),
 
@@ -924,7 +933,7 @@ class StatisticsPage(QWidget):
 
             self.calc_info_label.setText(
 
-                "Verkauf wählen, um Vorschlag zu laden."
+                _calc_placeholder()
 
             )
 
@@ -996,7 +1005,9 @@ class StatisticsPage(QWidget):
 
         self.cost_payer_combo.clear()
 
-        self.cost_payer_combo.addItem("— Bitte wählen —")
+        self.cost_payer_combo.addItem(
+            tr("session.mission.paid_by.placeholder")
+        )
 
         for member in proposal.get("crew", []):
 
@@ -1080,7 +1091,7 @@ class StatisticsPage(QWidget):
 
                     self,
 
-                    "Fehler",
+                    tr("common.error"),
 
                     str(error),
 
@@ -1104,9 +1115,9 @@ class StatisticsPage(QWidget):
 
                 self,
 
-                "Hinweis",
+                tr("common.hint"),
 
-                "Bitte zuerst einen Verkauf wählen.",
+                tr("payout.msg.select_sale"),
 
             )
 
@@ -1138,7 +1149,7 @@ class StatisticsPage(QWidget):
 
                 self,
 
-                "Fehler",
+                tr("common.error"),
 
                 str(error),
 
@@ -1152,9 +1163,9 @@ class StatisticsPage(QWidget):
 
                 self,
 
-                "Fehler",
+                tr("common.error"),
 
-                f"Berechnung fehlgeschlagen:\n\n{error}",
+                tr("payout.msg.calc_failed", error=error),
 
             )
 
@@ -1200,9 +1211,9 @@ class StatisticsPage(QWidget):
                 for sid in proposal["session_ids"]
                 if sid not in cost_sessions
             )
-            cost_note = (
-                f"\nSitzungskosten bereits abgerechnet "
-                f"(Sitzungen {settled})"
+            cost_note = tr(
+                "payout.proposal.cost_settled",
+                sessions=settled,
             )
 
         refinery_job_ids = proposal.get("refinery_job_ids", [])
@@ -1222,9 +1233,9 @@ class StatisticsPage(QWidget):
                 for job_id in refinery_job_ids
                 if job_id not in cost_refinery_job_ids
             )
-            refinery_note = (
-                f"\nRaffineriekosten bereits abgerechnet "
-                f"(Aufträge {settled_jobs})"
+            refinery_note = tr(
+                "payout.proposal.refinery_settled",
+                jobs=settled_jobs,
             )
 
         session_costs = proposal.get(
@@ -1237,7 +1248,11 @@ class StatisticsPage(QWidget):
 
         refunds_text = ", ".join(
 
-            f"{name}: {format_number_de(amount)} aUEC"
+            tr(
+                "payout.proposal.refund_line",
+                name=name,
+                amount=format_number(amount),
+            )
 
             for name, amount in sorted(
 
@@ -1245,7 +1260,7 @@ class StatisticsPage(QWidget):
 
             )
 
-        ) or "keine"
+        ) or tr("payout.proposal.refunds_none")
 
 
 
@@ -1265,35 +1280,23 @@ class StatisticsPage(QWidget):
 
         self.calc_info_label.setText(
 
-            f"Verkauf #{proposal['sale_id']} | "
-
-            f"Umsatz: {format_number_de(proposal['revenue'])} aUEC\n"
-
-            f"Sitzungen: {sessions}\n"
-
-            f"Sitzungskosten: {format_number_de(session_costs)} aUEC\n"
-
-            f"Raffineriekosten: {format_number_de(refinery_costs)} aUEC\n"
-
-            f"Kosten gesamt: "
-
-            f"{format_number_de(proposal['total_costs'])} aUEC\n"
-
-            f"Kostenerstattungen: {refunds_text}\n"
-
-            f"Gewinnanteil je Crew: "
-
-            f"{format_number_de(proposal['equal_share'])} aUEC\n"
-
-            f"Verteilt gesamt: "
-
-            f"{format_number_de(proposal['distributed_total'])} aUEC"
-
-            f"{cost_note}"
-
-            f"{refinery_note}"
-
-            f"{warning}"
+            tr(
+                "payout.proposal.detail",
+                sale_id=proposal["sale_id"],
+                revenue=format_number(proposal["revenue"]),
+                sessions=sessions,
+                session_costs=format_number(session_costs),
+                refinery_costs=format_number(refinery_costs),
+                total_costs=format_number(proposal["total_costs"]),
+                refunds=refunds_text,
+                equal_share=format_number(proposal["equal_share"]),
+                distributed_total=format_number(
+                    proposal["distributed_total"]
+                ),
+            )
+            + cost_note
+            + refinery_note
+            + warning
 
         )
 
@@ -1325,7 +1328,7 @@ class StatisticsPage(QWidget):
 
             amount_item = QTableWidgetItem(
 
-                format_number_de(item['amount'])
+                format_number(item['amount'])
 
             )
 
@@ -1370,9 +1373,9 @@ class StatisticsPage(QWidget):
 
                 self,
 
-                "Hinweis",
+                tr("common.hint"),
 
-                "Bitte zuerst einen Verkauf wählen.",
+                tr("payout.msg.select_sale"),
 
             )
 
@@ -1390,11 +1393,9 @@ class StatisticsPage(QWidget):
 
                     self,
 
-                    "Kostenerstattung",
+                    tr("payout.msg.cost_payer.title"),
 
-                    "Bitte wählen, welches Crew-Mitglied "
-
-                    "die Missionskosten bezahlt hat.",
+                    tr("payout.msg.cost_payer_required"),
 
                 )
 
@@ -1442,8 +1443,11 @@ class StatisticsPage(QWidget):
             if amount is None:
                 QMessageBox.warning(
                     self,
-                    "Fehler",
-                    f"Ungültiger Betrag für {member}.",
+                    tr("common.error"),
+                    tr(
+                        "payout.msg.invalid_amount",
+                        member=member,
+                    ),
                 )
                 return
 
@@ -1465,11 +1469,9 @@ class StatisticsPage(QWidget):
 
                     self,
 
-                    "Kostenerstattung",
+                    tr("payout.msg.cost_payer.title"),
 
-                    "SYSTEM-Kosten müssen einem "
-
-                    "Crew-Mitglied zugeordnet werden.",
+                    tr("payout.msg.system_costs"),
 
                 )
 
@@ -1483,9 +1485,9 @@ class StatisticsPage(QWidget):
 
                 self,
 
-                "Fehler",
+                tr("common.error"),
 
-                "Keine Auszahlungspositionen vorhanden.",
+                tr("payout.msg.no_items"),
 
             )
 
@@ -1515,7 +1517,7 @@ class StatisticsPage(QWidget):
 
                 self,
 
-                "Fehler",
+                tr("common.error"),
 
                 str(error),
 
@@ -1529,9 +1531,9 @@ class StatisticsPage(QWidget):
 
                 self,
 
-                "Fehler",
+                tr("common.error"),
 
-                f"Auszahlung fehlgeschlagen:\n\n{error}",
+                tr("payout.msg.save_failed", error=error),
 
             )
 
@@ -1543,9 +1545,12 @@ class StatisticsPage(QWidget):
 
             self,
 
-            "Gespeichert",
+            tr("payout.msg.saved.title"),
 
-            f"Auszahlung #{payout_id} wurde gespeichert.",
+            tr(
+                "payout.msg.saved.message",
+                payout_id=payout_id,
+            ),
 
         )
 
@@ -1559,7 +1564,7 @@ class StatisticsPage(QWidget):
 
         self.calc_info_label.setText(
 
-            "Verkauf wählen, um Vorschlag zu laden."
+            _calc_placeholder()
 
         )
 
@@ -1607,11 +1612,9 @@ class StatisticsPage(QWidget):
 
                 self,
 
-                "Hinweis",
+                tr("common.hint"),
 
-                "Bitte zuerst eine Auszahlung in der "
-
-                "Historie auswählen.",
+                tr("payout.msg.no_selection"),
 
             )
 
@@ -1621,13 +1624,12 @@ class StatisticsPage(QWidget):
 
             self,
 
-            "Auszahlung stornieren",
+            tr("payout.msg.void_confirm.title"),
 
-            f"Auszahlung #{payout_id} wirklich stornieren?\n\n"
-
-            "Der Verkauf erscheint wieder als offen "
-
-            "und kann neu berechnet werden.",
+            tr(
+                "payout.msg.void_confirm.message",
+                payout_id=payout_id,
+            ),
 
             QMessageBox.Yes | QMessageBox.No,
 
@@ -1649,7 +1651,7 @@ class StatisticsPage(QWidget):
 
                 self,
 
-                "Nicht möglich",
+                tr("common.not_possible"),
 
                 str(error),
 
@@ -1663,9 +1665,9 @@ class StatisticsPage(QWidget):
 
                 self,
 
-                "Fehler",
+                tr("common.error"),
 
-                f"Stornierung fehlgeschlagen:\n\n{error}",
+                tr("payout.msg.void_failed", error=error),
 
             )
 
@@ -1687,9 +1689,12 @@ class StatisticsPage(QWidget):
 
             self,
 
-            "Storniert",
+            tr("payout.msg.voided.title"),
 
-            f"Auszahlung #{payout_id} wurde storniert.",
+            tr(
+                "payout.msg.voided.message",
+                payout_id=payout_id,
+            ),
 
         )
 

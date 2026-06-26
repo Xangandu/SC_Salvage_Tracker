@@ -73,19 +73,25 @@ class SalvageTrackerApp:
     def _initialize_backend(self, splash):
         def schema_progress(current, total, name):
             splash.set_status(
-                f"DATENBANK: {name} ({current}/{total})"
+                tr(
+                    "splash.db_step",
+                    name=name,
+                    current=current,
+                    total=total,
+                )
             )
 
-        splash.set_status("DATENBANK WIRD VORBEREITET...")
+        splash.set_status(tr("splash.db_preparing"))
         self.db = Database(
             schema_progress=schema_progress,
         )
         set_database(self.db)
+        init_language_from_db(self.db)
 
-        splash.set_status("SCHRIFTPAKETE WERDEN GELADEN...")
+        splash.set_status(tr("splash.fonts_loading"))
         self._load_fonts()
 
-        splash.set_status("OBERFLÄCHE WIRD VORBEREITET...")
+        splash.set_status(tr("splash.ui_preparing"))
         ThemeManager.ensure_derived_themes()
         self._load_default_theme()
         install_mobiglas_message_boxes()
@@ -216,8 +222,8 @@ class SalvageTrackerApp:
         ):
             QMessageBox.warning(
                 None,
-                "Host-Server",
-                "Der Host-Server konnte nicht gestartet werden.",
+                tr("main.host.title"),
+                tr("main.host.start_failed"),
             )
             return
 
@@ -281,9 +287,8 @@ class SalvageTrackerApp:
             if not self.db.can_login_user(user):
                 QMessageBox.warning(
                     None,
-                    "Anmeldung nicht möglich",
-                    "Dieser Benutzer darf sich derzeit "
-                    "nicht anmelden.",
+                    tr("main.login.blocked.title"),
+                    tr("main.login.blocked.message"),
                 )
                 user_session.clear_session()
                 continue
@@ -315,11 +320,8 @@ class SalvageTrackerApp:
 
                 QMessageBox.information(
                     None,
-                    "Super-Administrator",
-                    "Der Super-Administrator ist nur für die "
-                    "Erstinstallation und Notfälle gedacht.\n\n"
-                    "Bitte melde dich mit einem "
-                    "Organisations-Benutzer an.",
+                    tr("main.superadmin.title"),
+                    tr("main.superadmin.message"),
                 )
                 user_session.clear_session()
                 continue
@@ -448,9 +450,8 @@ class SalvageTrackerApp:
         except Exception as error:
             QMessageBox.critical(
                 None,
-                "Startfehler",
-                "Das Hauptfenster konnte nicht geladen werden:\n\n"
-                f"{error}",
+                tr("main.start.error.title"),
+                tr("main.start.error.message", error=error),
             )
             raise
 

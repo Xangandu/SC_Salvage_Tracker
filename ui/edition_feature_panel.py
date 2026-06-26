@@ -6,7 +6,6 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QFrame,
     QLabel,
-    QPushButton,
     QVBoxLayout,
     QWidget,
 )
@@ -17,6 +16,7 @@ from config.editions import (
     has_feature,
     required_edition,
 )
+from config.i18n import tr
 from ui.mobiglas_message_box import information as mobiglas_information
 from ui.page_layout import info_panel, primary_button
 
@@ -43,7 +43,13 @@ class EditionFeaturePanel(QWidget):
         self._teaser_frame.hide()
 
         needed = required_edition(feature_id)
-        badge = QLabel(f"◆ SC SALVAGE TRACKER - {edition_title(needed).upper()}")
+        self._needed_edition = needed
+        badge = QLabel(
+            tr(
+                "edition.teaser.badge",
+                edition=edition_title(needed).upper(),
+            )
+        )
         badge.setObjectName("editionTeaserBadge")
         teaser_layout.addWidget(badge)
 
@@ -53,7 +59,10 @@ class EditionFeaturePanel(QWidget):
         teaser_layout.addWidget(self._teaser_body)
 
         self._learn_button = primary_button(
-            f"Mehr zur {edition_title(needed)}"
+            tr(
+                "edition.button.learn_more",
+                edition=edition_title(needed),
+            )
         )
         self._learn_button.clicked.connect(self._show_edition_info)
         teaser_layout.addWidget(
@@ -89,15 +98,10 @@ class EditionFeaturePanel(QWidget):
             self._content_host.setStyleSheet("")
 
     def _show_edition_info(self):
-        needed = required_edition(self._feature_id)
         mobiglas_information(
             self.window(),
-            edition_title(needed),
+            edition_title(self._needed_edition),
             feature_teaser_text(self._feature_id)
             + "\n\n"
-            "Die SOLO Version bleibt für Einzelspieler kostenlos. "
-            "CREW und ORGA erweitern das Programm um Mehrspieler "
-            "und Organisation — ohne Solo-Features zu entfernen.\n\n"
-            "Supporter-Keys kannst du unter Einstellungen → "
-            "Unterstützen einlösen.",
+            + tr("edition.info.footer"),
         )

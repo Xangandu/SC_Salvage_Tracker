@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (
     QMessageBox,
 )
 
+from config.i18n import tr
 from ui.page_layout import (
     page_title,
     hud_divider,
@@ -52,7 +53,7 @@ class DashboardPresetDialog(MobiglasFramelessMixin, QDialog):
         self.selected_layout = None
 
         self.setObjectName("mobiglasDialog")
-        self.setWindowTitle("Dashboard-Presets")
+        self.setWindowTitle(tr("dashboard.preset.window_title"))
         self.setModal(True)
         self.resize(560, 560)
         self.setMinimumSize(480, 480)
@@ -61,10 +62,10 @@ class DashboardPresetDialog(MobiglasFramelessMixin, QDialog):
         layout.setContentsMargins(24, 24, 24, 24)
         layout.setSpacing(12)
 
-        layout.addWidget(page_title("DASHBOARD-PRESETS"))
+        layout.addWidget(page_title(tr("dashboard.preset.title")))
         layout.addLayout(hud_divider())
 
-        layout.addWidget(subsection_title("◆ SYSTEM-VORLAGE"))
+        layout.addWidget(subsection_title(tr("dashboard.preset.section.system")))
         layout.addLayout(hud_divider())
 
         system_panel, system_layout = page_panel()
@@ -72,17 +73,26 @@ class DashboardPresetDialog(MobiglasFramelessMixin, QDialog):
         system_layout.setSpacing(10)
 
         self.system_combo = QComboBox()
-        for preset_id, meta in DASHBOARD_LAYOUTS.items():
-            self.system_combo.addItem(meta["label"], preset_id)
-        add_form_field(system_layout, "Vorlage", self.system_combo)
+        for preset_id in DASHBOARD_LAYOUTS:
+            self.system_combo.addItem(
+                tr(f"dashboard.preset.{preset_id}.label"),
+                preset_id,
+            )
+        add_form_field(
+            system_layout,
+            tr("dashboard.preset.label.template"),
+            self.system_combo,
+        )
 
-        load_system = primary_button("Vorlage laden")
+        load_system = primary_button(
+            tr("dashboard.preset.button.load_template")
+        )
         load_system.clicked.connect(self._load_system_preset)
         system_layout.addWidget(load_system)
         layout.addWidget(system_panel)
 
         layout.addWidget(
-            subsection_title("◆ EIGENE PRESETS")
+            subsection_title(tr("dashboard.preset.section.custom"))
         )
         layout.addLayout(hud_divider())
 
@@ -91,8 +101,10 @@ class DashboardPresetDialog(MobiglasFramelessMixin, QDialog):
         custom_layout.setSpacing(10)
 
         preset_hint = QLabel(
-            f"Maximal {MAX_CUSTOM_PRESETS} eigene Presets "
-            "pro Benutzer."
+            tr(
+                "dashboard.preset.hint.max",
+                max=MAX_CUSTOM_PRESETS,
+            )
         )
         preset_hint.setObjectName("mutedLabel")
         preset_hint.setWordWrap(True)
@@ -105,21 +117,27 @@ class DashboardPresetDialog(MobiglasFramelessMixin, QDialog):
 
         self.preset_name_input = QLineEdit()
         self.preset_name_input.setPlaceholderText(
-            "Name für neues Preset"
+            tr("dashboard.preset.placeholder.name")
         )
         add_form_field(
             custom_layout,
-            "Preset-Name",
+            tr("dashboard.preset.label.name"),
             self.preset_name_input,
         )
 
         btn_row = QHBoxLayout()
         btn_row.setSpacing(8)
-        save_btn = primary_button("Aktuelles speichern")
+        save_btn = primary_button(
+            tr("dashboard.preset.button.save_current")
+        )
         save_btn.clicked.connect(self._save_current_preset)
-        load_btn = _secondary_button("Auswahl laden")
+        load_btn = _secondary_button(
+            tr("dashboard.preset.button.load_selected")
+        )
         load_btn.clicked.connect(self._load_selected_custom)
-        delete_btn = _secondary_button("Löschen")
+        delete_btn = _secondary_button(
+            tr("dashboard.preset.button.delete")
+        )
         delete_btn.clicked.connect(self._delete_selected_custom)
         btn_row.addWidget(save_btn)
         btn_row.addWidget(load_btn)
@@ -129,7 +147,7 @@ class DashboardPresetDialog(MobiglasFramelessMixin, QDialog):
 
         close_row = QHBoxLayout()
         close_row.addStretch()
-        close_btn = _secondary_button("Schließen")
+        close_btn = _secondary_button(tr("dashboard.preset.button.close"))
         close_btn.clicked.connect(self.reject)
         close_row.addWidget(close_btn)
         layout.addLayout(close_row)
@@ -139,7 +157,7 @@ class DashboardPresetDialog(MobiglasFramelessMixin, QDialog):
 
         apply_mobiglas_window_frame(
             self,
-            title="Dashboard-Presets",
+            title=tr("dashboard.preset.window_title"),
             dialog=True,
         )
 
@@ -160,15 +178,15 @@ class DashboardPresetDialog(MobiglasFramelessMixin, QDialog):
         if not name:
             QMessageBox.warning(
                 self,
-                "Preset",
-                "Bitte einen Preset-Namen eingeben.",
+                tr("dashboard.preset.msg.title"),
+                tr("dashboard.preset.msg.name_required"),
             )
             return
         if self._current_layout is None:
             QMessageBox.warning(
                 self,
-                "Preset",
-                "Kein Layout zum Speichern vorhanden.",
+                tr("dashboard.preset.msg.title"),
+                tr("dashboard.preset.msg.no_layout"),
             )
             return
         try:
@@ -178,14 +196,18 @@ class DashboardPresetDialog(MobiglasFramelessMixin, QDialog):
                 self._current_layout,
             )
         except ValueError as error:
-            QMessageBox.warning(self, "Preset", str(error))
+            QMessageBox.warning(
+                self,
+                tr("dashboard.preset.msg.title"),
+                str(error),
+            )
             return
         self.preset_name_input.clear()
         self._refresh_custom_list()
         QMessageBox.information(
             self,
-            "Preset",
-            f"Preset „{name}“ wurde gespeichert.",
+            tr("dashboard.preset.msg.title"),
+            tr("dashboard.preset.msg.saved", name=name),
         )
 
     def _load_selected_custom(self):
@@ -193,8 +215,8 @@ class DashboardPresetDialog(MobiglasFramelessMixin, QDialog):
         if not item:
             QMessageBox.warning(
                 self,
-                "Preset",
-                "Bitte ein Preset auswählen.",
+                tr("dashboard.preset.msg.title"),
+                tr("dashboard.preset.msg.select"),
             )
             return
         layout = self.layout_repo.get_custom_preset(
@@ -204,8 +226,8 @@ class DashboardPresetDialog(MobiglasFramelessMixin, QDialog):
         if layout is None:
             QMessageBox.warning(
                 self,
-                "Preset",
-                "Preset konnte nicht geladen werden.",
+                tr("dashboard.preset.msg.title"),
+                tr("dashboard.preset.msg.load_failed"),
             )
             return
         self.selected_layout = layout
@@ -218,8 +240,8 @@ class DashboardPresetDialog(MobiglasFramelessMixin, QDialog):
         name = item.text()
         confirm = QMessageBox.question(
             self,
-            "Preset löschen",
-            f"Preset „{name}“ wirklich löschen?",
+            tr("dashboard.preset.msg.delete_confirm.title"),
+            tr("dashboard.preset.msg.delete_confirm", name=name),
         )
         if confirm != QMessageBox.StandardButton.Yes:
             return

@@ -5,6 +5,7 @@ import uuid
 from PySide6.QtCore import QObject, QTimer, Signal
 from PySide6.QtNetwork import QSslConfiguration, QSslSocket, QTcpSocket
 
+from config.i18n import tr
 from network.constants import (
     EVENT_DATA_CHANGED,
     MSG_AUTH,
@@ -184,7 +185,10 @@ class ClientConnection(QObject):
             if response.get("ok"):
                 result_holder["result"] = response.get("result")
             else:
-                result_holder["error"] = response.get("error", "RPC fehlgeschlagen")
+                result_holder["error"] = response.get(
+                    "error",
+                    tr("network.error.rpc_failed"),
+                )
             loop.quit()
 
         self._pending_rpc[request_id] = on_result
@@ -269,7 +273,10 @@ class ClientConnection(QObject):
         ):
             if msg_type == RELAY_ERROR:
                 self.auth_failed.emit(
-                    message.get("error", "Relay-Verbindung fehlgeschlagen")
+                    message.get(
+                        "error",
+                        tr("network.error.relay_failed"),
+                    )
                 )
                 self.disconnect_from_host()
                 return
@@ -277,7 +284,7 @@ class ClientConnection(QObject):
                 self._relay_handshake_done = True
                 self._send_hello()
                 return
-            self.auth_failed.emit("Ungültige Relay-Antwort")
+            self.auth_failed.emit(tr("network.error.relay_invalid_response"))
             self.disconnect_from_host()
             return
 
@@ -285,7 +292,9 @@ class ClientConnection(QObject):
 
         if msg_type == MSG_CHALLENGE:
             if message.get("protocol_version") != PROTOCOL_VERSION:
-                self.auth_failed.emit("Protokollversion inkompatibel")
+                self.auth_failed.emit(
+                    tr("network.error.protocol_incompatible")
+                )
                 self.disconnect_from_host()
                 return
             self._send_auth()
@@ -302,7 +311,12 @@ class ClientConnection(QObject):
             return
 
         if msg_type == MSG_AUTH_FAIL:
-            self.auth_failed.emit(message.get("error", "Authentifizierung fehlgeschlagen"))
+            self.auth_failed.emit(
+                message.get(
+                    "error",
+                    tr("network.error.auth_failed"),
+                )
+            )
             self.disconnect_from_host()
             return
 

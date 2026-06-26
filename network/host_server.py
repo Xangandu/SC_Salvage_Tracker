@@ -16,6 +16,7 @@ from PySide6.QtNetwork import (
     QTcpSocket,
 )
 
+from config.i18n import tr
 from network.constants import (
     DEFAULT_HOST_BIND,
     DEFAULT_PORT,
@@ -125,7 +126,10 @@ class _ClientSession(QObject):
             return
 
         if not self._authenticated:
-            self.send({"type": MSG_AUTH_FAIL, "error": "Nicht authentifiziert"})
+            self.send({
+                "type": MSG_AUTH_FAIL,
+                "error": tr("network.error.not_authenticated"),
+            })
             return
 
         if msg_type == MSG_PING:
@@ -143,7 +147,7 @@ class _ClientSession(QObject):
         if self.join_code and join_code != self.join_code:
             self.send({
                 "type": MSG_AUTH_FAIL,
-                "error": "Ungültiger Beitrittscode",
+                "error": tr("network.error.invalid_join_code"),
             })
             return
 
@@ -152,7 +156,7 @@ class _ClientSession(QObject):
             if not user:
                 self.send({
                     "type": MSG_AUTH_FAIL,
-                    "error": "Anmeldung fehlgeschlagen",
+                    "error": tr("network.error.login_failed"),
                 })
                 return
             user = self.db.permissions.attach_permissions_to_user(user)
@@ -163,7 +167,7 @@ class _ClientSession(QObject):
         else:
             self.send({
                 "type": MSG_AUTH_FAIL,
-                "error": "Benutzername und Passwort erforderlich",
+                "error": tr("network.error.credentials_required"),
             })
             return
 

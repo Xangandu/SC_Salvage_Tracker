@@ -70,6 +70,60 @@ CLIENT_PLACEHOLDERS = {
     SCENARIO_ROUTER: "Externe IP des Hosts, z. B. 85.123.45.67",
 }
 
+HOST_PLACEHOLDERS = {
+    SCENARIO_LAN: "LAN-IP für die Crew",
+    SCENARIO_RELAY: "Salvage-Relay, z. B. relay.example.com",
+    SCENARIO_INTERNET: (
+        "Erreichbare Adresse für die Einladung "
+        "(externe IP oder LAN-IP)"
+    ),
+    SCENARIO_ROUTER: (
+        "Externe IP — „Externe IP abrufen“ oder vom Provider"
+    ),
+}
+
+
+def scenario_label(scenario: str) -> str:
+    from config.i18n import tr
+
+    key = normalize_scenario(scenario)
+    return tr(
+        f"network.scenario.{key}.label",
+        default=SCENARIO_LABELS.get(key, key),
+    )
+
+
+def scenario_hint(scenario: str, *, role: str) -> str:
+    from config.i18n import tr
+
+    key = normalize_scenario(scenario)
+    prefix = "client" if role == "client" else "host"
+    fallback_source = CLIENT_HINTS if role == "client" else HOST_HINTS
+    return tr(
+        f"network.scenario.{prefix}_hint.{key}",
+        default=fallback_source.get(key, ""),
+    )
+
+
+def scenario_client_placeholder(scenario: str) -> str:
+    from config.i18n import tr
+
+    key = normalize_scenario(scenario)
+    return tr(
+        f"network.scenario.placeholder.{key}",
+        default=CLIENT_PLACEHOLDERS.get(key, ""),
+    )
+
+
+def scenario_host_placeholder(scenario: str) -> str:
+    from config.i18n import tr
+
+    key = normalize_scenario(scenario)
+    return tr(
+        f"network.scenario.host_placeholder.{key}",
+        default=HOST_PLACEHOLDERS.get(key, ""),
+    )
+
 
 def default_relay_host() -> str:
     return DEFAULT_RELAY_HOST

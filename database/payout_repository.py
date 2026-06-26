@@ -4,6 +4,7 @@ Gewinnverteilung: Verkauf → Sessions (via Lager-Trace) → Kosten → Crew-Aus
 
 import auth.session as user_session
 
+from config.i18n import tr
 from config.materials import REFINED_SELLABLE_CODES
 
 
@@ -423,15 +424,10 @@ class PayoutRepository:
         sale = self.get_sale_summary(sale_id)
 
         if not sale:
-            raise ValueError(
-                "Verkauf nicht gefunden."
-            )
+            raise ValueError(tr("error.sale.not_found"))
 
         if self.sale_has_payout(sale_id):
-            raise ValueError(
-                "Für diesen Verkauf existiert "
-                "bereits eine Auszahlung."
-            )
+            raise ValueError(tr("error.payout.already_exists"))
 
         session_ids = self.trace_sale_session_ids(
             sale_id
@@ -530,16 +526,12 @@ class PayoutRepository:
         warning = None
 
         if not session_ids:
-            warning = (
-                "Keine Sitzungen über Lager-Trace "
-                "zuordenbar."
-            )
+            warning = tr("error.payout.no_sessions_trace")
         elif unassigned:
             labels = ", ".join(unassigned)
-            warning = (
-                "Kostenerstattungen sind "
-                f"{labels} zugeordnet. "
-                "Bitte den Zahler auswählen."
+            warning = tr(
+                "error.payout.select_cost_payer",
+                labels=labels,
             )
 
         return {
@@ -585,16 +577,10 @@ class PayoutRepository:
                 approved_by = created_by
 
         if self.sale_has_payout(sale_id):
-            raise ValueError(
-                "Für diesen Verkauf existiert "
-                "bereits eine Auszahlung."
-            )
+            raise ValueError(tr("error.payout.already_exists"))
 
         if not items:
-            raise ValueError(
-                "Mindestens eine Auszahlungsposition "
-                "ist erforderlich."
-            )
+            raise ValueError(tr("error.payout.items_required"))
 
         normalized = []
 
@@ -605,14 +591,11 @@ class PayoutRepository:
             amount = float(item["amount"])
 
             if not member:
-                raise ValueError(
-                    "Crew-Mitglied darf nicht leer sein."
-                )
+                raise ValueError(tr("error.payout.member_empty"))
 
             if amount < 0:
                 raise ValueError(
-                    "Auszahlungsbetrag darf nicht "
-                    "negativ sein."
+                    tr("error.payout.amount_not_negative")
                 )
 
             normalized.append({

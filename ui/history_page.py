@@ -8,7 +8,7 @@ from PySide6.QtWidgets import (
 from database.access import get_database
 from config.dates import format_date
 from config.materials import material_label
-from config.strings_de import format_number_de
+from config.i18n import tr, format_number
 from config.permissions import apply_widget_permissions
 from ui.table_utils import (
     configure_mobiglas_table,
@@ -31,9 +31,9 @@ class HistoryPage(QWidget):
         super().__init__()
 
         content, layout = page_content_widget()
-        layout.addWidget(page_title("VERKAUFSHISTORIE"))
+        layout.addWidget(page_title(tr("history.title")))
         layout.addWidget(
-            section_accent("◆ ALLE VERKÄUFE")
+            section_accent(tr("history.section"))
         )
         layout.addLayout(hud_divider())
 
@@ -43,12 +43,12 @@ class HistoryPage(QWidget):
         self.history_table = QTableWidget()
         self.history_table.setColumnCount(6)
         self.history_table.setHorizontalHeaderLabels([
-            "Nr.",
-            "Datum",
-            "Ort",
-            "Materialien",
-            "Umsatz",
-            "Verkäufer",
+            tr("sales.history.no"),
+            tr("sales.history.date"),
+            tr("sales.history.location"),
+            tr("sales.history.materials"),
+            tr("sales.history.revenue"),
+            tr("sales.history.seller"),
         ])
         configure_mobiglas_table(
             self.history_table,
@@ -57,7 +57,7 @@ class HistoryPage(QWidget):
         self.history_table.setMinimumHeight(400)
 
         self.history_empty_panel = empty_info_panel(
-            "Noch keine Verkäufe erfasst.",
+            tr("history.empty"),
             "assets/images/icons/info.svg",
         )
 
@@ -89,8 +89,11 @@ class HistoryPage(QWidget):
 
         for row, sale in enumerate(sales):
             items_text = ", ".join(
-                f"{item['quantity']:g} SCU "
-                f"{material_label(item['material_code'])}"
+                tr(
+                    "sales.history.item_line",
+                    quantity=f"{item['quantity']:g}",
+                    material=material_label(item["material_code"]),
+                )
                 for item in sale["items"]
             )
 
@@ -120,7 +123,7 @@ class HistoryPage(QWidget):
                 row,
                 4,
                 QTableWidgetItem(
-                    format_number_de(sale['total_amount'])
+                    f"{format_number(sale['total_amount'])} aUEC"
                 ),
             )
             self.history_table.setItem(

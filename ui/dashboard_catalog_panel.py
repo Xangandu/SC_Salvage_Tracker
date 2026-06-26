@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
 )
 
 from ui.page_layout import hud_divider
+from config.i18n import tr
 from ui.dashboard_widget_registry import (
     MIME_DASHBOARD_WIDGET,
     widget_definitions,
@@ -76,15 +77,12 @@ class DashboardCatalogPanel(QWidget):
         outer.setContentsMargins(12, 12, 12, 12)
         outer.setSpacing(8)
 
-        title = QLabel("◆ WIDGET-KATALOG")
+        title = QLabel(tr("dashboard.catalog.title"))
         title.setObjectName("dashboardCatalogTitle")
         outer.addWidget(title)
         outer.addLayout(hud_divider())
 
-        hint = QLabel(
-            "Widgets auf das Dashboard ziehen.\n"
-            "Entfernen: × oder zurück hierher ziehen."
-        )
+        hint = QLabel(tr("dashboard.catalog.hint"))
         hint.setObjectName("dashboardCatalogHint")
         hint.setWordWrap(True)
         outer.addWidget(hint)
@@ -94,7 +92,7 @@ class DashboardCatalogPanel(QWidget):
         self._drop_zone.setAcceptDrops(True)
         drop_layout = QVBoxLayout(self._drop_zone)
         drop_layout.setContentsMargins(8, 8, 8, 8)
-        drop_label = QLabel("Ablage — Widget ablegen zum Entfernen")
+        drop_label = QLabel(tr("dashboard.catalog.drop"))
         drop_label.setObjectName("dashboardCatalogDropLabel")
         drop_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         drop_label.setWordWrap(True)

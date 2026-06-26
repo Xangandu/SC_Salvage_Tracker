@@ -30,6 +30,7 @@ from config.permissions import (
 
 )
 
+from config.i18n import tr, permission_label
 from config.setup import ROLE_SUPER_ADMIN
 
 
@@ -438,31 +439,19 @@ class PermissionRepository:
 
         if not cleaned:
 
-            raise ValueError("Rollenname erforderlich.")
+            raise ValueError(tr("error.role.name_required"))
 
 
 
         if cleaned == ROLE_ADMIN:
 
-            raise ValueError(
-
-                "Der Name „Administrator“ ist "
-
-                "systemseitig reserviert."
-
-            )
+            raise ValueError(tr("error.role.name_admin_reserved"))
 
 
 
         if cleaned == ROLE_SUPER_ADMIN:
 
-            raise ValueError(
-
-                "Der Name „Super-Administrator“ ist "
-
-                "systemseitig reserviert."
-
-            )
+            raise ValueError(tr("error.role.name_super_admin_reserved"))
 
 
 
@@ -472,25 +461,13 @@ class PermissionRepository:
 
             if current_name == ROLE_ADMIN:
 
-                raise ValueError(
-
-                    "Die Administrator-Rolle kann nicht "
-
-                    "umbenannt werden."
-
-                )
+                raise ValueError(tr("error.role.admin_cannot_rename"))
 
 
 
             if current_name == ROLE_SUPER_ADMIN:
 
-                raise ValueError(
-
-                    "Die Super-Administrator-Rolle kann nicht "
-
-                    "umbenannt werden."
-
-                )
+                raise ValueError(tr("error.role.super_admin_cannot_rename"))
 
 
 
@@ -750,7 +727,7 @@ class PermissionRepository:
 
             labels = [
 
-                PERMISSION_LABELS.get(name, name)
+                permission_label(name)
 
                 for name in sorted(forbidden)
 
@@ -758,9 +735,9 @@ class PermissionRepository:
 
             raise ValueError(
 
-                "Du darfst folgende Rechte nicht vergeben "
+                tr("error.role.forbidden_permissions")
 
-                "oder entziehen:\n• "
+                + "\n• "
 
                 + "\n• ".join(labels)
 
@@ -800,31 +777,19 @@ class PermissionRepository:
 
         if not role_name:
 
-            raise ValueError("Rolle nicht gefunden.")
+            raise ValueError(tr("error.role.not_found"))
 
 
 
         if role_name == ROLE_ADMIN:
 
-            raise ValueError(
-
-                "Administrator-Rechte können nicht "
-
-                "geändert werden."
-
-            )
+            raise ValueError(tr("error.role.admin_perms_immutable"))
 
 
 
         if role_name == ROLE_SUPER_ADMIN:
 
-            raise ValueError(
-
-                "Super-Administrator-Rechte können nicht "
-
-                "geändert werden."
-
-            )
+            raise ValueError(tr("error.role.super_admin_perms_immutable"))
 
 
 
@@ -894,19 +859,13 @@ class PermissionRepository:
 
         if not role_name:
 
-            raise ValueError("Rolle nicht gefunden.")
+            raise ValueError(tr("error.role.not_found"))
 
 
 
         if role_name == ROLE_ADMIN:
 
-            raise ValueError(
-
-                "Nur ein Administrator darf die "
-
-                "Administrator-Rolle zuweisen."
-
-            )
+            raise ValueError(tr("error.role.only_admin_can_assign_admin"))
 
 
 
@@ -926,15 +885,7 @@ class PermissionRepository:
 
         ):
 
-            raise ValueError(
-
-                "Diese Rolle enthält Rechte, die du "
-
-                "selbst nicht hast. Du darfst sie "
-
-                "niemandem zuweisen — auch nicht dir."
-
-            )
+            raise ValueError(tr("error.role.exceeds_actor_permissions"))
 
 
 
@@ -966,31 +917,19 @@ class PermissionRepository:
 
         if not target:
 
-            raise ValueError("Benutzer nicht gefunden.")
+            raise ValueError(tr("error.user.not_found"))
 
 
 
         if target.get("is_system"):
 
-            raise ValueError(
-
-                "System-Benutzer können nicht "
-
-                "verwaltet werden."
-
-            )
+            raise ValueError(tr("error.user.system_cannot_manage"))
 
 
 
         if target.get("role_name") == ROLE_SUPER_ADMIN:
 
-            raise ValueError(
-
-                "Der Super-Administrator kann nicht "
-
-                "verwaltet werden."
-
-            )
+            raise ValueError(tr("error.user.super_admin_cannot_manage"))
 
 
 
@@ -1008,13 +947,7 @@ class PermissionRepository:
 
         if target.get("role_name") == ROLE_ADMIN:
 
-            raise ValueError(
-
-                "Der Administrator-Account darf nur von "
-
-                "einem Administrator verwaltet werden."
-
-            )
+            raise ValueError(tr("error.user.admin_only_manages_admin"))
 
 
 
@@ -1026,31 +959,19 @@ class PermissionRepository:
 
         if not role_name:
 
-            raise ValueError("Rolle nicht gefunden.")
+            raise ValueError(tr("error.role.not_found"))
 
 
 
         if role_name == ROLE_ADMIN:
 
-            raise ValueError(
-
-                "Die Administrator-Rolle kann nicht "
-
-                "gelöscht werden."
-
-            )
+            raise ValueError(tr("error.role.admin_cannot_delete"))
 
 
 
         if role_name == ROLE_SUPER_ADMIN:
 
-            raise ValueError(
-
-                "Die Super-Administrator-Rolle kann nicht "
-
-                "gelöscht werden."
-
-            )
+            raise ValueError(tr("error.role.super_admin_cannot_delete"))
 
 
 
@@ -1070,11 +991,7 @@ class PermissionRepository:
 
         if self.cursor.fetchone()[0] > 0:
 
-            raise ValueError(
-
-                "Rolle ist noch Benutzern zugewiesen."
-
-            )
+            raise ValueError(tr("error.role.still_assigned"))
 
 
 

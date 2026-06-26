@@ -3,6 +3,7 @@
 from auth.password import hash_password, verify_password
 from config.dates import now_db_timestamp
 from config.debug import debug_log
+from config.i18n import tr
 from config.permissions import PERM_USERS_MANAGE, has_permission
 from config.setup import (
     DEFAULT_SUPERADMIN_PASSWORD,
@@ -447,8 +448,7 @@ class UserAuthMixin:
                 acting_user,
             ):
                 raise ValueError(
-                    "Keine Berechtigung, das Passwort "
-                    "eines anderen Benutzers zu ändern."
+                    tr("error.password.no_permission_other_user")
                 )
             self.permissions.assert_can_manage_user(user_id)
 
@@ -551,9 +551,7 @@ class UserAuthMixin:
         role_id,
     ):
         if self._user_is_system(user_id):
-            raise ValueError(
-                "System-Benutzer können nicht geändert werden."
-            )
+            raise ValueError(tr("error.user.system_immutable"))
 
         self.permissions.assert_can_manage_user(user_id)
         self.permissions.assert_can_assign_role(

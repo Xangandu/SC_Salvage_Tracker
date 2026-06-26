@@ -11,14 +11,11 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from config.i18n import tr
 from network.connection_guide import (
-    CLIENT_HINTS,
-    CLIENT_PLACEHOLDERS,
-    HOST_HINTS,
-    SCENARIO_LABELS,
+    SCENARIO_INTERNET,
     SCENARIO_LAN,
     SCENARIO_RELAY,
-    SCENARIO_INTERNET,
     SCENARIO_ROUTER,
     default_relay_host,
     default_relay_port,
@@ -27,6 +24,10 @@ from network.connection_guide import (
     is_relay_scenario,
     local_lan_addresses,
     normalize_scenario,
+    scenario_client_placeholder,
+    scenario_hint,
+    scenario_host_placeholder,
+    scenario_label,
 )
 from network.constants import DEFAULT_PORT
 from ui.clipboard_utils import copy_to_clipboard
@@ -56,9 +57,9 @@ class ConnectionScenarioPanel(QWidget):
         layout.setSpacing(8)
 
         title = (
-            "◆ WO SPIELT IHR?"
+            tr("network.scenario.title.client")
             if role == "client"
-            else "◆ WIE VERBINDEN SICH CLIENTS?"
+            else tr("network.scenario.title.host")
         )
         layout.addWidget(subsection_title(title))
 
@@ -69,11 +70,15 @@ class ConnectionScenarioPanel(QWidget):
             SCENARIO_INTERNET,
             SCENARIO_ROUTER,
         ):
-            self.scenario_combo.addItem(SCENARIO_LABELS[key], key)
+            self.scenario_combo.addItem(scenario_label(key), key)
         self.scenario_combo.currentIndexChanged.connect(
             self._on_scenario_changed
         )
-        add_form_field(layout, "Verbindungsart", self.scenario_combo)
+        add_form_field(
+            layout,
+            tr("network.scenario.label.type"),
+            self.scenario_combo,
+        )
 
         self.hint_label = QLabel()
         self.hint_label.setWordWrap(True)
@@ -81,26 +86,36 @@ class ConnectionScenarioPanel(QWidget):
         layout.addWidget(self.hint_label)
 
         self.address_input = QLineEdit()
-        self.address_input.setPlaceholderText("Adresse für Einladung")
-        self.address_label = form_label("Adresse für Einladung")
+        self.address_input.setPlaceholderText(
+            tr("network.scenario.label.invite_address")
+        )
+        self.address_label = form_label(
+            tr("network.scenario.label.invite_address")
+        )
         layout.addWidget(self.address_label)
         layout.addWidget(self.address_input)
 
         self.relay_port_input = QLineEdit(str(default_relay_port()))
-        self.relay_port_label = form_label("Relay-Port")
+        self.relay_port_label = form_label(
+            tr("network.scenario.label.relay_port")
+        )
         layout.addWidget(self.relay_port_label)
         layout.addWidget(self.relay_port_input)
         self.relay_port_label.hide()
         self.relay_port_input.hide()
 
-        self.fetch_public_ip_button = QPushButton("Externe IP abrufen")
+        self.fetch_public_ip_button = QPushButton(
+            tr("network.scenario.button.fetch_ip")
+        )
         self.fetch_public_ip_button.setObjectName("secondaryAction")
         self.fetch_public_ip_button.clicked.connect(
             self._fetch_public_ip
         )
 
         invite_row = QHBoxLayout()
-        self.copy_invite_button = QPushButton("Einladung kopieren")
+        self.copy_invite_button = QPushButton(
+            tr("network.scenario.button.copy_invite")
+        )
         self.copy_invite_button.setObjectName("secondaryAction")
         self.copy_invite_button.clicked.connect(self._copy_invite)
         invite_row.addWidget(self.fetch_public_ip_button)
@@ -174,10 +189,7 @@ class ConnectionScenarioPanel(QWidget):
             self.relay_port_input.setText(str(relay_port))
 
     def client_placeholder(self) -> str:
-        return CLIENT_PLACEHOLDERS.get(
-            self.get_scenario(),
-            CLIENT_PLACEHOLDERS[SCENARIO_LAN],
-        )
+        return scenario_client_placeholder(self.get_scenario())
 
     def _set_relay_port_row_visible(self, visible: bool) -> None:
         self.relay_port_label.setVisible(visible)
@@ -194,8 +206,9 @@ class ConnectionScenarioPanel(QWidget):
 
     def _on_scenario_changed(self) -> None:
         scenario = self.get_scenario()
-        hints = CLIENT_HINTS if self._role == "client" else HOST_HINTS
-        self.hint_label.setText(hints.get(scenario, ""))
+        self.hint_label.setText(
+            scenario_hint(scenario, role=self._role)
+        )
 
         is_relay = is_relay_scenario(scenario)
 
@@ -203,9 +216,11 @@ class ConnectionScenarioPanel(QWidget):
             self._set_address_row_visible(is_relay)
             self._set_relay_port_row_visible(is_relay)
             if is_relay:
-                self.address_label.setText("Relay-Adresse")
+                self.address_label.setText(
+                    tr("network.scenario.label.relay_address")
+                )
                 self.address_input.setPlaceholderText(
-                    CLIENT_PLACEHOLDERS[SCENARIO_RELAY]
+                    scenario_client_placeholder(SCENARIO_RELAY)
                 )
                 if not self.address_input.text().strip():
                     self.address_input.setText(default_relay_host())
@@ -223,42 +238,53 @@ class ConnectionScenarioPanel(QWidget):
             self.copy_invite_button.setVisible(True)
 
             if scenario == SCENARIO_LAN:
-                self.address_label.setText("Adresse für Einladung")
+                self.address_label.setText(
+                    tr("network.scenario.label.invite_address")
+                )
                 self.address_input.setPlaceholderText(
-                    "LAN-IP für die Crew"
+                    scenario_host_placeholder(SCENARIO_LAN)
                 )
                 lan_addresses = local_lan_addresses()
                 if lan_addresses:
                     self.address_input.setText(lan_addresses[0])
             elif is_relay:
-                self.address_label.setText("Relay-Adresse")
+                self.address_label.setText(
+                    tr("network.scenario.label.relay_address")
+                )
                 self.address_input.setPlaceholderText(
-                    "Salvage-Relay, z. B. relay.example.com"
+                    scenario_host_placeholder(SCENARIO_RELAY)
                 )
                 if not self.address_input.text().strip():
                     self.address_input.setText(default_relay_host())
             elif is_internet:
-                self.address_label.setText("Adresse für Einladung")
+                self.address_label.setText(
+                    tr("network.scenario.label.invite_address")
+                )
                 self.address_input.setPlaceholderText(
-                    "Erreichbare Adresse für die Einladung "
-                    "(externe IP oder LAN-IP)"
+                    scenario_host_placeholder(SCENARIO_INTERNET)
                 )
             elif is_router:
-                self.address_label.setText("Adresse für Einladung")
+                self.address_label.setText(
+                    tr("network.scenario.label.invite_address")
+                )
                 self.address_input.setPlaceholderText(
-                    "Externe IP — „Externe IP abrufen“ oder vom Provider"
+                    scenario_host_placeholder(SCENARIO_ROUTER)
                 )
 
         self.scenario_changed.emit(scenario)
 
     def _fetch_public_ip(self) -> None:
         self.fetch_public_ip_button.setEnabled(False)
-        self.fetch_public_ip_button.setText("Rufe ab…")
+        self.fetch_public_ip_button.setText(
+            tr("network.scenario.button.fetch_ip_progress")
+        )
         try:
             public_ip = fetch_public_ip()
         finally:
             self.fetch_public_ip_button.setEnabled(True)
-            self.fetch_public_ip_button.setText("Externe IP abrufen")
+            self.fetch_public_ip_button.setText(
+                tr("network.scenario.button.fetch_ip")
+            )
 
         if public_ip:
             self.address_input.setText(public_ip)
@@ -268,10 +294,8 @@ class ConnectionScenarioPanel(QWidget):
 
         QMessageBox.warning(
             self,
-            "Externe IP",
-            "Die externe IP konnte nicht abgerufen werden.\n"
-            "Prüfe die Internetverbindung oder trage die IP "
-            "manuell ein (Router-Statusseite oder Anbieter).",
+            tr("network.scenario.msg.fetch_ip_title"),
+            tr("network.scenario.msg.fetch_ip_failed"),
         )
 
     def _copy_invite(self) -> None:
@@ -284,8 +308,8 @@ class ConnectionScenarioPanel(QWidget):
 
                 QMessageBox.warning(
                     self,
-                    "Einladung",
-                    "Bitte zuerst die Relay-Adresse eintragen.",
+                    tr("network.scenario.msg.invite_title"),
+                    tr("network.scenario.msg.relay_address_required"),
                 )
                 return
         elif not host:
@@ -293,8 +317,8 @@ class ConnectionScenarioPanel(QWidget):
 
             QMessageBox.warning(
                 self,
-                "Einladung",
-                "Bitte zuerst eine Adresse eintragen oder abrufen.",
+                tr("network.scenario.msg.invite_title"),
+                tr("network.scenario.msg.address_required"),
             )
             return
 
@@ -303,8 +327,8 @@ class ConnectionScenarioPanel(QWidget):
 
             QMessageBox.warning(
                 self,
-                "Einladung",
-                "Beitrittscode fehlt — Host starten oder Code erzeugen.",
+                tr("network.scenario.msg.invite_title"),
+                tr("network.scenario.msg.join_code_missing"),
             )
             return
 
@@ -320,8 +344,5 @@ class ConnectionScenarioPanel(QWidget):
         copy_to_clipboard(
             text,
             self,
-            message=(
-                "Einladungstext wurde kopiert.\n"
-                "Sende ihn an deine Crew (Chat, Discord, …)."
-            ),
+            message=tr("network.scenario.msg.invite_copied"),
         )

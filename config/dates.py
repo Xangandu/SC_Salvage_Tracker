@@ -6,6 +6,8 @@ jeweiligen Rechners) — z. B. MESZ in Deutschland oder EST in den USA.
 
 from datetime import date, datetime
 
+from config.i18n import tr
+
 # SQLite: datetime('now') ist UTC — immer localtime für Speicherung.
 SQLITE_LOCAL_NOW = "datetime('now', 'localtime')"
 SQLITE_LOCAL_DATE = "date('now', 'localtime')"
@@ -45,7 +47,7 @@ def parse_date(value):
     text = (value or "").strip()
 
     if not text:
-        raise ValueError("Bitte ein Datum angeben.")
+        raise ValueError(tr("dates.error.empty"))
 
     for fmt in _DATE_INPUT_FORMATS:
         try:
@@ -53,16 +55,14 @@ def parse_date(value):
         except ValueError:
             continue
 
-    raise ValueError(
-        "Ungültiges Datum. Bitte TT.MM.JJJJ verwenden."
-    )
+    raise ValueError(tr("dates.error.invalid_date"))
 
 
 def parse_datetime(value):
     text = (value or "").strip()
 
     if not text:
-        raise ValueError("Ungültiger Zeitstempel.")
+        raise ValueError(tr("dates.error.invalid_timestamp"))
 
     for fmt in _DATETIME_INPUT_FORMATS:
         try:
@@ -70,7 +70,7 @@ def parse_datetime(value):
         except ValueError:
             continue
 
-    raise ValueError("Ungültiges Datum oder Uhrzeit.")
+    raise ValueError(tr("dates.error.invalid_datetime"))
 
 
 def normalize_date_input(value):

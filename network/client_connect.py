@@ -5,6 +5,7 @@ from __future__ import annotations
 from PySide6.QtCore import QEventLoop, QTimer
 from PySide6.QtWidgets import QMessageBox, QWidget
 
+from config.i18n import tr
 from database.access import set_client_connection, set_database
 from network.client_connection import ClientConnection
 from network.constants import DEFAULT_PORT
@@ -141,8 +142,8 @@ def connect_to_host_client(
             if show_errors and parent:
                 QMessageBox.warning(
                     parent,
-                    "Verbindung",
-                    "Bitte Relay-Adresse eingeben.",
+                    tr("network.error.connect_title"),
+                    tr("network.error.relay_address_required"),
                 )
             return None
     else:
@@ -151,8 +152,8 @@ def connect_to_host_client(
             if show_errors and parent:
                 QMessageBox.warning(
                     parent,
-                    "Verbindung",
-                    "Bitte Host-Adresse eingeben.",
+                    tr("network.error.connect_title"),
+                    tr("network.error.host_address_required"),
                 )
             return None
 
@@ -163,8 +164,8 @@ def connect_to_host_client(
         if show_errors and parent:
             QMessageBox.warning(
                 parent,
-                "Verbindung",
-                "Als Gast ist der Beitrittscode erforderlich.",
+                tr("network.error.connect_title"),
+                tr("network.error.guest_code_required"),
             )
         return None
 
@@ -172,8 +173,8 @@ def connect_to_host_client(
         if show_errors and parent:
             QMessageBox.warning(
                 parent,
-                "Verbindung",
-                "Benutzername und Passwort erforderlich.",
+                tr("network.error.connect_title"),
+                tr("network.error.credentials_required"),
             )
         return None
 
@@ -207,7 +208,7 @@ def connect_to_host_client(
         if show_errors and parent:
             QMessageBox.critical(
                 parent,
-                "Verbindung fehlgeschlagen",
+                tr("network.error.connection_failed"),
                 error,
             )
         loop.quit_fail()
@@ -217,15 +218,12 @@ def connect_to_host_client(
         if show_errors and "refused" in error.lower():
             message = (
                 f"{error}\n\n"
-                "Der Host-Server läuft nicht oder lauscht "
-                "nicht auf diesem Port. "
-                "Host zuerst starten und einloggen, bis "
-                "◆ HOST in der Leiste erscheint."
+                + tr("network.error.host_refused_hint")
             )
         if show_errors and parent:
             QMessageBox.critical(
                 parent,
-                "Verbindungsfehler",
+                tr("network.error.connect_error"),
                 message,
             )
         loop.quit_fail()

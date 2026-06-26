@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
 )
 
 from config.paths import asset_path
+from config.i18n import tr
 from ui.mobiglas_window_frame import (
     MobiglasFramelessMixin,
     apply_mobiglas_window_frame,
@@ -40,18 +41,18 @@ _BUTTON_ORDER = (
     QMessageBox.StandardButton.Abort,
 )
 
-_BUTTON_LABELS = {
-    QMessageBox.StandardButton.Ok: "OK",
-    QMessageBox.StandardButton.Yes: "Ja",
-    QMessageBox.StandardButton.No: "Nein",
-    QMessageBox.StandardButton.Cancel: "Abbrechen",
-    QMessageBox.StandardButton.Close: "Schließen",
-    QMessageBox.StandardButton.Save: "Speichern",
-    QMessageBox.StandardButton.Discard: "Verwerfen",
-    QMessageBox.StandardButton.Apply: "Anwenden",
-    QMessageBox.StandardButton.Retry: "Wiederholen",
-    QMessageBox.StandardButton.Ignore: "Ignorieren",
-    QMessageBox.StandardButton.Abort: "Abbrechen",
+_BUTTON_I18N = {
+    QMessageBox.StandardButton.Ok: "common.ok",
+    QMessageBox.StandardButton.Yes: "common.yes",
+    QMessageBox.StandardButton.No: "common.no",
+    QMessageBox.StandardButton.Cancel: "common.cancel",
+    QMessageBox.StandardButton.Close: "common.close",
+    QMessageBox.StandardButton.Save: "common.save",
+    QMessageBox.StandardButton.Discard: "common.discard",
+    QMessageBox.StandardButton.Apply: "common.apply",
+    QMessageBox.StandardButton.Retry: "common.retry",
+    QMessageBox.StandardButton.Ignore: "common.ignore",
+    QMessageBox.StandardButton.Abort: "common.abort",
 }
 
 
@@ -75,7 +76,10 @@ def _expand_buttons(buttons):
 
 
 def _button_label(button: QMessageBox.StandardButton) -> str:
-    return _BUTTON_LABELS.get(button, "OK")
+    key = _BUTTON_I18N.get(button)
+    if key:
+        return tr(key)
+    return tr("common.ok")
 
 
 def _create_action_button(

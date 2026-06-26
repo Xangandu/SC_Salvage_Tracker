@@ -35,6 +35,7 @@ from ui.mobiglas_window_frame import (
     apply_mobiglas_window_frame,
 )
 from config.editions import has_feature
+from config.i18n import tr
 from ui.edition_dialog import show_edition_locked
 from ui.page_layout import (
     form_label,
@@ -59,7 +60,7 @@ class ConnectionAssistantDialog(MobiglasFramelessMixin, QDialog):
         self._client_connection = None
 
         self.setObjectName("mobiglasDialog")
-        self.setWindowTitle("Vernetzung")
+        self.setWindowTitle(tr("network.assistant.window_title"))
         self.setModal(True)
         self.resize(520, 420)
 
@@ -67,19 +68,20 @@ class ConnectionAssistantDialog(MobiglasFramelessMixin, QDialog):
         layout.setSpacing(12)
         layout.setContentsMargins(24, 24, 24, 24)
 
-        subtitle = QLabel(
-            "Allein spielen, als Host eine Crew einladen, "
-            "oder mit einem Code beitreten."
-        )
+        subtitle = QLabel(tr("network.assistant.subtitle"))
         subtitle.setWordWrap(True)
         subtitle.setObjectName("mutedLabel")
 
         self.mode_group = QButtonGroup(self)
         mode_row = QHBoxLayout()
 
-        self.standalone_radio = QRadioButton("Allein spielen")
-        self.host_radio = QRadioButton("Crew hosten")
-        self.client_radio = QRadioButton("Crew beitreten")
+        self.standalone_radio = QRadioButton(
+            tr("network.assistant.mode.standalone")
+        )
+        self.host_radio = QRadioButton(tr("network.assistant.mode.host"))
+        self.client_radio = QRadioButton(
+            tr("network.assistant.mode.client")
+        )
 
         for radio in (
             self.standalone_radio,
@@ -98,10 +100,10 @@ class ConnectionAssistantDialog(MobiglasFramelessMixin, QDialog):
         self.stack.addWidget(self._build_host_page())
         self.stack.addWidget(self._build_client_page())
 
-        self.continue_button = primary_button("Weiter")
+        self.continue_button = primary_button(tr("common.continue"))
         self.continue_button.clicked.connect(self._on_continue)
 
-        cancel_button = QPushButton("Abbrechen")
+        cancel_button = QPushButton(tr("common.cancel"))
         cancel_button.setObjectName("secondaryAction")
         cancel_button.clicked.connect(self.reject)
 
@@ -110,7 +112,7 @@ class ConnectionAssistantDialog(MobiglasFramelessMixin, QDialog):
         button_row.addWidget(cancel_button)
         button_row.addWidget(self.continue_button)
 
-        layout.addWidget(page_title("VERNETZUNG"))
+        layout.addWidget(page_title(tr("network.assistant.title")))
         layout.addWidget(subtitle)
         layout.addLayout(hud_divider())
         layout.addLayout(mode_row)
@@ -127,7 +129,7 @@ class ConnectionAssistantDialog(MobiglasFramelessMixin, QDialog):
         self._apply_edition_limits()
         apply_mobiglas_window_frame(
             self,
-            title="Vernetzung",
+            title=tr("network.assistant.window_title"),
             dialog=True,
         )
 
@@ -145,11 +147,10 @@ class ConnectionAssistantDialog(MobiglasFramelessMixin, QDialog):
         panel = QFrame()
         panel.setObjectName("pagePanel")
         panel_layout = QVBoxLayout()
-        panel_layout.addWidget(subsection_title("◆ LOKAL"))
-        info = QLabel(
-            "Alle Daten bleiben auf diesem Rechner. "
-            "Keine Crew-Verbindung nötig."
+        panel_layout.addWidget(
+            subsection_title(tr("network.assistant.section.local"))
         )
+        info = QLabel(tr("network.assistant.local.info"))
         info.setWordWrap(True)
         info.setObjectName("mutedLabel")
         panel_layout.addWidget(info)
@@ -163,13 +164,11 @@ class ConnectionAssistantDialog(MobiglasFramelessMixin, QDialog):
         panel = QFrame()
         panel.setObjectName("pagePanel")
         panel_layout = QVBoxLayout()
-        panel_layout.addWidget(subsection_title("◆ CREW EINLADEN"))
-
-        info = QLabel(
-            "Teile diesen Code mit deiner Crew. "
-            "Sie brauchen nur den Salvage Tracker und den Code — "
-            "keine IP, kein Router, keine Extra-Software."
+        panel_layout.addWidget(
+            subsection_title(tr("network.assistant.section.host"))
         )
+
+        info = QLabel(tr("network.assistant.host.info"))
         info.setWordWrap(True)
         info.setObjectName("mutedLabel")
         panel_layout.addWidget(info)
@@ -190,7 +189,9 @@ class ConnectionAssistantDialog(MobiglasFramelessMixin, QDialog):
         else:
             self.host_code_input.setText(generate_join_code())
 
-        copy_button = QPushButton("Code kopieren")
+        copy_button = QPushButton(
+            tr("network.assistant.button.copy_code")
+        )
         copy_button.setObjectName("secondaryAction")
         copy_button.clicked.connect(self._copy_host_code)
 
@@ -206,25 +207,29 @@ class ConnectionAssistantDialog(MobiglasFramelessMixin, QDialog):
         panel = QFrame()
         panel.setObjectName("pagePanel")
         panel_layout = QVBoxLayout()
-        panel_layout.addWidget(subsection_title("◆ CREW BEITRETEN"))
-
-        info = QLabel(
-            "Code vom Host eingeben — oder die Einladung einfügen."
+        panel_layout.addWidget(
+            subsection_title(tr("network.assistant.section.client"))
         )
+
+        info = QLabel(tr("network.assistant.client.info"))
         info.setWordWrap(True)
         info.setObjectName("mutedLabel")
         panel_layout.addWidget(info)
 
         self.client_code_input = QLineEdit()
-        self.client_code_input.setPlaceholderText("6-stelliger Code")
+        self.client_code_input.setPlaceholderText(
+            tr("network.assistant.placeholder.code")
+        )
         self.client_name_input = QLineEdit()
         self.client_name_input.setPlaceholderText(
-            "Dein Name (optional)"
+            tr("network.assistant.placeholder.name")
         )
 
-        panel_layout.addWidget(form_label("Beitrittscode"))
+        panel_layout.addWidget(form_label(tr("network.assistant.label.code")))
         panel_layout.addWidget(self.client_code_input)
-        panel_layout.addWidget(form_label("Anzeigename"))
+        panel_layout.addWidget(
+            form_label(tr("network.assistant.label.display_name"))
+        )
         panel_layout.addWidget(self.client_name_input)
 
         client_settings = read_client_settings(self.db)
@@ -249,7 +254,7 @@ class ConnectionAssistantDialog(MobiglasFramelessMixin, QDialog):
         copy_to_clipboard(
             format_simple_invite(code),
             self,
-            message="Code kopiert — z. B. in Discord schicken.",
+            message=tr("network.assistant.copy.message"),
         )
 
     def _select_mode(self, mode: str) -> None:
@@ -264,13 +269,15 @@ class ConnectionAssistantDialog(MobiglasFramelessMixin, QDialog):
     def _on_mode_changed(self) -> None:
         if self.standalone_radio.isChecked():
             self.stack.setCurrentIndex(0)
-            self.continue_button.setText("Weiter")
+            self.continue_button.setText(tr("common.continue"))
         elif self.host_radio.isChecked():
             self.stack.setCurrentIndex(1)
-            self.continue_button.setText("Weiter")
+            self.continue_button.setText(tr("common.continue"))
         elif self.client_radio.isChecked():
             self.stack.setCurrentIndex(2)
-            self.continue_button.setText("Beitreten")
+            self.continue_button.setText(
+                tr("network.assistant.button.join")
+            )
 
     def _on_continue(self) -> None:
         state = get_network_state()
@@ -312,13 +319,13 @@ class ConnectionAssistantDialog(MobiglasFramelessMixin, QDialog):
         if not text:
             QMessageBox.warning(
                 self,
-                "Beitritt",
-                "Bitte Beitrittscode eingeben.",
+                tr("network.assistant.msg.join_title"),
+                tr("network.assistant.msg.code_required"),
             )
             return
 
         self.continue_button.setEnabled(False)
-        self.continue_button.setText("Verbinde…")
+        self.continue_button.setText(tr("common.connecting"))
 
         result = connect_client_simple(
             self.db,
@@ -328,7 +335,9 @@ class ConnectionAssistantDialog(MobiglasFramelessMixin, QDialog):
         )
 
         self.continue_button.setEnabled(True)
-        self.continue_button.setText("Beitreten")
+        self.continue_button.setText(
+            tr("network.assistant.button.join")
+        )
 
         if not result:
             return

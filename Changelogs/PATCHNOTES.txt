@@ -1,6 +1,43 @@
 SC SALVAGE TRACKER – PATCHNOTES
 ================================
 
+VERSION 0.15.2 Beta | Build 2026.10 | Codename: GLOBAL INTERFACE
+--------------------------------------------------------------------
+
+NEU — INTERNATIONALISIERUNG (VOLLSTÄNDIG)
+• Zentrales i18n-System (config/i18n.py): Englisch als Standard, Deutsch wählbar
+• Sprachauswahl beim ersten Start und unter Einstellungen → Design → Erscheinungsbild
+• Hinweis: Nach Sprachwechsel App neu starten, damit alle bereits geöffneten
+  Oberflächenelemente aktualisiert werden
+• Übersetzt: alle Hauptseiten (Sitzung, Raffinerie, Verkauf, Auszahlung, Dashboard,
+  Historie, Statistik), Navigation, Splash, Login, Setup-Wizard, Admin-Bereich
+• Dialoge: Verbindungsassistent, Quick-Join, Edition, Updates, Changelog, Recovery,
+  Rollen-Editor, Passwort ändern, Dashboard-Presets, MobiGlas-Eingaben
+• Fehlermeldungen aus der Datenbank-Schicht (error.*) in der gewählten Sprache
+• Vernetzung: Verbindungsszenarien, Assistent-Hinweise, Client-/Host-Fehlertexte,
+  RPC-Berechtigungen, UPnP-Meldungen
+• Edition-Teaser, Fenster-Chrome (Minimieren/Maximieren/Schließen), Update-Warnungen
+
+NEU — HILFSFUNKTIONEN
+• feature_label(), permission_label(), theme_option_label() für konsistente Labels
+• scenario_label() / scenario_hint() für Netzwerk-Verbindungsguide
+• dashboard_preset_label() für System-Dashboard-Vorlagen
+
+UI & POLISH
+• Dashboard-Schrift-Vorschau im Design-Tab übersetzt
+• Theme-Auswahl (Dark / Star Citizen / Light) über i18n-Keys
+• Mengen-Eingabedialog: Placeholder „Menge in SCU“ lokalisiert
+
+DOKUMENTATION
+• Changelogs, VERSION_HISTORY, ROADMAP und GitHub-Release-Vorlage aktualisiert
+• update_release_notes.json für In-App-Update-Dialog (DE/EN)
+
+HINWEIS
+• Material-Codes (RMC, CM Rubble, …) und Markenbezeichnungen bleiben englisch
+  (Star-Citizen-Begriffe)
+• Interne Protokoll- und Dev-Meldungen (Relay-Server) weiterhin nicht lokalisiert
+
+
 VERSION 0.15.1 Beta | Build 2026.09 | Codename: SOLO BUGFIX
 --------------------------------------------------------------------
 

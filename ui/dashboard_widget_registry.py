@@ -1,6 +1,7 @@
 """Katalog aller Dashboard-Widgets."""
 
 from config.materials import material_total_label
+from config.i18n import tr
 
 GRID_COLUMNS = 12
 ROW_UNIT_PX = 30
@@ -76,56 +77,56 @@ def widget_definitions():
             "sizes": ("1x1", "2x1", "2x2"),
         },
         "refinery_jobs": {
-            "title": "RAFFINERIE",
+            "title": tr("dashboard.widget.refinery_jobs"),
             "kind": "kpi",
             "default_size": "1x1",
             "sizes": ("1x1", "2x1", "2x2"),
         },
         "active_sessions": {
-            "title": "AKTIV",
+            "title": tr("dashboard.widget.active_sessions"),
             "kind": "kpi",
             "default_size": "1x1",
             "sizes": ("1x1", "2x1", "2x2"),
         },
         "total_sessions": {
-            "title": "SITZUNGEN",
+            "title": tr("dashboard.widget.total_sessions"),
             "kind": "kpi",
             "default_size": "1x1",
             "sizes": ("1x1", "2x1", "2x2"),
         },
         "sold_sessions": {
-            "title": "VERKÄUFE",
+            "title": tr("dashboard.widget.sold_sessions"),
             "kind": "kpi",
             "default_size": "1x1",
             "sizes": ("1x1", "2x1", "2x2"),
         },
         "ready_sessions": {
-            "title": "LAGER (SCU)",
+            "title": tr("dashboard.widget.ready_sessions"),
             "kind": "kpi",
             "default_size": "1x1",
             "sizes": ("1x1", "2x1", "2x2"),
         },
         "total_sales": {
-            "title": "UMSATZ",
+            "title": tr("dashboard.widget.total_sales"),
             "kind": "kpi",
             "default_size": "1x1",
             "sizes": ("1x1", "2x1", "2x2"),
         },
         "total_profit": {
-            "title": "GEWINN",
+            "title": tr("dashboard.widget.total_profit"),
             "kind": "kpi",
             "default_size": "1x1",
             "sizes": ("1x1", "2x1", "2x2"),
         },
         "session": {
-            "title": "◆ AKTIVE SITZUNG",
+            "title": tr("dashboard.widget.session"),
             "kind": "session",
             "default_size": "2x2",
             "sizes": ("2x1", "2x2"),
             "reflow": False,
         },
         "refinery_stats": {
-            "title": "◆ RAFFINERIE-STATISTIK",
+            "title": tr("dashboard.widget.refinery_stats"),
             "kind": "refinery_stats",
             "default_size": "2x2",
             "sizes": ("2x2", "2x1"),

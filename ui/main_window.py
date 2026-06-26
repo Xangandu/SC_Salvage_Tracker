@@ -152,7 +152,7 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
         user_panel_layout.setContentsMargins(10, 10, 10, 10)
         user_panel_layout.setSpacing(4)
 
-        user_heading = QLabel("◆  BENUTZER")
+        user_heading = QLabel(tr("nav.user"))
         user_heading.setObjectName("navUserHeading")
         user_heading.setAlignment(
             Qt.AlignmentFlag.AlignLeft
@@ -338,7 +338,9 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
 
         nav_layout.addStretch(1)
 
-        self.update_badge = QPushButton("◆ UPDATE VERFÜGBAR")
+        self.update_badge = QPushButton(
+            tr("nav.badge.update_available")
+        )
         self.update_badge.setObjectName("navUpdateBadge")
         self.update_badge.setCursor(Qt.PointingHandCursor)
         self.update_badge.setVisible(False)
@@ -603,7 +605,7 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
 
     def _show_update_badge(self, manifest):
         self.update_badge.setText(
-            f"◆ UPDATE · {manifest.version_display}"
+            tr("nav.badge.update", version=manifest.version_display)
         )
         self.update_badge.setVisible(True)
 
@@ -619,9 +621,15 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
 
         state = get_network_state()
         if state.is_client():
-            host = state.host_address or "Host"
+            host = state.host_address or tr(
+                "nav.network.host_fallback"
+            )
             self.network_label.setText(
-                f"◆ CLIENT · {host}:{state.host_port}"
+                tr(
+                    "nav.network.client",
+                    host=host,
+                    port=state.host_port,
+                )
             )
             self.network_label.setVisible(True)
             return
@@ -631,16 +639,20 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
             clients = len(state.connected_clients)
             addrs = ", ".join(server.addresses[:2])
             self.network_label.setText(
-                f"◆ HOST · {addrs}:{server.port}\n"
-                f"Code: {server.join_code} · "
-                f"{clients} Client(s)"
+                tr(
+                    "nav.network.host",
+                    addresses=addrs,
+                    port=server.port,
+                    code=server.join_code,
+                    clients=clients,
+                )
             )
             self.network_label.setVisible(True)
             return
 
         if state.mode == "host" or state.host_running:
             self.network_label.setText(
-                "◆ HOST · nicht aktiv"
+                tr("nav.network.host_inactive")
             )
             self.network_label.setVisible(True)
             return
@@ -880,7 +892,7 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
         self.dashboard_window.show_dashboard()
 
         self.btn_dashboard.setText(
-            "Übersicht ●"
+            tr("dashboard.nav.detached")
         )
 
     def hide_dashboard_window(self):
@@ -896,7 +908,7 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
         self.dashboard_window.hide_dashboard()
 
         self.btn_dashboard.setText(
-            "Übersicht ⧉"
+            tr("dashboard.nav.embedded")
         )
 
     def toggle_dashboard_window(self):

@@ -4,6 +4,7 @@ Zentrale Versionsinformation — einzige Quelle für Programm und Splash.
 Alle UI-Anzeigen (Splash, Navigation, Changelog) nutzen die format_*-Helfer
 aus diesem Modul, damit Version, Build und Codename immer synchron sind.
 
+Beta 0.15.2: Vollständige UI-Internationalisierung (EN/DE) — siehe Changelogs/PATCHNOTES.txt.
 Beta 0.15.0: Produkt-Editionen (SOLO / CREW / ORGA) — siehe config/editions.py
 und Changelogs/EDITIONS.txt.
 
@@ -40,9 +41,9 @@ EDITION_TITLES = {
     "orga": "ORGA Version",
 }
 
-APP_VERSION = "0.15.1 Beta"
-APP_BUILD = "2026.09"
-APP_CODENAME = "SOLO BUGFIX"
+APP_VERSION = "0.15.2 Beta"
+APP_BUILD = "2026.10"
+APP_CODENAME = "GLOBAL INTERFACE"
 
 DEVELOPER_NAME = "Christian"
 DEVELOPER_ALIAS = "Xan-Gan-Du"

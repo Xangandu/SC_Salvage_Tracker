@@ -3,6 +3,7 @@
 import json
 
 from config.debug import debug_log
+from config.i18n import tr
 from ui.dashboard_grid_utils import (
     migrate_layout,
     layout_needs_migration,
@@ -101,7 +102,10 @@ class DashboardLayoutRepository:
 
         if not exists and count >= MAX_CUSTOM_PRESETS:
             raise ValueError(
-                f"Maximal {MAX_CUSTOM_PRESETS} eigene Presets erlaubt."
+                tr(
+                    "error.dashboard.max_presets",
+                    max=MAX_CUSTOM_PRESETS,
+                )
             )
 
         payload = json.dumps(
