@@ -22,8 +22,10 @@ from ui.dashboard_widget_registry import widget_definitions
 from ui.page_layout import (
     page_title,
     subsection_title,
+    section_accent,
     hud_divider,
     primary_button,
+    form_label,
 )
 from ui.dashboard_grid_canvas import DashboardGridCanvas
 from ui.dashboard_catalog_panel import DashboardCatalogPanel
@@ -34,6 +36,17 @@ from ui.dashboard_status_animation import DashboardStatusAnimator
 from ui.dashboard_fit_label import DashboardFitLabel
 from ui.theme_manager import ThemeManager
 import auth.session as user_session
+
+
+def _session_field_column(label_text: str, value_widget: QWidget) -> QWidget:
+    """Label über Wert — wie auf der Session-Seite."""
+    host = QWidget()
+    column = QVBoxLayout(host)
+    column.setContentsMargins(0, 0, 0, 0)
+    column.setSpacing(2)
+    column.addWidget(form_label(label_text))
+    column.addWidget(value_widget)
+    return host
 
 
 class DashboardPage(QWidget):
@@ -71,10 +84,15 @@ class DashboardPage(QWidget):
         header_host = QWidget()
         header_host.setObjectName("dashboardHeader")
         header_layout = QHBoxLayout(header_host)
-        header_layout.setContentsMargins(20, 14, 20, 6)
+        header_layout.setContentsMargins(24, 18, 24, 8)
 
+        title_block = QVBoxLayout()
+        title_block.setSpacing(4)
         self._title = page_title(tr("dashboard.title"))
-        header_layout.addWidget(self._title)
+        self._subtitle = section_accent(tr("dashboard.subtitle"))
+        title_block.addWidget(self._title)
+        title_block.addWidget(self._subtitle)
+        header_layout.addLayout(title_block)
         header_layout.addStretch()
 
         self.preset_button = QPushButton(tr("dashboard.button.presets"))
@@ -375,27 +393,39 @@ class DashboardPage(QWidget):
                 accent=accent,
             )
             if card_id == "status":
-                value.setObjectName("dashboardKpiStatusValue")
+                value.setObjectName("cardValue")
             self._widget_pool[card_id] = card
 
         self.session_label = QLabel(tr("dashboard.session.none"))
+        self.session_label.setObjectName("displayValue")
+        self.session_label.setWordWrap(True)
+
         self.crew_info_label = AnimatedDashboardValue("0")
+        self.crew_info_label.setObjectName("displayValue")
+
         self.status_info_label = DashboardFitLabel(
             idle_text,
             max_lines=2,
         )
+        self.status_info_label.setObjectName("displayValue")
+
         self.rmc_info_label = AnimatedDashboardValue("0 SCU")
+        self.rmc_info_label.setObjectName("displayValue")
         self.cm_info_label = AnimatedDashboardValue("0 SCU")
+        self.cm_info_label.setObjectName("displayValue")
         self.refinery_info_label = AnimatedDashboardValue("0")
+        self.refinery_info_label.setObjectName("displayValue")
         self.session_rubble_info_label = AnimatedDashboardValue("0 SCU")
+        self.session_rubble_info_label.setObjectName("displayValue")
         self.session_scraps_info_label = AnimatedDashboardValue("0 SCU")
+        self.session_scraps_info_label.setObjectName("displayValue")
         self.session_salvage_info_label = AnimatedDashboardValue("0 SCU")
+        self.session_salvage_info_label.setObjectName("displayValue")
 
         self.refinery_stats_label = QLabel(
             tr("dashboard.refinery_stats.empty_short")
         )
         self.refinery_stats_label.setWordWrap(True)
-        self.refinery_stats_label.setObjectName("dashboardStatValue")
 
         session_panel = QFrame(self)
         session_panel.setObjectName("dashboardSessionPanel")
@@ -404,72 +434,88 @@ class DashboardPage(QWidget):
             QSizePolicy.Policy.Preferred,
             QSizePolicy.Policy.Preferred,
         )
-        session_layout = QGridLayout(session_panel)
-        session_layout.setContentsMargins(4, 4, 4, 4)
-        session_layout.setHorizontalSpacing(8)
-        session_layout.setVerticalSpacing(1)
+        session_layout = QVBoxLayout(session_panel)
+        session_layout.setContentsMargins(0, 0, 0, 0)
+        session_layout.setSpacing(10)
 
-        session_heading = QLabel(tr("dashboard.session.active"))
-        session_heading.setObjectName("dashboardSessionHeading")
-        session_layout.addWidget(session_heading, 0, 0, 1, 4)
+        session_layout.addWidget(
+            subsection_title(tr("dashboard.session.active"))
+        )
+        session_layout.addLayout(hud_divider())
 
-        session_fields = [
-            (tr("dashboard.label.ship"), self.session_label),
-            (tr("dashboard.label.crew"), self.crew_info_label),
-            (tr("dashboard.label.status"), self.status_info_label),
-            (tr("dashboard.label.refinery"), self.refinery_info_label),
+        session_layout.addWidget(
+            _session_field_column(
+                tr("dashboard.label.ship"),
+                self.session_label,
+            )
+        )
+        session_layout.addWidget(
+            _session_field_column(
+                tr("dashboard.label.status"),
+                self.status_info_label,
+            )
+        )
+
+        meta_row = QHBoxLayout()
+        meta_row.setSpacing(16)
+        meta_row.addWidget(
+            _session_field_column(
+                tr("dashboard.label.crew"),
+                self.crew_info_label,
+            ),
+            1,
+        )
+        meta_row.addWidget(
+            _session_field_column(
+                tr("dashboard.label.refinery"),
+                self.refinery_info_label,
+            ),
+            1,
+        )
+        session_layout.addLayout(meta_row)
+
+        materials_title = QLabel(tr("dashboard.session.materials"))
+        materials_title.setObjectName("cardTitle")
+        session_layout.addWidget(materials_title)
+
+        materials_grid_host = QWidget()
+        materials_grid = QGridLayout(materials_grid_host)
+        materials_grid.setContentsMargins(0, 0, 0, 0)
+        materials_grid.setHorizontalSpacing(16)
+        materials_grid.setVerticalSpacing(8)
+
+        material_fields = [
             (material_label("RMC"), self.rmc_info_label),
             (material_label("CM"), self.cm_info_label),
-            (
-                material_label("CM_RUBBLE"),
-                self.session_rubble_info_label,
-            ),
-            (
-                material_label("CM_SCRAPS"),
-                self.session_scraps_info_label,
-            ),
-            (
-                material_label("CM_SALVAGE"),
-                self.session_salvage_info_label,
-            ),
+            (material_label("CM_RUBBLE"), self.session_rubble_info_label),
+            (material_label("CM_SCRAPS"), self.session_scraps_info_label),
+            (material_label("CM_SALVAGE"), self.session_salvage_info_label),
         ]
+        for index, (title, value) in enumerate(material_fields):
+            row = index // 2
+            col = index % 2
+            materials_grid.addWidget(
+                _session_field_column(title, value),
+                row,
+                col,
+            )
+        materials_grid.setColumnStretch(0, 1)
+        materials_grid.setColumnStretch(1, 1)
+        session_layout.addWidget(materials_grid_host)
 
-        grid_row = 1
-        for index in range(0, len(session_fields), 2):
-            left_title, left_value = session_fields[index]
-            left_label = QLabel(f"{left_title}:")
-            left_label.setObjectName("dashboardStatLabel")
-            left_value.setObjectName("dashboardStatValue")
-            if not isinstance(left_value, DashboardFitLabel):
-                left_value.setWordWrap(False)
-            session_layout.addWidget(left_label, grid_row, 0)
-            session_layout.addWidget(left_value, grid_row, 1)
-
-            if index + 1 < len(session_fields):
-                right_title, right_value = session_fields[index + 1]
-                right_label = QLabel(f"{right_title}:")
-                right_label.setObjectName("dashboardStatLabel")
-                right_value.setObjectName("dashboardStatValue")
-                if not isinstance(right_value, DashboardFitLabel):
-                    right_value.setWordWrap(False)
-                session_layout.addWidget(right_label, grid_row, 2)
-                session_layout.addWidget(right_value, grid_row, 3)
-
-            grid_row += 1
-
-        session_layout.setColumnStretch(0, 0)
-        session_layout.setColumnStretch(1, 1)
-        session_layout.setColumnStretch(2, 0)
-        session_layout.setColumnStretch(3, 1)
         self._widget_pool["session"] = session_panel
 
         refinery_stats_panel = QFrame(self)
         refinery_stats_panel.setObjectName("dashboardSessionPanel")
         refinery_stats_layout = QVBoxLayout(refinery_stats_panel)
-        refinery_stats_layout.setContentsMargins(8, 8, 8, 8)
-        refinery_heading = QLabel(tr("dashboard.refinery_stats.title"))
-        refinery_heading.setObjectName("dashboardSessionHeading")
+        refinery_stats_layout.setContentsMargins(0, 0, 0, 0)
+        refinery_stats_layout.setSpacing(8)
+        refinery_heading = subsection_title(
+            tr("dashboard.refinery_stats.title")
+        )
         refinery_stats_layout.addWidget(refinery_heading)
+        refinery_stats_layout.addLayout(hud_divider())
+        self.refinery_stats_label.setObjectName("statValue")
         refinery_stats_layout.addWidget(self.refinery_stats_label)
         self._widget_pool["refinery_stats"] = refinery_stats_panel
 
@@ -631,26 +677,16 @@ class DashboardPage(QWidget):
 
         layout = QVBoxLayout(card)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
+        layout.setSpacing(8)
 
-        title_label = QLabel(title.upper())
-        title_label.setObjectName("dashboardKpiTitle")
-        title_label.setAlignment(
-            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop
-        )
-        title_label.setWordWrap(True)
-        title_label.setSizePolicy(
-            QSizePolicy.Policy.Preferred,
-            QSizePolicy.Policy.Minimum,
-        )
+        title_label = subsection_title(title.upper())
+        divider_host = QWidget()
+        divider_host.setLayout(hud_divider())
 
-        divider = QFrame()
-        divider.setObjectName("dashboardKpiDivider")
-        divider.setFixedHeight(1)
-
-        value.setObjectName(
-            "dashboardKpiValueAccent" if accent else "dashboardKpiValue"
-        )
+        if accent:
+            value.setObjectName("profitLabel")
+        else:
+            value.setObjectName("cardValue")
         value.setAlignment(
             Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop
         )
@@ -661,13 +697,21 @@ class DashboardPage(QWidget):
         )
 
         layout.addWidget(title_label)
-        layout.addWidget(divider)
+        layout.addWidget(divider_host)
         layout.addWidget(
             value,
             0,
             Qt.AlignmentFlag.AlignTop,
         )
         return card
+
+    def _set_session_ship_text(self, text: str, *, active: bool):
+        self.session_label.setText(text)
+        self.session_label.setObjectName(
+            "displayValue" if active else "mutedLabel"
+        )
+        self.session_label.style().unpolish(self.session_label)
+        self.session_label.style().polish(self.session_label)
 
     def _update_session_status(self, status_code, status_text):
         previous = self._last_session_status
@@ -769,7 +813,10 @@ class DashboardPage(QWidget):
             if not self._status_cycle_animating:
                 self._update_session_status("IDLE", status_label("IDLE"))
             self.crew_value.animate_to(0)
-            self.session_label.setText(tr("dashboard.session.none"))
+            self._set_session_ship_text(
+                tr("dashboard.session.none"),
+                active=False,
+            )
             self.crew_info_label.animate_to(0)
             self.rmc_info_label.animate_to(0, suffix=" SCU")
             self.cm_info_label.animate_to(0, suffix=" SCU")
@@ -810,7 +857,7 @@ class DashboardPage(QWidget):
         if not self._status_cycle_animating:
             self._update_session_status(status, status_text)
         self.crew_value.animate_to(len(crew))
-        self.session_label.setText(ship_name)
+        self._set_session_ship_text(ship_name, active=True)
         self.crew_info_label.animate_to(len(crew))
         self.rmc_info_label.animate_to(
             session_rmc, suffix=" SCU", decimals=1

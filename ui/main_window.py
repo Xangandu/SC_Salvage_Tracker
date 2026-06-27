@@ -37,6 +37,7 @@ from PySide6.QtWidgets import (
     QFrame,
 )
 
+from ui.nav_button_icons import configure_nav_button
 from ui.dashboard_page import DashboardPage
 
 from ui.dashboard_window import (
@@ -202,27 +203,25 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
         brand_outer.addWidget(brand_card)
 
         self.btn_dashboard = QPushButton(tr("nav.dashboard"))
-        self.btn_dashboard.setObjectName(
-            "navButton"
-        )
+        configure_nav_button(self.btn_dashboard, "dashboard")
 
         self.btn_session = QPushButton(tr("nav.session"))
-        self.btn_session.setObjectName("navButton")
+        configure_nav_button(self.btn_session, "session")
 
         self.btn_refinery = QPushButton(tr("nav.refinery"))
-        self.btn_refinery.setObjectName("navButton")
+        configure_nav_button(self.btn_refinery, "refinery")
 
         self.btn_sales = QPushButton(tr("nav.sales"))
-        self.btn_sales.setObjectName("navButton")
+        configure_nav_button(self.btn_sales, "sales")
 
         self.btn_stats = QPushButton(tr("nav.payout"))
-        self.btn_stats.setObjectName("navButton")
+        configure_nav_button(self.btn_stats, "payout")
 
         self.btn_history = QPushButton(tr("nav.history"))
-        self.btn_history.setObjectName("navButton")
+        configure_nav_button(self.btn_history, "history")
 
         self.btn_admin = QPushButton(tr("nav.settings"))
-        self.btn_admin.setObjectName("navButton")
+        configure_nav_button(self.btn_admin, "settings")
 
         self.pages = QStackedWidget()
         self.pages.setObjectName("contentStack")
@@ -784,6 +783,22 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
         if self.on_logout:
             self.on_logout()
 
+    def request_language_restart(self):
+        from PySide6.QtCore import QTimer
+        from PySide6.QtWidgets import QApplication
+        from auth.app_restart import restart_application, shutdown_before_restart
+
+        if hasattr(self, "dashboard_page"):
+            self.dashboard_page.persist_layout()
+        save_window_geometry(self, self.db)
+
+        def _do_restart():
+            shutdown_before_restart()
+            restart_application()
+            QApplication.instance().quit()
+
+        QTimer.singleShot(150, _do_restart)
+
     def switch_page(
         self,
         page,
@@ -811,6 +826,7 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
 
         if page == self.admin_page:
             self.admin_page.refresh_data()
+            self.admin_page.refresh_language_settings()
 
         self.pages.setCurrentWidget(page)
 

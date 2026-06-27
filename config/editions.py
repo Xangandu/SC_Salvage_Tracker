@@ -26,7 +26,7 @@ EDITION_SHORT = {
 
 EDITION_GLOW_RGB: dict[str, tuple[int, int, int]] = {
     EDITION_SOLO: (0, 217, 255),
-    EDITION_CREW: (201, 162, 39),
+    EDITION_CREW: (65, 209, 122),
     EDITION_ORGA: (155, 122, 255),
 }
 

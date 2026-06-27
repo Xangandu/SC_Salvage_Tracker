@@ -4,7 +4,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QFrame, QVBoxLayout, QLabel
 
 from config.i18n import tr
-from ui.page_layout import subsection_title
+from ui.page_layout import subsection_title, form_label
 from ui.theme_manager import ThemeManager
 
 
@@ -26,31 +26,23 @@ class DashboardFontPreviewWidget(QFrame):
 
         layout = QVBoxLayout(self._card)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
+        layout.setSpacing(4)
 
-        self._title = QLabel(tr("dashboard.font_preview.demo_title"))
-        self._title.setObjectName("dashboardFontPreviewTitle")
-        self._title.setAlignment(
-            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop
-        )
-
-        divider = QFrame()
-        divider.setObjectName("dashboardKpiDivider")
-        divider.setFixedHeight(1)
+        self._title = form_label(tr("dashboard.font_preview.demo_title"))
 
         self._value = QLabel(tr("dashboard.font_preview.demo_value"))
-        self._value.setObjectName("dashboardFontPreviewValue")
+        self._value.setObjectName("displayValue")
         self._value.setAlignment(
             Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
         )
 
         layout.addWidget(self._title)
-        layout.addWidget(divider)
         layout.addWidget(self._value)
         outer.addWidget(self._card)
 
         hint = QLabel(tr("dashboard.font_preview.hint"))
         hint.setObjectName("dashboardFontPreviewHint")
+        hint.setWordWrap(True)
         hint.setAlignment(Qt.AlignmentFlag.AlignCenter)
         outer.addWidget(hint)
 

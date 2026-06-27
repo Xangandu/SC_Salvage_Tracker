@@ -1,22 +1,22 @@
-// SC Salvage Tracker — AAA Setup Wizard (Launcher Polish · Inno Setup 6.7+)
-// Farben entsprechen ui/themes/star_citizen.qss
+// SC Salvage Tracker — Setup Wizard (Inno Setup 6.7+)
+// Layout: Hintergrund install_bg.png, Inhalts-Panel links, Splash rechts sichtbar.
+// Hinweis: ParentBackground auf Seiten mit Edits/CheckListBox vermeiden (Controls unsichtbar).
 
 #ifndef MyAppCodename
-  #define MyAppCodename "Launcher Polish"
+  #define MyAppCodename "GLOBAL INTERFACE"
 #endif
 
 #ifndef MyAppBuild
-  #define MyAppBuild "2026.06"
+  #define MyAppBuild "2026.10"
 #endif
 
 const
   TRACKER_BG = $12100A;
   TRACKER_PANEL = $271D15;
-  TRACKER_INPUT = $30241A;
-  TRACKER_TEXT = $F5EEE6;
+  TRACKER_TEXT = $FBF7F2;
   TRACKER_ORANGE = $2A7AE0;
-  TRACKER_MUTED = $99A8B8;
-  TRACKER_HINT = $8FA3B8;
+  TRACKER_MUTED = $BCA893;
+  TRACKER_HINT = $B8A38F;
   TRACKER_BTN_H = 32;
   TRACKER_BTN_GAP = 12;
   TRACKER_BTN_MARGIN = 24;
@@ -24,16 +24,35 @@ const
   TRACKER_BTN_W_CANCEL = 156;
   TRACKER_BTN_W_BACK = 136;
   TRACKER_BOTTOM_BAR_H = 56;
-  TRACKER_CONTENT_PAD = 20;
+  { Linkes Panel — rechts bleibt install_bg.png (Splash) sichtbar }
+  TRACKER_PANEL_LEFT = 24;
+  TRACKER_PANEL_TOP = 58;
+  TRACKER_PANEL_WIDTH = 560;
+  TRACKER_PAD_L = 16;
+  TRACKER_PAD_R = 16;
+  TRACKER_TITLE_TOP = 8;
+  TRACKER_DESC_TOP = 34;
+  TRACKER_BODY_TOP = 62;
 
 function NewLine: String;
 begin
   Result := Chr(13) + Chr(10);
 end;
 
+function TrackerPanelHeight: Integer;
+begin
+  Result := WizardForm.ClientHeight - ScaleY(TRACKER_PANEL_TOP) -
+    ScaleY(TRACKER_BOTTOM_BAR_H);
+end;
+
+function TrackerContentWidth: Integer;
+begin
+  Result := WizardForm.MainPanel.ClientWidth - ScaleX(TRACKER_PAD_L) -
+    ScaleX(TRACKER_PAD_R);
+end;
+
 var
   TrackerBgImage: TBitmapImage;
-  TrackerPanel: TPanel;
   TrackerAccentStripe: TPanel;
   TrackerBottomBar: TPanel;
   TrackerFooterLabel: TNewStaticText;
@@ -48,6 +67,17 @@ begin
   L.StyleElements := L.StyleElements - [seFont];
 end;
 
+procedure TrackerStyleTitle(L: TNewStaticText);
+begin
+  if L = nil then
+    Exit;
+  TrackerLockFont(L);
+  L.Font.Name := 'Segoe UI';
+  L.Font.Size := 12;
+  L.Font.Style := [fsBold];
+  L.Font.Color := TRACKER_ORANGE;
+end;
+
 procedure TrackerStyleLabel(L: TNewStaticText);
 begin
   if L = nil then
@@ -55,19 +85,8 @@ begin
   TrackerLockFont(L);
   L.Font.Name := 'Segoe UI';
   L.Font.Size := 10;
-  L.Font.Style := [fsBold];
+  L.Font.Style := [];
   L.Font.Color := TRACKER_TEXT;
-end;
-
-procedure TrackerStyleTitle(L: TNewStaticText);
-begin
-  if L = nil then
-    Exit;
-  TrackerLockFont(L);
-  L.Font.Name := 'Segoe UI';
-  L.Font.Size := 15;
-  L.Font.Style := [fsBold];
-  L.Font.Color := TRACKER_ORANGE;
 end;
 
 procedure TrackerStyleMuted(L: TNewStaticText);
@@ -116,60 +135,164 @@ begin
   M.Font.Size := 9;
 end;
 
-procedure TrackerSyncDecorPanel;
+procedure TrackerApplyPageColors;
 begin
-  if TrackerPanel <> nil then
-  begin
-    TrackerPanel.SetBounds(
-      WizardForm.MainPanel.Left,
-      WizardForm.MainPanel.Top,
-      WizardForm.MainPanel.Width,
-      WizardForm.MainPanel.Height);
-  end;
+  WizardForm.Color := TRACKER_BG;
+  WizardForm.MainPanel.Color := TRACKER_PANEL;
+  WizardForm.MainPanel.ParentBackground := False;
+  WizardForm.WelcomePage.Color := TRACKER_PANEL;
+  WizardForm.WelcomePage.ParentBackground := False;
+  WizardForm.InnerPage.Color := TRACKER_PANEL;
+  WizardForm.InnerPage.ParentBackground := False;
+  WizardForm.FinishedPage.Color := TRACKER_PANEL;
+  WizardForm.FinishedPage.ParentBackground := False;
+end;
 
-  if TrackerAccentStripe <> nil then
-  begin
-    TrackerAccentStripe.SetBounds(
-      WizardForm.MainPanel.Left,
-      WizardForm.MainPanel.Top,
-      ScaleX(4),
-      WizardForm.MainPanel.Height);
-  end;
+procedure TrackerLayoutMainPanel;
+begin
+  WizardForm.MainPanel.SetBounds(
+    ScaleX(TRACKER_PANEL_LEFT),
+    ScaleY(TRACKER_PANEL_TOP),
+    ScaleX(TRACKER_PANEL_WIDTH),
+    TrackerPanelHeight);
+end;
+
+procedure TrackerLayoutAccentStripe;
+begin
+  if TrackerAccentStripe = nil then
+    Exit;
+  TrackerAccentStripe.SetBounds(
+    WizardForm.MainPanel.Left,
+    WizardForm.MainPanel.Top,
+    ScaleX(4),
+    WizardForm.MainPanel.Height);
 end;
 
 procedure TrackerLayoutPageHeaders;
 var
-  PadL, PadT, ContentW: Integer;
+  PadL, W: Integer;
 begin
-  PadL := ScaleX(TRACKER_CONTENT_PAD);
-  PadT := ScaleY(8);
-  ContentW := WizardForm.MainPanel.Width - (PadL * 2);
+  PadL := ScaleX(TRACKER_PAD_L);
+  W := TrackerContentWidth;
 
   WizardForm.PageNameLabel.AutoSize := False;
   WizardForm.PageNameLabel.SetBounds(
-    PadL, PadT, ContentW, ScaleY(28));
+    PadL, ScaleY(TRACKER_TITLE_TOP), W, ScaleY(22));
 
   WizardForm.PageDescriptionLabel.AutoSize := False;
   WizardForm.PageDescriptionLabel.SetBounds(
-    PadL, PadT + ScaleY(30), ContentW, ScaleY(36));
+    PadL, ScaleY(TRACKER_DESC_TOP), W, ScaleY(24));
 end;
 
 procedure TrackerLayoutWelcomePage;
 var
-  PadL, PadT, ContentW: Integer;
+  PadL, W: Integer;
 begin
-  PadL := ScaleX(TRACKER_CONTENT_PAD);
-  PadT := ScaleY(12);
-  ContentW := WizardForm.WelcomePage.Width - (PadL * 2);
+  PadL := ScaleX(TRACKER_PAD_L);
+  W := TrackerContentWidth;
 
   WizardForm.WelcomeLabel1.AutoSize := False;
   WizardForm.WelcomeLabel1.SetBounds(
-    PadL, PadT, ContentW, ScaleY(28));
+    PadL, ScaleY(TRACKER_TITLE_TOP), W, ScaleY(22));
 
   WizardForm.WelcomeLabel2.AutoSize := False;
   WizardForm.WelcomeLabel2.SetBounds(
-    PadL, PadT + ScaleY(34), ContentW,
-    WizardForm.WelcomePage.Height - PadT - ScaleY(40));
+    PadL, ScaleY(TRACKER_DESC_TOP), W,
+    WizardForm.WelcomePage.Height - ScaleY(TRACKER_DESC_TOP) - ScaleY(12));
+end;
+
+procedure TrackerLayoutFinishedPage;
+var
+  PadL, W: Integer;
+begin
+  PadL := ScaleX(TRACKER_PAD_L);
+  W := TrackerContentWidth;
+
+  WizardForm.FinishedLabel.AutoSize := False;
+  WizardForm.FinishedLabel.SetBounds(
+    PadL, ScaleY(TRACKER_TITLE_TOP), W,
+    WizardForm.FinishedPage.Height - ScaleY(TRACKER_TITLE_TOP) - ScaleY(12));
+end;
+
+procedure TrackerLayoutSelectDirPage;
+var
+  PadL, W, Y, EditW: Integer;
+begin
+  PadL := ScaleX(TRACKER_PAD_L);
+  W := TrackerContentWidth;
+  EditW := W - ScaleX(138);
+  if EditW < ScaleX(200) then
+    EditW := ScaleX(200);
+  Y := ScaleY(TRACKER_BODY_TOP);
+
+  WizardForm.SelectDirLabel.AutoSize := False;
+  WizardForm.SelectDirLabel.SetBounds(PadL, Y, W, ScaleY(24));
+  Y := Y + ScaleY(28);
+
+  WizardForm.DirEdit.SetBounds(PadL, Y, EditW, ScaleY(23));
+  WizardForm.DirBrowseButton.SetBounds(
+    PadL + EditW + ScaleX(8), Y, ScaleX(130), ScaleY(23));
+  Y := Y + ScaleY(30);
+
+  WizardForm.SelectDirBrowseLabel.AutoSize := False;
+  WizardForm.SelectDirBrowseLabel.SetBounds(PadL, Y, W, ScaleY(32));
+  Y := Y + ScaleY(34);
+
+  WizardForm.DiskSpaceLabel.AutoSize := False;
+  WizardForm.DiskSpaceLabel.SetBounds(PadL, Y, W, ScaleY(18));
+end;
+
+procedure TrackerLayoutTasksPage;
+var
+  PadL, W, Y: Integer;
+begin
+  PadL := ScaleX(TRACKER_PAD_L);
+  W := TrackerContentWidth;
+  Y := ScaleY(TRACKER_BODY_TOP);
+
+  WizardForm.SelectTasksLabel.AutoSize := False;
+  WizardForm.SelectTasksLabel.SetBounds(PadL, Y, W, ScaleY(18));
+  Y := Y + ScaleY(22);
+
+  WizardForm.TasksList.SetBounds(
+    PadL, Y, W,
+    WizardForm.InnerPage.Height - Y - ScaleY(12));
+end;
+
+procedure TrackerLayoutReadyPage;
+var
+  PadL, W, Y: Integer;
+begin
+  PadL := ScaleX(TRACKER_PAD_L);
+  W := TrackerContentWidth;
+  Y := ScaleY(TRACKER_BODY_TOP);
+
+  WizardForm.ReadyLabel.AutoSize := False;
+  WizardForm.ReadyLabel.SetBounds(PadL, Y, W, ScaleY(22));
+  Y := Y + ScaleY(26);
+
+  WizardForm.ReadyMemo.SetBounds(
+    PadL, Y, W,
+    WizardForm.InnerPage.Height - Y - ScaleY(12));
+end;
+
+procedure TrackerLayoutInstallingPage;
+var
+  PadL, W, Y: Integer;
+begin
+  PadL := ScaleX(TRACKER_PAD_L);
+  W := TrackerContentWidth;
+  Y := ScaleY(TRACKER_BODY_TOP);
+
+  WizardForm.StatusLabel.AutoSize := False;
+  WizardForm.StatusLabel.SetBounds(PadL, Y, W, ScaleY(22));
+  Y := Y + ScaleY(28);
+
+  WizardForm.ProgressGauge.SetBounds(PadL, Y, W, ScaleY(18));
+  Y := Y + ScaleY(26);
+
+  WizardForm.FilenameLabel.AutoSize := False;
+  WizardForm.FilenameLabel.SetBounds(PadL, Y, W, ScaleY(18));
 end;
 
 procedure TrackerStyleInnerPages;
@@ -189,25 +312,18 @@ begin
   WizardForm.DirBrowseButton.Visible := True;
   WizardForm.DiskSpaceLabel.Visible := True;
 
+  WizardForm.SelectTasksLabel.Visible := True;
   WizardForm.TasksList.Visible := True;
   WizardForm.ReadyLabel.Visible := True;
   WizardForm.ReadyMemo.Visible := True;
   WizardForm.StatusLabel.Visible := True;
+  WizardForm.ProgressGauge.Visible := True;
   WizardForm.FilenameLabel.Visible := True;
 end;
 
 procedure TrackerApplyPageTheme;
 begin
-  WizardForm.Color := TRACKER_BG;
-  WizardForm.MainPanel.Color := TRACKER_PANEL;
-  WizardForm.InnerPage.Color := TRACKER_PANEL;
-  WizardForm.WelcomePage.Color := TRACKER_PANEL;
-  WizardForm.FinishedPage.Color := TRACKER_PANEL;
-
-  if TrackerPanel <> nil then
-    TrackerPanel.Color := TRACKER_PANEL;
-  if TrackerAccentStripe <> nil then
-    TrackerAccentStripe.Color := TRACKER_ORANGE;
+  TrackerApplyPageColors;
 
   TrackerStyleTitle(WizardForm.WelcomeLabel1);
   TrackerStyleLabel(WizardForm.WelcomeLabel2);
@@ -219,8 +335,6 @@ begin
   TrackerStyleHint(WizardForm.FilenameLabel);
   TrackerStyleLabel(WizardForm.SelectDirLabel);
   TrackerStyleHint(WizardForm.SelectDirBrowseLabel);
-  TrackerStyleLabel(WizardForm.SelectStartMenuFolderLabel);
-  TrackerStyleLabel(WizardForm.SelectComponentsLabel);
   TrackerStyleHint(WizardForm.SelectTasksLabel);
   TrackerStyleLabel(WizardForm.ReadyLabel);
   TrackerStyleLabel(WizardForm.PreparingLabel);
@@ -275,9 +389,6 @@ begin
       TRACKER_BTN_W_BACK, TRACKER_BTN_H);
   end;
 
-  if TrackerBottomBar <> nil then
-    TrackerBottomBar.BringToFront;
-
   WizardForm.BackButton.BringToFront;
   WizardForm.NextButton.BringToFront;
   WizardForm.CancelButton.BringToFront;
@@ -292,28 +403,47 @@ begin
     TrackerBgImage.SendToBack;
   end;
 
-  TrackerSyncDecorPanel;
+  TrackerLayoutMainPanel;
+  TrackerLayoutAccentStripe;
 
   if WizardForm.CurPageID = wpWelcome then
     TrackerLayoutWelcomePage
-  else if WizardForm.CurPageID <> wpFinished then
+  else if WizardForm.CurPageID = wpFinished then
+    TrackerLayoutFinishedPage
+  else if WizardForm.CurPageID = wpSelectDir then
+  begin
     TrackerLayoutPageHeaders;
-
-  if TrackerPanel <> nil then
-    TrackerPanel.SendToBack;
+    TrackerLayoutSelectDirPage;
+  end
+  else if WizardForm.CurPageID = wpSelectTasks then
+  begin
+    TrackerLayoutPageHeaders;
+    TrackerLayoutTasksPage;
+  end
+  else if WizardForm.CurPageID = wpReady then
+  begin
+    TrackerLayoutPageHeaders;
+    TrackerLayoutReadyPage;
+  end
+  else if WizardForm.CurPageID = wpInstalling then
+  begin
+    TrackerLayoutPageHeaders;
+    TrackerLayoutInstallingPage;
+  end
+  else
+    TrackerLayoutPageHeaders;
 
   if TrackerAccentStripe <> nil then
     TrackerAccentStripe.BringToFront;
-
   WizardForm.MainPanel.BringToFront;
 
   if TrackerFooterLabel <> nil then
   begin
     TrackerFooterLabel.SetBounds(
-      24,
+      ScaleX(24),
       WizardForm.ClientHeight - TRACKER_BOTTOM_BAR_H +
         ((TRACKER_BOTTOM_BAR_H - 18) div 2),
-      460, 18);
+      ScaleX(460), ScaleY(18));
     TrackerFooterLabel.BringToFront;
   end;
 
@@ -333,47 +463,45 @@ begin
   case WizardForm.CurPageID of
     wpWelcome:
       begin
-        WizardForm.WelcomeLabel1.Caption :=
-          '◆ SC SALVAGE TRACKER · SETUP';
+        WizardForm.WelcomeLabel1.Caption := 'Willkommen';
         WizardForm.WelcomeLabel2.Caption :=
-          'Willkommen beim Installationsassistenten.' + NewLine + NewLine +
-          'Version ' + ExpandConstant('{#MyAppVersion}') +
-          ' · Build ' + ExpandConstant('{#MyAppBuild}') + NewLine +
-          ExpandConstant('{#MyAppCodename}') + NewLine + NewLine +
-          'Dieser Assistent installiert den Salvage Tracker mit ' +
-          'Sitzungen, Raffinerie, Verkäufen, Lager und Crew-Auszahlung.' +
+          'Schritt 1 von 6 · Der Assistent führt dich durch die Installation.' +
           NewLine + NewLine +
+          'Dieser Assistent richtet den Salvage Tracker auf deinem PC ein — ' +
+          'Sitzungen, Raffinerie, Verkäufe, Lager und Crew-Auszahlung.' +
+          NewLine + NewLine +
+          'Edition: ' + ExpandConstant('{#MyAppName}') + NewLine + NewLine +
           'Klicke auf Weiter, um fortzufahren.';
       end;
     wpSelectDir:
       begin
-        WizardForm.PageNameLabel.Caption := '◆ INSTALLATIONSORDNER';
+        WizardForm.PageNameLabel.Caption := 'Installationsordner';
         WizardForm.PageDescriptionLabel.Caption :=
-          'Wähle den Zielordner für den Salvage Tracker.';
+          'Schritt 2 von 6 · Wähle den Zielordner.';
       end;
     wpSelectTasks:
       begin
-        WizardForm.PageNameLabel.Caption := '◆ ZUSÄTZLICHE OPTIONEN';
+        WizardForm.PageNameLabel.Caption := 'Zusätzliche Optionen';
         WizardForm.PageDescriptionLabel.Caption :=
-          'Desktop-Verknüpfung und Start nach der Installation.';
+          'Schritt 3 von 6 · Verknüpfungen und Startverhalten.';
       end;
     wpReady:
       begin
-        WizardForm.PageNameLabel.Caption := '◆ BEREIT ZUR INSTALLATION';
+        WizardForm.PageNameLabel.Caption := 'Bereit zur Installation';
         WizardForm.PageDescriptionLabel.Caption :=
-          'Alle Einstellungen sind gewählt. Klicke auf Installieren.';
+          'Schritt 4 von 6 · Einstellungen prüfen und installieren.';
       end;
     wpInstalling:
       begin
-        WizardForm.PageNameLabel.Caption := '◆ INSTALLATION LÄUFT';
+        WizardForm.PageNameLabel.Caption := 'Installation läuft';
         WizardForm.PageDescriptionLabel.Caption :=
-          'Dateien werden entpackt — bitte warten …';
+          'Schritt 5 von 6 · Dateien werden entpackt — bitte warten …';
       end;
     wpFinished:
       begin
         WizardForm.FinishedLabel.Caption :=
-          '◆ INSTALLATION ABGESCHLOSSEN' + NewLine + NewLine +
-          'Der Salvage Tracker wurde erfolgreich installiert.' + NewLine +
+          'Installation abgeschlossen' + NewLine + NewLine +
+          'Schritt 6 von 6 · Der Salvage Tracker ist bereit.' + NewLine + NewLine +
           'Starte die Anwendung über das Startmenü oder die Desktop-Verknüpfung.';
       end;
   end;
@@ -403,23 +531,19 @@ begin
     TrackerBgImage.Visible := False;
   end;
 
-  TrackerPanel := TPanel.Create(WizardForm);
-  TrackerPanel.Parent := WizardForm;
-  TrackerPanel.Color := TRACKER_PANEL;
-  TrackerPanel.BevelOuter := bvNone;
-  TrackerPanel.BevelInner := bvNone;
-
   TrackerAccentStripe := TPanel.Create(WizardForm);
   TrackerAccentStripe.Parent := WizardForm;
   TrackerAccentStripe.Color := TRACKER_ORANGE;
   TrackerAccentStripe.BevelOuter := bvNone;
   TrackerAccentStripe.BevelInner := bvNone;
+  TrackerAccentStripe.ParentBackground := False;
 
   TrackerBottomBar := TPanel.Create(WizardForm);
   TrackerBottomBar.Parent := WizardForm;
   TrackerBottomBar.Color := TRACKER_BG;
   TrackerBottomBar.BevelOuter := bvNone;
   TrackerBottomBar.BevelInner := bvNone;
+  TrackerBottomBar.ParentBackground := False;
 
   TrackerFooterLabel := TNewStaticText.Create(WizardForm);
   TrackerFooterLabel.Parent := WizardForm;
@@ -457,7 +581,6 @@ end;
 procedure DeinitializeWizard();
 begin
   TrackerBgImage := nil;
-  TrackerPanel := nil;
   TrackerAccentStripe := nil;
   TrackerBottomBar := nil;
   TrackerFooterLabel := nil;

@@ -9,13 +9,14 @@
 #   powershell -ExecutionPolicy Bypass -File installer\build_installer.ps1 -Edition crew
 #   powershell -ExecutionPolicy Bypass -File installer\build_installer.ps1 -Edition all
 #   powershell -ExecutionPolicy Bypass -File installer\build_installer.ps1 -SkipInno
-#   powershell -ExecutionPolicy Bypass -File installer\build_installer.ps1 -SkipPyInstaller
+#   powershell -ExecutionPolicy Bypass -File installer\build_installer.ps1 -UseInno
 
 param(
     [ValidateSet("solo", "crew", "orga", "all")]
     [string]$Edition = "solo",
     [switch]$SkipInno,
-    [switch]$SkipPyInstaller
+    [switch]$SkipPyInstaller,
+    [switch]$UseInno
 )
 
 $ErrorActionPreference = "Stop"
@@ -126,7 +127,8 @@ function Set-BuildEditionMarker {
         [string]$EditionKey
     )
 
-    Set-Content -Path $BuildEditionFile -Value $EditionKey -Encoding UTF8 -NoNewline
+    $utf8NoBom = New-Object System.Text.UTF8Encoding $false
+    [System.IO.File]::WriteAllText($BuildEditionFile, $EditionKey, $utf8NoBom)
     Write-Host "Build-Edition: $EditionKey -> $BuildEditionFile"
 }
 
@@ -293,6 +295,74 @@ function Build-InnoSetup {
     return $SetupExe
 }
 
+function Build-PySideSetup {
+    param(
+        [Parameter(Mandatory = $true)]
+        [hashtable]$Profile,
+        [Parameter(Mandatory = $true)]
+        [string]$AppOutput,
+        [Parameter(Mandatory = $true)]
+        [hashtable]$VersionMeta
+    )
+
+    $AppVersion = $VersionMeta.FileVersion
+    $SetupName = "SC_Salvage_Tracker_Setup_$($Profile.SetupSuffix)_$AppVersion.exe"
+    $PayloadZip = Join-Path $InstallerDir "payload_$($Profile.Key).zip"
+    $SetupSpec = Join-Path $InstallerDir "setup_wizard.spec"
+    $EditionDist = Join-Path $ProjectRoot "dist\setup_$($Profile.Key)"
+
+    Write-Host "Erstelle Payload-ZIP ($($Profile.SetupSuffix))..."
+    if (Test-Path $PayloadZip) {
+        Remove-Item $PayloadZip -Force
+    }
+    Compress-Archive -Path (Join-Path $AppOutput '*') -DestinationPath $PayloadZip -CompressionLevel Optimal -Force
+
+    Remove-DirSafe -Path $EditionDist -Label "Setup-Dist" | Out-Null
+    New-Item -ItemType Directory -Force -Path $EditionDist | Out-Null
+
+    $env:SST_SETUP_EDITION = $Profile.Key
+    Write-Host "PyInstaller Setup-Assistent ($($Profile.SetupSuffix))..."
+    & py -3 -m PyInstaller `
+        --noconfirm `
+        --clean `
+        --distpath $EditionDist `
+        --workpath (Join-Path $ProjectRoot "build\setup_$($Profile.Key)") `
+        $SetupSpec
+
+    if ($LASTEXITCODE -ne 0) {
+        throw "Setup-Build fehlgeschlagen fuer $($Profile.SetupSuffix) (Exit-Code $LASTEXITCODE)."
+    }
+
+    $BuiltExe = Join-Path $EditionDist "SC_Salvage_Tracker_Setup.exe"
+    if (-not (Test-Path $BuiltExe)) {
+        throw "Setup-EXE nicht gefunden: $BuiltExe"
+    }
+
+    New-Item -ItemType Directory -Force -Path $InstallerOutput | Out-Null
+    $SetupExe = Join-Path $InstallerOutput $SetupName
+    Copy-Item -Path $BuiltExe -Destination $SetupExe -Force
+    Write-Host "Setup-EXE: $SetupExe"
+
+    $ManifestScript = Join-Path $InstallerDir "generate_update_manifest.py"
+    $ManifestPath = Join-Path $InstallerOutput ("update-manifest-" + $Profile.Key + ".json")
+    & py -3 $ManifestScript `
+        --setup $SetupExe `
+        --output $ManifestPath `
+        --tag "v$AppVersion" `
+        --edition $Profile.Key `
+        --app-name $Profile.AppName
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "Update-Manifest: $ManifestPath"
+        if ($Profile.Key -eq "solo") {
+            $DefaultManifest = Join-Path $InstallerOutput "update-manifest.json"
+            Copy-Item -Path $ManifestPath -Destination $DefaultManifest -Force
+            Write-Host "Standard-Manifest: $DefaultManifest"
+        }
+    }
+
+    return $SetupExe
+}
+
 function Build-EditionInstaller {
     param(
         [Parameter(Mandatory = $true)]
@@ -330,7 +400,11 @@ function Build-EditionInstaller {
         return $null
     }
 
-    return Build-InnoSetup -Profile $Profile -AppOutput $AppOutput -VersionMeta $VersionMeta
+    if ($UseInno) {
+        return Build-InnoSetup -Profile $Profile -AppOutput $AppOutput -VersionMeta $VersionMeta
+    }
+
+    return Build-PySideSetup -Profile $Profile -AppOutput $AppOutput -VersionMeta $VersionMeta
 }
 
 $VersionMeta = Get-VersionMeta (Join-Path $ProjectRoot "config\version.py")

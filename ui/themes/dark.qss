@@ -100,7 +100,7 @@ QFrame#navEditionBadgeHost[edition="solo"] {
 
 QLabel#navEditionBadge[edition="crew"],
 QFrame#navEditionBadgeHost[edition="crew"] QLabel#navEditionBadge {
-    color: #E8C547;
+    color: #41D17A;
 }
 
 QLabel#navEditionBadge[edition="orga"],
@@ -109,7 +109,7 @@ QFrame#navEditionBadgeHost[edition="orga"] QLabel#navEditionBadge {
 }
 
 QLabel#navEditionBadge[edition="crew"] {
-    color: #E8C547;
+    color: #41D17A;
 }
 
 QLabel#navEditionBadge[edition="orga"] {
@@ -125,6 +125,49 @@ QFrame#navBrandCard QFrame#hudLine {
 QFrame#navBrandCard QLabel#hudMarker {
     color: #42D4F5;
     font-size: 10px;
+}
+
+QWidget#navLanguageBlock {
+    padding: 0;
+}
+
+QLabel#navLanguageHeading {
+    color: #E07A2A;
+    font-family: "Segoe UI";
+    font-size: 11px;
+    font-weight: bold;
+    letter-spacing: 2px;
+    padding: 0 2px;
+}
+
+QComboBox#navLanguageCombo {
+    background: #121820;
+    border: 1px solid #1E2A38;
+    border-radius: 6px;
+    color: #E8F2FA;
+    font-family: "Segoe UI";
+    font-size: 14px;
+    font-weight: 600;
+    min-height: 34px;
+    padding: 4px 10px;
+}
+
+QComboBox#navLanguageCombo:hover {
+    border-color: #2A3848;
+    background: #151D28;
+}
+
+QComboBox#navLanguageCombo::drop-down {
+    border: none;
+    width: 24px;
+}
+
+QComboBox#navLanguageCombo QAbstractItemView {
+    background: #121820;
+    border: 1px solid #2A3848;
+    color: #E8F2FA;
+    selection-background-color: #1A2838;
+    selection-color: #F4F8FC;
 }
 
 QFrame#navUserPanel {
@@ -212,13 +255,14 @@ QPushButton#navUpdateBadge:pressed {
     border-left: 3px solid transparent;
     border-radius: 0;
     color: #8FA3B8;
-    padding: 12px 16px 12px 14px;
-    min-height: 44px;
+    padding: 6px 16px 6px 8px;
+    min-height: 100px;
     text-align: left;
     font-family: "Segoe UI";
     font-size: 17px;
     font-weight: bold;
     letter-spacing: 0.5px;
+    icon-size: 100px 100px;
 }
 
 #navButton:hover {
@@ -922,6 +966,35 @@ QLabel#mobiglasTitleMarker {
     font-size: 10px;
     padding: 0;
     margin: 0;
+}
+
+QComboBox#titleLanguageCombo {
+    background: #121820;
+    border: 1px solid #2A3848;
+    border-radius: 4px;
+    color: #E8F2FA;
+    font-family: "Segoe UI";
+    font-size: 12px;
+    font-weight: 600;
+    padding: 2px 8px;
+}
+
+QComboBox#titleLanguageCombo:hover {
+    border-color: #E07A2A;
+    background: #151D28;
+}
+
+QComboBox#titleLanguageCombo::drop-down {
+    border: none;
+    width: 20px;
+}
+
+QComboBox#titleLanguageCombo QAbstractItemView {
+    background: #121820;
+    border: 1px solid #2A3848;
+    color: #E8F2FA;
+    selection-background-color: #1A2838;
+    selection-color: #F4F8FC;
 }
 
 QLabel#mobiglasTitleLabel {
@@ -1914,6 +1987,30 @@ QLabel#splashDeveloper {
     padding: 0;
 }
 
+QFrame#splashProgressPanel {
+    background: qlineargradient(
+        x1: 0, y1: 0, x2: 0, y2: 1,
+        stop: 0 rgba(23, 30, 40, 238),
+        stop: 1 rgba(14, 20, 28, 248)
+    );
+    border: 1px solid #263545;
+    border-top: 2px solid #E07A2A;
+    border-radius: 6px;
+}
+
+QLabel#splashPercent {
+    color: #C9A227;
+    font-family: "Segoe UI";
+    font-size: 14px;
+    font-weight: bold;
+    letter-spacing: 0.6px;
+    background: transparent;
+}
+
+QWidget#trackerLoadingBar {
+    background: transparent;
+}
+
 /* ==========================================================
    28. MODULARES DASHBOARD (kompakt / filigran)
    ========================================================== */
@@ -1935,77 +2032,55 @@ QFrame#dashboardPlacedWidget {
 
 QFrame#dashboardKpiCard,
 QFrame#dashboardSessionPanel {
-    background: rgba(8, 16, 24, 0.68);
-    border: 1px solid rgba(0, 217, 255, 0.22);
-    border-radius: 6px;
+    background: qlineargradient(
+        x1: 0, y1: 0, x2: 0, y2: 1,
+        stop: 0 #171E28,
+        stop: 1 #121820
+    );
+    border: 1px solid #263545;
+    border-radius: 8px;
     min-height: 0;
     min-width: 0;
-    padding: 6px 10px;
+    padding: 16px 18px;
 }
 
-QWidget#dashboardPage QLabel#hudMarker {
-    font-size: 20px;
-}
-
-QLabel#dashboardKpiTitle {
-    color: rgba(0, 217, 255, 0.68);
-    font-family: "Segoe UI";
-    font-size: 10px;
-    font-weight: bold;
-    letter-spacing: 0.8px;
+QFrame#dashboardKpiCard QLabel#subSectionTitle,
+QFrame#dashboardSessionPanel QLabel#subSectionTitle {
     padding: 0;
     margin: 0;
 }
 
-QFrame#dashboardKpiDivider {
-    min-height: 1px;
-    max-height: 1px;
+QFrame#dashboardSessionPanel QLabel#formLabel {
+    padding-top: 0;
+    margin: 0;
+}
+
+QFrame#dashboardSessionPanel QLabel#displayValue {
+    padding: 0 0 2px 0;
+    margin: 0;
+}
+
+QFrame#dashboardSessionPanel QLabel#mutedLabel {
+    padding: 0 0 2px 0;
+    margin: 0;
+}
+
+QFrame#dashboardSessionPanel QLabel#cardTitle {
     margin-top: 2px;
-    margin-bottom: 3px;
-    background: qlineargradient(
-        x1: 0, y1: 0, x2: 1, y2: 0,
-        stop: 0 transparent,
-        stop: 0.15 rgba(0, 217, 255, 0.08),
-        stop: 0.5 rgba(0, 217, 255, 0.55),
-        stop: 0.85 rgba(0, 217, 255, 0.08),
-        stop: 1 transparent
-    );
-    border: none;
+    padding: 0;
 }
 
-QLabel#dashboardKpiValue {
-    color: #E6F2F8;
-    font-family: "Segoe UI";
-    font-size: 16px;
-    font-weight: bold;
+QFrame#dashboardKpiCard QLabel#cardValue,
+QFrame#dashboardKpiCard QLabel#profitLabel {
     padding: 0;
     margin: 0;
-}
-
-QLabel#dashboardKpiValueAccent {
-    color: #C9A227;
-    font-family: "Segoe UI";
-    font-size: 16px;
-    font-weight: bold;
-    padding: 0;
-    margin: 0;
-}
-
-QLabel#dashboardKpiStatusValue {
-    color: #E6F2F8;
-    font-family: "Segoe UI";
-    font-size: 13px;
-    font-weight: bold;
-    padding: 0;
-    margin: 0;
-    line-height: 1.15;
 }
 
 QLabel#dashboardKpiDigit,
-QWidget#dashboardKpiValue > QLabel#dashboardKpiDigit {
-    color: #E6F2F8;
+QWidget#dashboardKpiCard QLabel#dashboardKpiDigit {
+    color: #FFFFFF;
     font-family: "Segoe UI";
-    font-size: 16px;
+    font-size: 26px;
     font-weight: bold;
     padding: 0;
     margin: 0;
@@ -2013,70 +2088,22 @@ QWidget#dashboardKpiValue > QLabel#dashboardKpiDigit {
 }
 
 QLabel#dashboardKpiDigitAccent,
-QWidget#dashboardKpiValueAccent > QLabel#dashboardKpiDigitAccent {
+QWidget#dashboardKpiCard QLabel#profitLabel > QLabel#dashboardKpiDigitAccent,
+QWidget#dashboardKpiCard QLabel#dashboardKpiDigitAccent {
     color: #C9A227;
     font-family: "Segoe UI";
-    font-size: 16px;
+    font-size: 26px;
     font-weight: bold;
     padding: 0;
     margin: 0;
     min-width: 0.55em;
-}
-
-QLabel#dashboardStatDigit,
-QWidget#dashboardStatValue > QLabel#dashboardStatDigit {
-    color: #DCE8EF;
-    font-family: "Segoe UI";
-    font-size: 11px;
-    font-weight: bold;
-    padding: 0;
-    margin: 0;
-    min-width: 0.55em;
-}
-
-QLabel#dashboardSessionHeading {
-    color: rgba(0, 217, 255, 0.78);
-    font-family: "Segoe UI";
-    font-size: 10px;
-    font-weight: bold;
-    letter-spacing: 1.2px;
-    padding-bottom: 0;
-    border-bottom: 1px solid rgba(0, 217, 255, 0.25);
-    margin-bottom: 2px;
-}
-
-QFrame#dashboardSessionPanel QLabel#dashboardStatLabel {
-    font-size: 12px;
-    padding: 0;
-    margin: 0;
-}
-
-QFrame#dashboardSessionPanel QLabel#dashboardStatValue {
-    font-size: 11px;
-    padding: 0;
-    margin: 0;
-}
-
-QLabel#dashboardStatLabel {
-    color: #E07A2A;
-    font-family: "Segoe UI";
-    font-size: 13px;
-    font-weight: bold;
-}
-
-QLabel#dashboardStatValue {
-    color: #DCE8EF;
-    font-family: "Segoe UI";
-    font-size: 12px;
-    font-weight: bold;
 }
 
 QWidget#dashboardCatalogPanel {
     background: qlineargradient(
         x1: 0, y1: 0, x2: 0, y2: 1,
-        stop: 0 #252525,
-        stop: 0.45 #222222,
-        stop: 1 #1A1A1A
+        stop: 0 #171E28,
+        stop: 1 #121820
     );
     border-left: 1px solid #263545;
 }
@@ -2092,7 +2119,7 @@ QLabel#dashboardCatalogTitle {
 }
 
 QLabel#dashboardCatalogHint {
-    color: rgba(85, 232, 255, 0.58);
+    color: #6F8599;
     font-family: "Segoe UI";
     font-size: 11px;
     font-weight: bold;
@@ -2102,38 +2129,31 @@ QLabel#dashboardCatalogHint {
 }
 
 QWidget#dashboardCatalogPanel QFrame#hudLine {
-    background: qlineargradient(
-        x1: 0, y1: 0, x2: 1, y2: 0,
-        stop: 0 transparent,
-        stop: 0.2 rgba(0, 217, 255, 0.15),
-        stop: 0.5 rgba(0, 217, 255, 0.55),
-        stop: 0.8 rgba(0, 217, 255, 0.15),
-        stop: 1 transparent
-    );
+    background: #33485C;
     min-height: 1px;
     max-height: 1px;
     border: none;
 }
 
 QWidget#dashboardCatalogPanel QLabel#hudMarker {
-    color: rgba(0, 217, 255, 0.75);
+    color: #E07A2A;
     font-size: 10px;
 }
 
 QFrame#dashboardCatalogDrop {
-    background-color: rgba(0, 217, 255, 0.05);
-    border: 1px dashed rgba(0, 217, 255, 0.38);
+    background-color: rgba(38, 53, 69, 0.35);
+    border: 1px dashed #33485C;
     border-radius: 8px;
     min-height: 44px;
 }
 
 QFrame#dashboardCatalogDrop[dragActive="true"] {
-    background-color: rgba(0, 217, 255, 0.14);
-    border: 1px solid rgba(0, 217, 255, 0.72);
+    background-color: rgba(224, 122, 42, 0.12);
+    border: 1px solid #E07A2A;
 }
 
 QLabel#dashboardCatalogDropLabel {
-    color: rgba(85, 232, 255, 0.78);
+    color: #93A8BC;
     font-family: "Segoe UI";
     font-size: 10px;
     font-weight: bold;
@@ -2145,20 +2165,28 @@ QLabel#dashboardCatalogDropLabel {
 }
 
 QFrame#dashboardCatalogItem {
-    background-color: rgba(11, 23, 33, 0.92);
-    border: 1px solid rgba(0, 217, 255, 0.32);
-    border-radius: 10px;
-    min-height: 30px;
+    background: qlineargradient(
+        x1: 0, y1: 0, x2: 0, y2: 1,
+        stop: 0 #1A2430,
+        stop: 1 #121820
+    );
+    border: 1px solid #263545;
+    border-radius: 6px;
+    min-height: 36px;
 }
 
 QFrame#dashboardCatalogItem:hover {
-    border: 1px solid rgba(0, 217, 255, 0.68);
-    background-color: rgba(14, 32, 44, 0.96);
+    border: 1px solid #E07A2A;
+    background: qlineargradient(
+        x1: 0, y1: 0, x2: 0, y2: 1,
+        stop: 0 #1E2A38,
+        stop: 1 #151D28
+    );
 }
 
 QFrame#dashboardCatalogItem:disabled {
-    background-color: rgba(8, 14, 20, 0.55);
-    border: 1px solid rgba(0, 217, 255, 0.12);
+    background-color: #121820;
+    border: 1px solid #1E2A38;
 }
 
 QLabel#dashboardCatalogLabel {
@@ -2180,9 +2208,9 @@ QWidget#dashboardCatalogList {
 }
 
 QPushButton#dashboardWidgetRemove {
-    background-color: rgba(30, 81, 103, 0.88);
+    background-color: #1E2A38;
     color: #FFFFFF;
-    border: 1px solid rgba(0, 217, 255, 0.5);
+    border: 1px solid #33485C;
     border-radius: 9px;
     min-width: 18px;
     max-width: 18px;
@@ -2196,9 +2224,9 @@ QPushButton#dashboardWidgetRemove {
 }
 
 QPushButton#dashboardWidgetRemove:hover {
-    background-color: rgba(0, 217, 255, 0.45);
-    color: #041018;
-    border: 1px solid rgba(0, 217, 255, 0.85);
+    background-color: #E07A2A;
+    color: #FFFFFF;
+    border: 1px solid #E07A2A;
 }
 
 QWidget#dashboardHeader {

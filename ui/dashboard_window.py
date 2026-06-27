@@ -122,10 +122,6 @@ class DashboardWindow(MobiglasFramelessMixin, QMainWindow):
 
         self.dashboard_page.update()
 
-        title_bar = getattr(self, "_mobiglas_title_bar", None)
-        if title_bar is not None:
-            title_bar.restore_from_maximize()
-
         if self.isMinimized():
             self.showNormal()
 

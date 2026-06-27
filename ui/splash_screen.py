@@ -1,4 +1,5 @@
 from pathlib import Path
+import math
 import random
 
 from PySide6.QtCore import (
@@ -9,6 +10,7 @@ from PySide6.QtCore import (
     Signal,
     QEventLoop,
     QRect,
+    QRectF,
     QElapsedTimer,
 )
 from PySide6.QtGui import (
@@ -18,6 +20,8 @@ from PySide6.QtGui import (
     QLinearGradient,
     QPen,
     QFont,
+    QPainterPath,
+    QBrush,
 )
 from PySide6.QtWidgets import (
     QWidget,
@@ -59,150 +63,53 @@ SPLASH_EDGE_MARGIN = 10
 
 SPLASH_PROGRESS_STYLE = """
 QFrame#splashProgressPanel {
-    background-color: rgba(8, 19, 28, 230);
-    border: 1px solid #00D9FF;
-    border-radius: 2px;
+    background: qlineargradient(
+        x1: 0, y1: 0, x2: 0, y2: 1,
+        stop: 0 rgba(23, 30, 40, 238),
+        stop: 1 rgba(14, 20, 28, 248)
+    );
+    border: 1px solid #263545;
+    border-top: 2px solid #E07A2A;
+    border-radius: 6px;
 }
 QLabel#splashStatus {
-    color: #D9F4FF;
+    color: #42D4F5;
     font-family: "Rajdhani";
     font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    background: transparent;
+}
+QLabel#splashPercent {
+    color: #C9A227;
+    font-family: "Rajdhani";
+    font-size: 14px;
     font-weight: bold;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.6px;
+    background: transparent;
+}
+QFrame#splashHudLine {
+    color: #E07A2A;
+    background-color: #E07A2A;
+    max-height: 2px;
+}
+QLabel#splashHudMarker {
+    color: #E07A2A;
+    font-family: "Rajdhani";
+    font-size: 14px;
+    font-weight: bold;
+    padding: 0 2px;
     background: transparent;
 }
 """
 
-
-class MobiglasLoadingBar(QWidget):
-
-    def __init__(self, parent=None, bar_height=24):
-        super().__init__(parent)
-
-        self._progress = 0
-        self._stripe_offset = 0
-        self._stalled = False
-        self.setFixedHeight(bar_height)
-        self.setObjectName("mobiglasLoadingBar")
-
-    def setProgress(self, value):
-        self._progress = max(0, min(100, int(value)))
-        self._stripe_offset = (self._stripe_offset + 2) % 7
-        self.update()
-
-    def setStalled(self, stalled):
-        self._stalled = stalled
-        self._stripe_offset = (self._stripe_offset + 3) % 7
-        self.update()
-
-    def progress(self):
-        return self._progress
-
-    def paintEvent(self, event):
-        painter = QPainter(self)
-        painter.setRenderHint(
-            QPainter.RenderHint.Antialiasing
-        )
-
-        width = self.width()
-        height = self.height()
-        inner_width = max(0, width - 4)
-        fill_width = int(
-            inner_width * self._progress / 100
-        )
-
-        painter.fillRect(
-            self.rect(),
-            QColor(8, 19, 28, 210),
-        )
-
-        painter.setPen(
-            QPen(QColor(0, 217, 255), 1)
-        )
-        painter.drawRect(0, 0, width - 1, height - 1)
-
-        if fill_width > 0:
-            gradient = QLinearGradient(0, 0, fill_width, 0)
-            gradient.setColorAt(
-                0.0,
-                QColor(0, 90, 115, 220),
-            )
-            gradient.setColorAt(
-                1.0,
-                QColor(0, 217, 255, 230),
-            )
-            painter.fillRect(
-                2,
-                2,
-                fill_width,
-                height - 4,
-                gradient,
-            )
-
-            painter.setPen(
-                QPen(QColor(0, 217, 255, 70), 1)
-            )
-            stripe_step = 7
-            start_x = -height + self._stripe_offset
-            for x in range(start_x, fill_width, stripe_step):
-                painter.drawLine(
-                    x + 2,
-                    height - 2,
-                    x + height,
-                    2,
-                )
-
-        painter.setPen(QColor(217, 244, 255))
-        font = QFont("Rajdhani", 11)
-        font.setBold(True)
-        painter.setFont(font)
-        painter.drawText(
-            self.rect(),
-            Qt.AlignmentFlag.AlignCenter,
-            f"{self._progress}%",
-        )
-
-        painter.end()
-
-
-class MobiglasLoadingPanel(QFrame):
-
-    def __init__(
-        self,
-        status_text=None,
-        parent=None,
-    ):
-        super().__init__(parent)
-
-        self.setObjectName("splashProgressPanel")
-
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(10, 8, 10, 8)
-        layout.setSpacing(6)
-
-        if status_text is None:
-            status_text = tr("splash.initializing")
-
-        self.status_label = QLabel(status_text)
-        self.status_label.setObjectName("splashStatus")
-        self.status_label.setAlignment(
-            Qt.AlignmentFlag.AlignCenter
-        )
-        self.status_label.setWordWrap(True)
-
-        self.loading_bar = MobiglasLoadingBar(self)
-
-        layout.addWidget(self.status_label)
-        layout.addWidget(self.loading_bar)
-
-    def set_status(self, text):
-        self.status_label.setText(text)
-
-    def set_progress(self, value):
-        self.loading_bar.setProgress(value)
-
-    def set_stalled(self, stalled):
-        self.loading_bar.setStalled(stalled)
+_TRACK_BG = QColor(14, 20, 28)
+_TRACK_BORDER = QColor(38, 53, 69)
+_TRACK_INNER = QColor(10, 14, 20)
+_FILL_START = QColor(160, 90, 24)
+_FILL_MID = QColor(224, 122, 42)
+_FILL_END = QColor(255, 168, 72)
+_SEGMENT_COUNT = 10
 
 
 class SplashHudRow(QWidget):
@@ -258,6 +165,300 @@ class SplashHudRow(QWidget):
         self.label.setText(text)
 
 
+class TrackerLoadingBar(QWidget):
+
+    display_progress_changed = Signal(float)
+
+    def __init__(self, parent=None, bar_height=24):
+        super().__init__(parent)
+
+        self._target_progress = 0.0
+        self._display_progress = 0.0
+        self._anim_phase = 0.0
+        self._stalled = False
+        self._pulse = 0.0
+        self.setFixedHeight(bar_height)
+        self.setObjectName("trackerLoadingBar")
+
+        self._anim_timer = QTimer(self)
+        self._anim_timer.setInterval(16)
+        self._anim_timer.timeout.connect(self._tick_animation)
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        if not self._anim_timer.isActive():
+            self._anim_timer.start()
+
+    def hideEvent(self, event):
+        super().hideEvent(event)
+        self._anim_timer.stop()
+
+    def reset(self) -> None:
+        self._target_progress = 0.0
+        self._display_progress = 0.0
+        self._anim_phase = 0.0
+        self._stalled = False
+        self._pulse = 0.0
+        self.display_progress_changed.emit(0.0)
+        self.update()
+
+    def setProgress(self, value):
+        value = max(0.0, min(100.0, float(value)))
+        if value <= 0.0:
+            self.reset()
+            return
+        if value < self._display_progress - 25.0:
+            self._display_progress = value
+        self._target_progress = value
+
+    def setStalled(self, stalled):
+        self._stalled = stalled
+
+    def progress(self):
+        return int(round(self._display_progress))
+
+    def _tick_animation(self):
+        speed = 0.045 if self._stalled else 0.14
+        delta = self._target_progress - self._display_progress
+        if abs(delta) > 0.05:
+            self._display_progress += delta * speed
+        else:
+            self._display_progress = self._target_progress
+
+        anim_speed = 0.004 if self._stalled else 0.018
+        self._anim_phase = (self._anim_phase + anim_speed) % 1.0
+        self._pulse = (self._pulse + (0.035 if self._stalled else 0.02)) % (
+            2 * math.pi
+        )
+        self.display_progress_changed.emit(self._display_progress)
+        self.update()
+
+    def _draw_hud_brackets(self, painter, rect, color, arm=5):
+        x, y, w, h = rect.x(), rect.y(), rect.width(), rect.height()
+        painter.setPen(QPen(color, 1.2))
+        for sx, sy, dx, dy in (
+            (x, y, arm, 0),
+            (x, y, 0, arm),
+            (x + w, y, -arm, 0),
+            (x + w, y, 0, arm),
+            (x, y + h, arm, 0),
+            (x, y + h, 0, -arm),
+            (x + w, y + h, -arm, 0),
+            (x + w, y + h, 0, -arm),
+        ):
+            painter.drawLine(int(sx), int(sy), int(sx + dx), int(sy + dy))
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+        width = self.width()
+        height = self.height()
+        inset = 1
+        track = QRectF(
+            inset,
+            inset,
+            width - 2 * inset,
+            height - 2 * inset,
+        )
+        radius = max(3.0, height * 0.22)
+
+        pulse_alpha = int(90 + 50 * math.sin(self._pulse))
+        border_color = QColor(_TRACK_BORDER)
+        if self._stalled:
+            border_color = QColor(224, 122, 42, pulse_alpha + 80)
+
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(_TRACK_BG)
+        painter.drawRoundedRect(track, radius, radius)
+
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+        painter.setPen(QPen(border_color, 1))
+        painter.drawRoundedRect(track, radius, radius)
+
+        inner = track.adjusted(2, 2, -2, -2)
+        inner_radius = max(2.0, radius - 1)
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(_TRACK_INNER)
+        painter.drawRoundedRect(inner, inner_radius, inner_radius)
+
+        segment_pen = QPen(QColor(38, 53, 69, 120), 1)
+        painter.setPen(segment_pen)
+        for i in range(1, _SEGMENT_COUNT):
+            sx = inner.x() + inner.width() * i / _SEGMENT_COUNT
+            painter.drawLine(
+                int(sx),
+                int(inner.y() + 2),
+                int(sx),
+                int(inner.bottom() - 2),
+            )
+
+        inner_w = inner.width()
+        fill_w = inner_w * self._display_progress / 100.0
+        if fill_w > 1.5:
+            fill_rect = QRectF(
+                inner.x(),
+                inner.y(),
+                fill_w,
+                inner.height(),
+            )
+
+            fill_grad = QLinearGradient(
+                fill_rect.left(),
+                0,
+                fill_rect.right(),
+                0,
+            )
+            fill_grad.setColorAt(0.0, _FILL_START)
+            fill_grad.setColorAt(0.55, _FILL_MID)
+            fill_grad.setColorAt(1.0, _FILL_END)
+            painter.setBrush(QBrush(fill_grad))
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.drawRoundedRect(
+                fill_rect,
+                inner_radius,
+                inner_radius,
+            )
+
+            shimmer_w = max(18.0, inner.height() * 1.8)
+            shimmer_x = (
+                inner.x()
+                + (inner_w + shimmer_w) * self._anim_phase
+                - shimmer_w
+            )
+            if shimmer_x < fill_rect.right():
+                shimmer = QLinearGradient(
+                    shimmer_x,
+                    0,
+                    shimmer_x + shimmer_w,
+                    0,
+                )
+                shimmer.setColorAt(0.0, QColor(255, 255, 255, 0))
+                shimmer.setColorAt(0.45, QColor(255, 220, 170, 55))
+                shimmer.setColorAt(0.55, QColor(255, 255, 255, 90))
+                shimmer.setColorAt(1.0, QColor(255, 255, 255, 0))
+                clip = QPainterPath()
+                clip.addRoundedRect(
+                    fill_rect,
+                    inner_radius,
+                    inner_radius,
+                )
+                painter.setClipPath(clip)
+                painter.fillRect(
+                    QRectF(
+                        shimmer_x,
+                        inner.y(),
+                        shimmer_w,
+                        inner.height(),
+                    ),
+                    shimmer,
+                )
+                painter.setClipping(False)
+
+            edge_x = inner.x() + fill_w
+            edge_glow = QLinearGradient(edge_x - 10, 0, edge_x + 6, 0)
+            edge_alpha = int(120 + 80 * math.sin(self._pulse * 1.4))
+            edge_glow.setColorAt(0.0, QColor(66, 212, 245, 0))
+            edge_glow.setColorAt(0.55, QColor(66, 212, 245, edge_alpha))
+            edge_glow.setColorAt(1.0, QColor(255, 210, 140, edge_alpha // 2))
+            painter.fillRect(
+                QRectF(edge_x - 10, inner.y(), 16, inner.height()),
+                edge_glow,
+            )
+
+        bracket_color = QColor(224, 122, 42, 180)
+        if self._stalled:
+            bracket_color = QColor(
+                66,
+                212,
+                245,
+                int(140 + 60 * math.sin(self._pulse)),
+            )
+        self._draw_hud_brackets(
+            painter,
+            track.adjusted(0.5, 0.5, -0.5, -0.5),
+            bracket_color,
+            arm=max(4, int(height * 0.22)),
+        )
+
+        scan_y = inner.y() + inner.height() * (
+            0.35 + 0.3 * math.sin(self._pulse * 0.8)
+        )
+        scan_alpha = int(35 + 25 * math.sin(self._pulse * 1.2))
+        painter.setPen(QPen(QColor(66, 212, 245, scan_alpha), 1))
+        painter.drawLine(
+            int(inner.x() + 3),
+            int(scan_y),
+            int(inner.right() - 3),
+            int(scan_y),
+        )
+
+        painter.end()
+
+
+class TrackerLoadingPanel(QFrame):
+
+    def __init__(
+        self,
+        status_text=None,
+        parent=None,
+    ):
+        super().__init__(parent)
+
+        self.setObjectName("splashProgressPanel")
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(12, 10, 12, 10)
+        layout.setSpacing(8)
+
+        if status_text is None:
+            status_text = tr("splash.initializing")
+
+        self.status_row = SplashHudRow(status_text, self)
+
+        bar_row = QHBoxLayout()
+        bar_row.setContentsMargins(0, 0, 0, 0)
+        bar_row.setSpacing(8)
+
+        self.loading_bar = TrackerLoadingBar(self)
+        self.percent_label = QLabel("0%")
+        self.percent_label.setObjectName("splashPercent")
+        self.percent_label.setAlignment(
+            Qt.AlignmentFlag.AlignRight
+            | Qt.AlignmentFlag.AlignVCenter,
+        )
+        self.percent_label.setFixedWidth(48)
+        self.loading_bar.display_progress_changed.connect(
+            self._sync_percent_label,
+        )
+
+        bar_row.addWidget(self.loading_bar, 1)
+        bar_row.addWidget(self.percent_label)
+
+        layout.addWidget(self.status_row)
+        layout.addLayout(bar_row)
+
+    def _sync_percent_label(self, value: float) -> None:
+        self.percent_label.setText(f"{int(round(value))}%")
+
+    def reset(self) -> None:
+        self.loading_bar.reset()
+        self.percent_label.setText("0%")
+
+    def set_status(self, text):
+        self.status_row.set_text(text)
+
+    def set_progress(self, value):
+        self.loading_bar.setProgress(value)
+
+    def set_stalled(self, stalled):
+        self.loading_bar.setStalled(stalled)
+
+
+MobiglasLoadingBar = TrackerLoadingBar
+MobiglasLoadingPanel = TrackerLoadingPanel
+
+
 class SplashScreen(QWidget):
 
     finished = Signal()
@@ -280,6 +481,7 @@ class SplashScreen(QWidget):
         self._custom_status_active = False
         self._source_pixmap = None
         self._pixmap = None
+        self._progress_generation = 0
 
         self.setObjectName("splashScreen")
         self.setWindowFlags(
@@ -409,7 +611,7 @@ class SplashScreen(QWidget):
             return
 
         self._timers_started = True
-
+        self._progress_clock.invalidate()
         self._progress_clock.start()
         self._schedule_next_progress_tick()
 
@@ -425,7 +627,26 @@ class SplashScreen(QWidget):
         else:
             delay = random.randint(45, 115)
 
-        QTimer.singleShot(delay, self._tick_progress)
+        generation = self._progress_generation
+
+        def tick():
+            if generation != self._progress_generation:
+                return
+            self._tick_progress()
+
+        QTimer.singleShot(delay, tick)
+
+    def _reset_progress_state(self):
+        self._progress_generation += 1
+        self._progress_value = 0
+        self._closing = False
+        self._fade_out_scheduled = False
+        self._init_complete = False
+        self._custom_status_active = False
+        self._timers_started = False
+        self._progress_clock.invalidate()
+        self.progress_panel.reset()
+        self.progress_panel.set_stalled(False)
 
     def _create_display_pixmap(self):
         source = self._source_pixmap
@@ -502,14 +723,14 @@ class SplashScreen(QWidget):
         height,
     ):
         panel_width = int(width * 0.62)
-        bar_height = max(16, int(height * BAR_HEIGHT_RATIO))
-        status_height = max(22, int(height * 0.042))
+        bar_height = max(18, int(height * BAR_HEIGHT_RATIO))
+        status_height = max(26, int(height * 0.048))
         panel_height = (
-            8
+            10
             + status_height
-            + 6
-            + bar_height
             + 8
+            + bar_height
+            + 10
         )
         panel_x = (width - panel_width) // 2
         panel_y = int(height * STATUS_Y_RATIO)
@@ -571,6 +792,8 @@ class SplashScreen(QWidget):
         self._raise_overlay_widgets()
 
     def show_splash(self):
+        self._reset_progress_state()
+
         screen = QApplication.primaryScreen()
         available = screen.availableGeometry()
         self.move(
@@ -585,10 +808,13 @@ class SplashScreen(QWidget):
         QApplication.processEvents()
 
         self._fade_in.start()
-        self._start_progress_timers()
 
     def _tick_progress(self):
         if self._closing:
+            return
+
+        if not self._progress_clock.isValid():
+            self._schedule_next_progress_tick()
             return
 
         elapsed_ms = self._progress_clock.elapsed()
@@ -596,6 +822,9 @@ class SplashScreen(QWidget):
             100,
             int(elapsed_ms * 100 / self.duration_ms),
         )
+
+        if elapsed_ms < 250:
+            expected = min(expected, 2)
 
         if elapsed_ms >= self.duration_ms - 450:
             step = random.randint(2, 5)

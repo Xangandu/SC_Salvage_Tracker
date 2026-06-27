@@ -66,7 +66,7 @@ def widget_needs_wider_size(
 
     for label in inner.findChildren(QLabel):
         name = label.objectName()
-        if name != "dashboardKpiTitle":
+        if name != "subSectionTitle":
             continue
         if isinstance(label, DashboardFitLabel):
             continue

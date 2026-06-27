@@ -873,7 +873,7 @@ class DashboardGridCanvas(QWidget):
         y0 = host_geom.y() + self._grid_margins
         height = self._grid_paint_height()
 
-        pen = QPen(QColor(0, 217, 255, 18))
+        pen = QPen(QColor(51, 72, 92, 48))
         pen.setWidth(1)
         painter.setPen(pen)
 
@@ -897,8 +897,8 @@ class DashboardGridCanvas(QWidget):
             )
             rect.translate(host_geom.topLeft())
             if preview["valid"]:
-                fill = QColor(0, 217, 255, 28)
-                border = QColor(0, 217, 255, 100)
+                fill = QColor(224, 122, 42, 28)
+                border = QColor(224, 122, 42, 140)
             else:
                 fill = QColor(255, 80, 80, 22)
                 border = QColor(255, 80, 80, 90)

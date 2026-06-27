@@ -123,7 +123,7 @@ def widget_definitions():
             "kind": "session",
             "default_size": "2x2",
             "sizes": ("2x1", "2x2"),
-            "reflow": False,
+            "reflow": True,
         },
         "refinery_stats": {
             "title": tr("dashboard.widget.refinery_stats"),

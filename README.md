@@ -46,8 +46,8 @@ Details: [`Changelogs/EDITIONS.txt`](Changelogs/EDITIONS.txt)
 **Updates:** Einstellungen → System → *Nach Updates suchen*
 
 **Sprache / Language:** English (Standard) und Deutsch — beim Erststart wählbar,
-später unter **Einstellungen → Design → Erscheinungsbild**. Nach Sprachwechsel
-App **neu starten**, damit alle UI-Elemente aktualisiert werden.
+danach unter **Einstellungen → Sprache** (rechter Tab). Nach dem Wechsel startet
+die App **automatisch neu** und meldet dich wieder an.
 
 ------------------------------------------------------------------------
 

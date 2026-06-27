@@ -18,7 +18,7 @@ DEFAULT_APP_SETTINGS = {
     "table_density": "normal",
     "animations": "full",
     "dashboard_layout": "classic",
-    "dashboard_font_scale": "200",
+    "dashboard_font_scale": "100",
     "dashboard_title_font_scale": "",
     "dashboard_button_font_scale": "",
     "update_auto_check": "1",

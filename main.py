@@ -35,6 +35,7 @@ from auth.remember_me import (
     load_remember_data,
     clear_remember_data,
 )
+from auth.app_restart import consume_language_restart_pending
 from network.constants import (
     NETWORK_MODE_CLIENT,
     NETWORK_MODE_HOST,
@@ -271,8 +272,21 @@ class SalvageTrackerApp:
         if not self._run_initial_setup_if_needed():
             return 0
 
+        language_restart = consume_language_restart_pending()
+
         while True:
-            user = self._try_remembered_login()
+            user = None
+
+            if language_restart:
+                language_restart = False
+                self._load_saved_network_mode()
+                if self._network_mode == NETWORK_MODE_CLIENT:
+                    user = self._try_restore_client_session_after_restart()
+                if not user:
+                    user = self._try_remembered_login()
+
+            if not user:
+                user = self._try_remembered_login()
 
             if not user:
                 user = self._login()
@@ -377,6 +391,26 @@ class SalvageTrackerApp:
             state = get_network_state()
             state.connected = False
             state.host_running = False
+
+    def _try_restore_client_session_after_restart(self):
+        """Nach Sprach-Neustart: gespeicherte Crew-Verbindung still wiederherstellen."""
+        if not has_feature("network.client", self.db):
+            return None
+
+        if self._network_mode != NETWORK_MODE_CLIENT:
+            return None
+
+        result = restore_saved_client_connection(self.db)
+        if not result:
+            return None
+
+        _connection, host_user = result
+        if not host_user:
+            return None
+
+        user_session.set_session(host_user, 0)
+        self.db = get_database()
+        return self.db.permissions.ensure_user_permissions(host_user)
 
     def _try_remembered_login(self):
         remember_data = load_remember_data()

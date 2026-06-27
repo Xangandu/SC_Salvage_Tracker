@@ -7,7 +7,6 @@ from config.paths import asset_path
 # Basis-Schriftarten im Star-Citizen-QSS (werden ersetzt).
 BASE_HEADING_FONT = "Orbitron"
 BASE_BODY_FONT = "Rajdhani"
-DEFAULT_FONT_FAMILY = "oxanium"
 
 FONT_FAMILIES: dict[str, dict] = {
     "launcher": {
@@ -56,7 +55,8 @@ FONT_FAMILIES: dict[str, dict] = {
         "heading": "Oxanium",
         "body": "Oxanium",
         "files": (
-            "assets/fonts/scifi/Oxanium-Variable.ttf",
+            "assets/fonts/scifi/Oxanium-Regular.ttf",
+            "assets/fonts/scifi/Oxanium-Bold.ttf",
         ),
     },
     "teko": {
@@ -64,7 +64,7 @@ FONT_FAMILIES: dict[str, dict] = {
         "heading": "Teko",
         "body": "Teko",
         "files": (
-            "assets/fonts/scifi/Teko-Variable.ttf",
+            "assets/fonts/scifi/Teko-Medium.ttf",
         ),
     },
     "jura": {
@@ -72,7 +72,7 @@ FONT_FAMILIES: dict[str, dict] = {
         "heading": "Jura",
         "body": "Jura",
         "files": (
-            "assets/fonts/scifi/Jura-Variable.ttf",
+            "assets/fonts/scifi/Jura-Medium.ttf",
         ),
     },
     "electrolize": {
@@ -97,6 +97,8 @@ FONT_FAMILY_LABELS = {
     key: profile["label"]
     for key, profile in FONT_FAMILIES.items()
 }
+
+DEFAULT_FONT_FAMILY = "oxanium"
 
 
 def font_family_ids() -> tuple[str, ...]:
@@ -145,31 +147,6 @@ def existing_font_paths():
             yield path
 
 
-# Dashboard-Labels: (heading|body, base_px)
-_DASHBOARD_LABEL_ROLES: dict[str, tuple[str, int]] = {
-    "dashboardKpiTitle": ("heading", 10),
-    "dashboardKpiValue": ("body", 16),
-    "dashboardKpiValueAccent": ("body", 16),
-    "dashboardKpiStatusValue": ("body", 13),
-    "dashboardSessionHeading": ("heading", 10),
-    "dashboardStatLabel": ("body", 11),
-    "dashboardStatValue": ("body", 12),
-    "dashboardCatalogTitle": ("heading", 12),
-    "dashboardCatalogHint": ("body", 11),
-    "dashboardCatalogDropLabel": ("body", 10),
-    "dashboardCatalogLabel": ("body", 12),
-}
-
-
-def dashboard_label_fonts(family_id: str) -> dict[str, tuple[str, int]]:
-    heading = resolve_heading_font(family_id)
-    body = resolve_body_font(family_id)
-    return {
-        name: (heading if role == "heading" else body, px)
-        for name, (role, px) in _DASHBOARD_LABEL_ROLES.items()
-    }
-
-
 def apply_font_family_to_qss(qss: str, family_id: str) -> str:
     profile = get_font_profile(family_id)
     heading = profile["heading"]
@@ -189,3 +166,34 @@ def apply_font_family_to_qss(qss: str, family_id: str) -> str:
     for old, new in replacements:
         qss = qss.replace(old, new)
     return qss
+
+# Gleiche Basis wie ui.theme_manager.DASHBOARD_FONT_BASE_PX
+DASHBOARD_FONT_BASE_PX = 14
+
+# Dashboard-Labels: (heading|body, base_px) — Größe einheitlich über ThemeManager
+_DASHBOARD_LABEL_ROLES: dict[str, tuple[str, int]] = {
+    "pageTitle": ("heading", DASHBOARD_FONT_BASE_PX),
+    "sectionAccent": ("heading", DASHBOARD_FONT_BASE_PX),
+    "subSectionTitle": ("heading", DASHBOARD_FONT_BASE_PX),
+    "formLabel": ("heading", DASHBOARD_FONT_BASE_PX),
+    "cardTitle": ("heading", DASHBOARD_FONT_BASE_PX),
+    "cardValue": ("body", DASHBOARD_FONT_BASE_PX),
+    "profitLabel": ("body", DASHBOARD_FONT_BASE_PX),
+    "displayValue": ("body", DASHBOARD_FONT_BASE_PX),
+    "mutedLabel": ("body", DASHBOARD_FONT_BASE_PX),
+    "statValue": ("body", DASHBOARD_FONT_BASE_PX),
+    "dashboardCatalogTitle": ("heading", DASHBOARD_FONT_BASE_PX),
+    "dashboardCatalogHint": ("body", DASHBOARD_FONT_BASE_PX),
+    "dashboardCatalogDropLabel": ("body", DASHBOARD_FONT_BASE_PX),
+    "dashboardCatalogLabel": ("body", DASHBOARD_FONT_BASE_PX),
+}
+
+
+def dashboard_label_fonts(family_id: str) -> dict[str, tuple[str, int]]:
+    heading = resolve_heading_font(family_id)
+    body = resolve_body_font(family_id)
+    return {
+        name: (heading if role == "heading" else body, px)
+        for name, (role, px) in _DASHBOARD_LABEL_ROLES.items()
+    }
+

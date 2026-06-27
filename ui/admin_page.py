@@ -29,13 +29,11 @@ from ui.mobiglas_input_dialog import (
 )
 from config.dates import format_datetime
 from config.i18n import (
-    SUPPORTED_LANGUAGES,
     normalize_language,
-    save_language_choice,
-    set_language,
     theme_option_label,
     tr,
 )
+from ui.language_settings_panel import LanguageSettingsPanel
 from database.access import get_database
 from config.permissions import (
     has_permission,
@@ -150,6 +148,7 @@ class AdminPage(QWidget):
         self.network_tab = self._build_network_tab()
         self.support_tab = self._build_support_tab()
         self.system_tab = self._build_system_tab()
+        self.language_tab = self._build_language_tab()
 
         self.tabs.addTab(self.users_tab, tr("admin.tab.users"))
         self.tabs.addTab(self.roles_tab, tr("admin.tab.roles"))
@@ -157,6 +156,7 @@ class AdminPage(QWidget):
         self.tabs.addTab(self.network_tab, tr("admin.tab.network"))
         self.tabs.addTab(self.support_tab, tr("admin.tab.support"))
         self.tabs.addTab(self.system_tab, tr("admin.tab.system"))
+        self.tabs.addTab(self.language_tab, tr("admin.tab.language"))
 
         layout.addWidget(self.tabs)
 
@@ -171,6 +171,7 @@ class AdminPage(QWidget):
         super().showEvent(event)
         self.refresh_data()
         self.load_design_settings()
+        self.refresh_language_settings()
         self.refresh_support_tab()
 
     def _new_tab(self):
@@ -441,6 +442,36 @@ class AdminPage(QWidget):
         layout.addWidget(self.design_sub_tabs)
         return tab
 
+    def _build_language_tab(self):
+        tab, layout = self._new_tab()
+
+        panel, panel_layout = page_panel()
+        panel_layout.setContentsMargins(20, 20, 20, 20)
+        panel_layout.setSpacing(12)
+
+        panel_layout.addWidget(
+            subsection_title(tr("admin.language.section"))
+        )
+        panel_layout.addLayout(hud_divider())
+
+        self.language_settings_panel = LanguageSettingsPanel()
+        panel_layout.addWidget(self.language_settings_panel)
+
+        layout.addWidget(panel)
+        layout.addStretch()
+        return tab
+
+    def refresh_language_settings(self):
+        if not hasattr(self, "language_settings_panel"):
+            return
+        main_window = self.window()
+        if self.current_user and main_window is not None:
+            self.language_settings_panel.bind(
+                self.db,
+                self.current_user,
+                main_window,
+            )
+
     def _build_design_appearance_page(self):
         page = QWidget()
         page.setObjectName("designSubPage")
@@ -460,13 +491,6 @@ class AdminPage(QWidget):
         self.theme_combo = QComboBox()
         for theme_id, label in ThemeManager.available_themes():
             self.theme_combo.addItem(label, theme_id)
-
-        self.language_combo = QComboBox()
-        for lang_code in SUPPORTED_LANGUAGES:
-            self.language_combo.addItem(
-                tr(f"language.name.{lang_code}"),
-                lang_code,
-            )
 
         self.font_size_combo = QComboBox()
         _populate_option_combo(
@@ -500,7 +524,6 @@ class AdminPage(QWidget):
         grid.setColumnStretch(1, 1)
 
         appearance_fields = [
-            (tr("admin.language"), self.language_combo),
             (tr("admin.design.label.theme"), self.theme_combo),
             (tr("admin.design.label.font_size"), self.font_size_combo),
             (tr("admin.design.label.font_family"), self.font_family_combo),
@@ -1096,10 +1119,6 @@ class AdminPage(QWidget):
         )
 
         self._set_combo_by_data(
-            self.language_combo,
-            normalize_language(effective.get("language")),
-        )
-        self._set_combo_by_data(
             self.theme_combo,
             effective.get("theme"),
         )
@@ -1192,8 +1211,17 @@ class AdminPage(QWidget):
         self._refresh_design_color_swatches()
 
     def _collect_theme_form(self):
+        effective = (
+            self.db.settings.resolve_effective_settings(
+                self.current_user["id"]
+            )
+            if self.current_user
+            else {}
+        )
         return {
-            "language": self.language_combo.currentData(),
+            "language": normalize_language(
+                effective.get("language")
+            ),
             "theme": self.theme_combo.currentData(),
             "font_size": self.font_size_combo.currentData(),
             "font_family": self.font_family_combo.currentData(),
@@ -1282,6 +1310,12 @@ class AdminPage(QWidget):
             ),
         }
 
+    def _refresh_dashboard_font_live(self):
+        settings = self._merge_effective_settings(
+            self._collect_dashboard_form()
+        )
+        ThemeManager.refresh_dashboard_font_scale(settings)
+
     def _merge_effective_settings(self, overrides):
         if not self.current_user:
             return dict(overrides)
@@ -1307,6 +1341,7 @@ class AdminPage(QWidget):
             scale,
         )
         self.dashboard_font_preview.set_scale(scale)
+        self._refresh_dashboard_font_live()
 
     def _on_dashboard_title_scale_changed(self, scale):
         scale = ThemeManager.normalize_dashboard_font_scale(
@@ -1316,6 +1351,7 @@ class AdminPage(QWidget):
             self.dashboard_title_font_scale_value,
             scale,
         )
+        self._refresh_dashboard_font_live()
 
     def _on_dashboard_button_scale_changed(self, scale):
         scale = ThemeManager.normalize_dashboard_font_scale(
@@ -1325,6 +1361,7 @@ class AdminPage(QWidget):
             self.dashboard_button_font_scale_value,
             scale,
         )
+        self._refresh_dashboard_font_live()
 
     def _apply_dashboard_layout(self):
         window = self.window()
@@ -1349,8 +1386,6 @@ class AdminPage(QWidget):
         theme = self._collect_theme_form()
         accent = theme.get("accent_color") or None
         selected_language = normalize_language(theme.get("language"))
-        save_language_choice(self.db, selected_language)
-        set_language(selected_language)
 
         self.db.settings.save_user_settings(
             self.current_user["id"],
@@ -1383,10 +1418,7 @@ class AdminPage(QWidget):
         QMessageBox.information(
             self,
             tr("admin.design.dialog.title"),
-            tr(
-                "admin.design.msg.saved",
-                restart_hint=tr("admin.language.restart_hint"),
-            ),
+            tr("admin.design.msg.saved"),
         )
 
     def preview_dashboard_settings(self):
@@ -2635,6 +2667,8 @@ class AdminPage(QWidget):
         if hasattr(self, "datensicherung_section"):
             self.datensicherung_section.setVisible(can_reset)
 
+        self.refresh_language_settings()
+
         if can_users and not can_roles:
             self.tabs.setCurrentWidget(self.users_tab)
         elif can_roles and not can_users:
@@ -2858,6 +2892,7 @@ class AdminPage(QWidget):
         self.refresh_datensicherung()
         self.refresh_updates_section()
         self._refresh_network_tab()
+        self.refresh_language_settings()
 
     def selected_user_id(self):
         row = self.users_table.currentRow()

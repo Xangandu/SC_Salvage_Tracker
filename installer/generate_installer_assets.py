@@ -16,6 +16,7 @@ except ImportError:
     from PIL import Image, ImageDraw, ImageFont, ImageFilter
 
 INSTALLER_BG = (920, 580)
+INSTALLER_BG_FULL = (920, 620)  # Titelleiste (40 px) + Inhalt (580 px)
 SIDEBAR = (200, 580)
 SMALL = (64, 64)
 ICON_SIZES = [(16, 16), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)]
@@ -234,19 +235,35 @@ def main() -> None:
             assets_dir / "wizard_small.png",
             optimize=True,
         )
-        save_icon(emblem, assets_dir / "app_icon.ico")
-    else:
-        fallback = Image.new("RGBA", (256, 256), (*COL_ORANGE, 255))
-        save_icon(fallback, assets_dir / "app_icon.ico")
 
     project_icon = root / "assets" / "images" / "app_icon.ico"
-    project_icon.parent.mkdir(parents=True, exist_ok=True)
-    project_icon.write_bytes((assets_dir / "app_icon.ico").read_bytes())
+    installer_icon = assets_dir / "app_icon.ico"
+    try:
+        try:
+            from installer.sync_app_icon import sync_app_icon
+        except ImportError:
+            from sync_app_icon import sync_app_icon
+
+        project_icon = sync_app_icon(verbose=False)
+        icon_source = "sync_app_icon (assets/images/app_icon.png oder .ico)"
+    except FileNotFoundError:
+        if splash is not None:
+            save_icon(emblem, installer_icon)
+        else:
+            fallback = Image.new("RGBA", (256, 256), (*COL_ORANGE, 255))
+            save_icon(fallback, installer_icon)
+        project_icon.parent.mkdir(parents=True, exist_ok=True)
+        project_icon.write_bytes(installer_icon.read_bytes())
+        icon_source = "Splash (auto-generiert)"
 
     print(f"Installer-Grafiken (Launcher-Stil): {assets_dir}")
     print(f"  Version: {meta['version']} · {meta['codename']}")
-    print(f"  install_bg.png      {INSTALLER_BG[0]}x{INSTALLER_BG[1]}")
-    print(f"  app_icon.ico")
+    print(f"  install_bg.png      {INSTALLER_BG[0]}x{INSTALLER_BG[1]} (Legacy / Generator)")
+    print(
+        f"  install_background.png  {INSTALLER_BG_FULL[0]}x{INSTALLER_BG_FULL[1]} "
+        "(optional, Vollfläche — manuell ablegen)"
+    )
+    print(f"  app_icon.ico        ({icon_source})")
     print(f"Projekt-Icon: {project_icon}")
 
 

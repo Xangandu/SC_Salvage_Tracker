@@ -19,16 +19,23 @@ _VALID_BUILD_EDITIONS = frozenset({"solo", "crew", "orga"})
 
 
 def _read_build_edition() -> str:
-    """Dev: solo. Frozen: Marker-Datei aus dem Installer-Build."""
-    if not is_frozen():
-        return "solo"
+    """Dev: build_edition.txt / SST_EDITION. Frozen: Marker aus dem Installer-Build."""
+    import os
+
+    env = (os.environ.get("SST_EDITION") or "").strip().lower()
+    if env in _VALID_BUILD_EDITIONS:
+        return env
+
     marker = app_root() / "config" / "build_edition.txt"
     try:
-        edition = marker.read_text(encoding="utf-8").strip().lower()
+        edition = marker.read_text(encoding="utf-8-sig").strip().lower()
     except OSError:
-        return "solo"
+        edition = ""
     if edition in _VALID_BUILD_EDITIONS:
         return edition
+
+    if is_frozen():
+        return "solo"
     return "solo"
 
 

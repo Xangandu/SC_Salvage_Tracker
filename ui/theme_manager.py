@@ -76,33 +76,33 @@ DASHBOARD_LAYOUT_LABELS = {
     "storage": "Storage",
 }
 
-DEFAULT_DASHBOARD_FONT_SCALE = 200
+DEFAULT_DASHBOARD_FONT_SCALE = 100
 DASHBOARD_FONT_SCALE_MIN = 50
 DASHBOARD_FONT_SCALE_MAX = 250
+DASHBOARD_FONT_BASE_PX = 14
 
-DASHBOARD_FONT_BASE_RULES = (
-    ("QLabel#dashboardKpiTitle", 10),
-    ("QLabel#dashboardKpiValue", 16),
-    ("QLabel#dashboardKpiValueAccent", 16),
-    ("QLabel#dashboardKpiStatusValue", 13),
-    ("QLabel#dashboardKpiDigit", 16),
-    ("QLabel#dashboardKpiDigitAccent", 16),
-    ("QLabel#dashboardStatDigit", 12),
-    ("QLabel#dashboardSessionHeading", 10),
-    ("QLabel#dashboardStatLabel", 11),
-    ("QLabel#dashboardStatValue", 12),
-    ("QLabel#dashboardCatalogTitle", 12),
-    ("QLabel#dashboardCatalogHint", 11),
-    ("QLabel#dashboardCatalogDropLabel", 10),
-    ("QLabel#dashboardCatalogLabel", 12),
-    ("QWidget#dashboardCatalogPanel QLabel#hudMarker", 10),
-    ("QWidget#dashboardPage QLabel#hudMarker", 18),
-    ("QLabel#dashboardSection", 18),
-)
+DASHBOARD_FONT_LABEL_NAMES = frozenset({
+    "pageTitle",
+    "sectionAccent",
+    "subSectionTitle",
+    "formLabel",
+    "displayValue",
+    "mutedLabel",
+    "cardTitle",
+    "cardValue",
+    "profitLabel",
+    "statValue",
+    "dashboardKpiDigit",
+    "dashboardKpiDigitAccent",
+    "dashboardCatalogTitle",
+    "dashboardCatalogHint",
+    "dashboardCatalogDropLabel",
+    "dashboardCatalogLabel",
+})
 
 DASHBOARD_FONT_PREVIEW_RULES = (
-    ("QLabel#dashboardFontPreviewTitle", 10),
-    ("QLabel#dashboardFontPreviewValue", 16),
+    ("QFrame#dashboardFontPreviewCard QLabel", DASHBOARD_FONT_BASE_PX),
+    ("QLabel#dashboardFontPreviewHint", DASHBOARD_FONT_BASE_PX),
 )
 
 TRANSPARENCY_OPTIONS = (0, 25, 50, 75, 100)
@@ -664,8 +664,8 @@ class ThemeManager:
         scale = cls.resolve_dashboard_scales(scales)[
             "dashboard_font_scale"
         ]
-        pad_v = max(3, round(3 * scale / 100))
-        pad_h = max(6, round(6 * scale / 100))
+        pad_v = max(6, round(10 * scale / 100))
+        pad_h = max(8, round(14 * scale / 100))
         return pad_v, pad_h
 
     @classmethod
@@ -743,29 +743,43 @@ class ThemeManager:
         button_scale = cls.normalize_dashboard_font_scale(
             button_scale
         )
+
+        widget_px = cls._scaled_dashboard_px(
+            DASHBOARD_FONT_BASE_PX,
+            widget_scale,
+        )
+        title_px = cls._scaled_dashboard_px(
+            DASHBOARD_FONT_BASE_PX,
+            title_scale,
+        )
+        button_px = cls._scaled_dashboard_px(
+            DASHBOARD_FONT_BASE_PX,
+            button_scale,
+        )
         lines = [
             "/* ThemeManager: Dashboard-Schrift */",
-            cls._build_font_rules_qss(
-                DASHBOARD_FONT_BASE_RULES,
-                widget_scale,
-            ),
-            cls._build_font_rules_qss(
-                (("QWidget#dashboardHeader QLabel#pageTitle", 42),),
-                title_scale,
-            ),
-        ]
-        button_px = cls._scaled_dashboard_px(16, button_scale)
-        button_h = max(44, round(button_px * 1.6))
-        lines.append(
+            f"QWidget#dashboardPage QLabel {{\n"
+            f"    font-size: {widget_px}px;\n"
+            "}",
+            "QWidget#dashboardHeader QLabel#pageTitle,\n"
+            "QWidget#dashboardHeader QLabel#sectionAccent {\n"
+            f"    font-size: {title_px}px;\n"
+            "}",
             "QWidget#dashboardHeader QPushButton#secondaryAction,\n"
             "QWidget#dashboardHeader QPushButton#primaryAction {\n"
             f"    font-size: {button_px}px;\n"
+            "}",
+        ]
+        button_h = max(32, round(button_px * 2.2))
+        lines.append(
+            "QWidget#dashboardHeader QPushButton#secondaryAction,\n"
+            "QWidget#dashboardHeader QPushButton#primaryAction {\n"
             f"    min-height: {button_h}px;\n"
             "    padding: 8px 20px;\n"
             "}"
         )
-        pad_v = max(3, round(3 * widget_scale / 100))
-        pad_h = max(6, round(6 * widget_scale / 100))
+        pad_v = max(6, round(10 * widget_scale / 100))
+        pad_h = max(8, round(14 * widget_scale / 100))
         lines.append(
             "QFrame#dashboardKpiCard,\n"
             "QFrame#dashboardSessionPanel {\n"
@@ -787,8 +801,8 @@ class ThemeManager:
     @classmethod
     def build_dashboard_font_preview_qss(cls, scale_percent: int) -> str:
         scale = cls.normalize_dashboard_font_scale(scale_percent)
-        pad_v = max(3, round(3 * scale / 100))
-        pad_h = max(6, round(6 * scale / 100))
+        pad_v = max(6, round(10 * scale / 100))
+        pad_h = max(8, round(14 * scale / 100))
         family_id = cls._current_font_family_id()
         heading = resolve_heading_font(family_id)
         body = resolve_body_font(family_id)
@@ -798,25 +812,18 @@ class ThemeManager:
             "    border: none;\n"
             "}\n"
             "QFrame#dashboardFontPreviewCard {\n"
-            "    background: rgba(8, 16, 24, 0.68);\n"
-            "    border: 1px solid rgba(0, 217, 255, 0.22);\n"
-            "    border-radius: 6px;\n"
+            "    background: qlineargradient(\n"
+            "        x1: 0, y1: 0, x2: 0, y2: 1,\n"
+            "        stop: 0 #171E28,\n"
+            "        stop: 1 #121820\n"
+            "    );\n"
+            "    border: 1px solid #263545;\n"
+            "    border-radius: 8px;\n"
             f"    padding: {pad_v}px {pad_h}px;\n"
             "}\n"
-            "QLabel#dashboardFontPreviewTitle {\n"
-            "    color: rgba(0, 217, 255, 0.68);\n"
-            f'    font-family: "{heading}";\n'
-            "    font-weight: bold;\n"
-            "}\n"
-            "QLabel#dashboardFontPreviewValue {\n"
-            "    color: #E6F2F8;\n"
-            f'    font-family: "{body}";\n'
-            "    font-weight: bold;\n"
-            "}\n"
             "QLabel#dashboardFontPreviewHint {\n"
-            "    color: rgba(85, 232, 255, 0.55);\n"
+            "    color: #6F8599;\n"
             f'    font-family: "{body}";\n'
-            "    font-size: 11px;\n"
             "    font-weight: bold;\n"
             "}\n"
             + cls._build_font_rules_qss(
@@ -835,6 +842,18 @@ class ThemeManager:
         widget_scale = resolved["dashboard_font_scale"]
         title_scale = resolved["dashboard_title_font_scale"]
         button_scale = resolved["dashboard_button_font_scale"]
+        widget_px = cls._scaled_dashboard_px(
+            DASHBOARD_FONT_BASE_PX,
+            widget_scale,
+        )
+        title_px = cls._scaled_dashboard_px(
+            DASHBOARD_FONT_BASE_PX,
+            title_scale,
+        )
+        button_px = cls._scaled_dashboard_px(
+            DASHBOARD_FONT_BASE_PX,
+            button_scale,
+        )
 
         root_widget.setStyleSheet(
             cls.build_dashboard_font_qss(
@@ -853,38 +872,34 @@ class ThemeManager:
 
         for label in root_widget.findChildren(QLabel):
             name = label.objectName()
-            if name == "pageTitle":
-                font = QFont(
-                    heading_font,
-                    cls._scaled_dashboard_px(42, title_scale),
-                )
-                font.setBold(True)
-                label.setFont(font)
+            if name not in DASHBOARD_FONT_LABEL_NAMES:
                 continue
-
             spec = label_fonts.get(name)
-            if spec is None:
-                continue
-            family, base_px = spec
-            font = QFont(
-                family,
-                cls._scaled_dashboard_px(base_px, widget_scale),
-            )
+            if spec is not None:
+                family = spec[0]
+            elif name in ("pageTitle", "sectionAccent"):
+                family = heading_font
+            else:
+                family = body_font
+            if name in ("pageTitle", "sectionAccent"):
+                label_px = title_px
+            else:
+                label_px = widget_px
+            font = QFont(family, label_px)
             font.setBold(True)
             if isinstance(label, DashboardFitLabel):
                 label.apply_theme_font(font)
             else:
                 label.setFont(font)
 
-        button_px = cls._scaled_dashboard_px(16, button_scale)
+        font = QFont(body_font, button_px)
+        font.setBold(True)
         for button in root_widget.findChildren(QPushButton):
             if button.objectName() not in (
                 "secondaryAction",
                 "primaryAction",
             ):
                 continue
-            font = QFont(body_font, button_px)
-            font.setBold(True)
             button.setFont(font)
 
         root_widget.style().unpolish(root_widget)

@@ -12,4 +12,8 @@ if (-not (Test-Path $Splash)) {
 }
 
 Write-Host "Erzeuge Launcher-Installer-Grafiken..."
+py -3 (Join-Path $InstallerDir "sync_app_icon.py")
+if ($LASTEXITCODE -ne 0) {
+    throw "App-Icon-Sync fehlgeschlagen. Bitte assets/images/app_icon.png oder app_icon.ico ablegen."
+}
 py -3 (Join-Path $InstallerDir "generate_installer_assets.py")

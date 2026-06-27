@@ -14,7 +14,9 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
     "en": {
         "language.dialog.title": "Choose Language",
         "language.dialog.subtitle": "Select your interface language",
-        "language.dialog.hint": "You can change this later under Settings → Design → Appearance.",
+        "language.dialog.hint": (
+            "You can change this later under Settings → Language."
+        ),
         "language.dialog.continue": "Continue",
         "language.name.en": "English",
         "language.name.de": "Deutsch",
@@ -131,9 +133,11 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "nav.history": "History",
         "nav.settings": "Settings",
         "nav.logout": "Sign Out",
+        "nav.language.title": "Language",
         "admin.language": "Language",
-        "admin.language.restart_hint": (
-            "Language saved. Restart the application for all texts to update."
+        "admin.language.restart_now": (
+            "Language saved. The application will restart now and "
+            "sign you in automatically."
         ),
         "common.yes": "Yes",
         "common.no": "No",
@@ -153,6 +157,12 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "admin.tab.network": "Networking",
         "admin.tab.support": "Support",
         "admin.tab.system": "System",
+        "admin.tab.language": "Language",
+        "admin.language.section": "◆ INTERFACE LANGUAGE",
+        "admin.language.tab_hint": (
+            "Choose the interface language and click Save. The application "
+            "restarts automatically and signs you in again."
+        ),
         "admin.users.section": "◆ USER OVERVIEW",
         "admin.users.col.username": "Username",
         "admin.users.col.display_name": "Display name",
@@ -297,8 +307,7 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
             "Preview applied. Use \"Save\" to keep permanently."
         ),
         "admin.design.msg.saved": (
-            "Your design settings were saved.\n\n"
-            "{restart_hint}"
+            "Your design settings were saved."
         ),
         "admin.design.msg.no_app_defaults_permission": (
             "No permission for app defaults."
@@ -1218,6 +1227,7 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "payout.msg.voided.title": "Voided",
         "payout.msg.voided.message": "Payout #{payout_id} was voided.",
         "dashboard.title": "SALVAGE OVERVIEW",
+        "dashboard.subtitle": "◆ OPERATIONS OVERVIEW",
         "dashboard.window.title": "MobiGlas Salvage Overview",
         "dashboard.button.presets": "Presets",
         "dashboard.button.customize": "Customize dashboard",
@@ -1239,6 +1249,7 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "dashboard.widget.refinery_stats": "◆ REFINERY STATISTICS",
         "dashboard.session.none": "NO SESSION",
         "dashboard.session.active": "ACTIVE SESSION",
+        "dashboard.session.materials": "MATERIALS",
         "dashboard.label.ship": "Ship",
         "dashboard.label.crew": "Crew",
         "dashboard.label.status": "Status",
@@ -1273,7 +1284,7 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "dashboard.font_preview.demo_title": "STATUS",
         "dashboard.font_preview.demo_value": "128 SCU",
         "dashboard.font_preview.hint": (
-            "Sample KPI as shown on the dashboard"
+            "100 % = default size. All dashboard text scales uniformly."
         ),
         "dashboard.preset.title": "DASHBOARD PRESETS",
         "dashboard.preset.window_title": "Dashboard Presets",
@@ -1710,7 +1721,9 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
     "de": {
         "language.dialog.title": "Sprache wählen",
         "language.dialog.subtitle": "Wähle deine Oberflächensprache",
-        "language.dialog.hint": "Du kannst das später unter Einstellungen → Design → Erscheinungsbild ändern.",
+        "language.dialog.hint": (
+            "Du kannst das später unter Einstellungen → Sprache ändern."
+        ),
         "language.dialog.continue": "Weiter",
         "language.name.en": "English",
         "language.name.de": "Deutsch",
@@ -1830,10 +1843,11 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "nav.history": "Historie",
         "nav.settings": "Einstellungen",
         "nav.logout": "Abmelden",
+        "nav.language.title": "Sprache",
         "admin.language": "Sprache",
-        "admin.language.restart_hint": (
-            "Sprache gespeichert. Bitte die Anwendung neu starten, "
-            "damit alle Texte aktualisiert werden."
+        "admin.language.restart_now": (
+            "Sprache gespeichert. Das Programm startet jetzt neu und "
+            "meldet dich automatisch wieder an."
         ),
         "common.yes": "Ja",
         "common.no": "Nein",
@@ -1853,6 +1867,13 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "admin.tab.network": "Vernetzung",
         "admin.tab.support": "Unterstützen",
         "admin.tab.system": "System",
+        "admin.tab.language": "Sprache",
+        "admin.language.section": "◆ OBERFLÄCHENSSPRACHE",
+        "admin.language.tab_hint": (
+            "Wähle die Sprache der Oberfläche und klicke auf Speichern. "
+            "Danach startet die Anwendung automatisch neu und meldet "
+            "dich wieder an."
+        ),
         "admin.users.section": "◆ BENUTZERÜBERSICHT",
         "admin.users.col.username": "Benutzername",
         "admin.users.col.display_name": "Anzeigename",
@@ -2013,8 +2034,7 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
             "Mit „Speichern“ dauerhaft übernehmen."
         ),
         "admin.design.msg.saved": (
-            "Deine Design-Einstellungen wurden gespeichert.\n\n"
-            "{restart_hint}"
+            "Deine Design-Einstellungen wurden gespeichert."
         ),
         "admin.design.msg.no_app_defaults_permission": (
             "Keine Berechtigung für App-Standards."
@@ -3084,6 +3104,7 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
             "Auszahlung #{payout_id} wurde storniert."
         ),
         "dashboard.title": "SALVAGE-ÜBERSICHT",
+        "dashboard.subtitle": "◆ BETRIEBSÜBERSICHT",
         "dashboard.window.title": "MobiGlas Salvage-Übersicht",
         "dashboard.button.presets": "Presets",
         "dashboard.button.customize": "Dashboard anpassen",
@@ -3105,6 +3126,7 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "dashboard.widget.refinery_stats": "◆ RAFFINERIE-STATISTIK",
         "dashboard.session.none": "KEINE SITZUNG",
         "dashboard.session.active": "AKTIVE SITZUNG",
+        "dashboard.session.materials": "MATERIALIEN",
         "dashboard.label.ship": "Schiff",
         "dashboard.label.crew": "Crew",
         "dashboard.label.status": "Status",
@@ -3143,7 +3165,7 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "dashboard.font_preview.demo_title": "STATUS",
         "dashboard.font_preview.demo_value": "128 SCU",
         "dashboard.font_preview.hint": (
-            "Beispiel-KPI wie auf dem Dashboard"
+            "100 % = Standardgröße. Alle Dashboard-Texte skalieren einheitlich."
         ),
         "dashboard.preset.title": "DASHBOARD-PRESETS",
         "dashboard.preset.window_title": "Dashboard-Presets",

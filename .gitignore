@@ -10,6 +10,7 @@ __pycache__/
 build/
 dist/
 *.spec.bak
+installer/payload_*.zip
 
 # Runtime / lokale Daten (Dev)
 data/*.db
