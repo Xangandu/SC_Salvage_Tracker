@@ -29,27 +29,32 @@ SETTING_LAST_CHECK = "update_last_check"
 
 DOWNLOAD_CHUNK_BYTES = 256 * 1024
 
-INNO_SILENT_ARGS = (
-    "/VERYSILENT",
-    "/SUPPRESSMSGBOXES",
-    "/NORESTART",
-    "/CLOSEAPPLICATIONS",
-)
-
-PYSIDE_SILENT_ARGS = (
-    "--quiet",
-)
+_PROCESS_NAME = "SC_Salvage_Tracker"
+_EXE_NAME = "SC_Salvage_Tracker.exe"
 
 
 def _installer_cli_args(install_dir: Path, edition: str) -> list[str]:
-    install_dir_str = str(install_dir)
     return [
-        *INNO_SILENT_ARGS,
-        f'/DIR="{install_dir_str}"',
-        *PYSIDE_SILENT_ARGS,
-        f'--install-dir="{install_dir_str}"',
-        f"--edition={edition}",
+        "--quiet",
+        "--install-dir",
+        str(install_dir),
+        "--edition",
+        edition,
     ]
+
+
+def _resolve_update_install_dir(edition: str) -> Path:
+    from config.paths import install_root
+    from installer.install_engine import find_install_dir_from_registry
+
+    registry_dir = find_install_dir_from_registry(edition)
+    if registry_dir is not None:
+        return registry_dir
+    return install_root()
+
+
+def _powershell_single_quote(value: str) -> str:
+    return value.replace("'", "''")
 
 
 def is_auto_check_enabled(db) -> bool:
@@ -195,40 +200,69 @@ def launch_installer(setup_path: Path) -> None:
     if not can_launch_installer():
         raise RuntimeError(tr("update.error.installer_frozen_only"))
 
-    from config.paths import install_root
     from config.version import APP_EDITION
 
     setup_path = setup_path.resolve()
-    install_dir = install_root()
     edition = APP_EDITION or "solo"
-
+    install_dir = _resolve_update_install_dir(edition)
     installer_args = _installer_cli_args(install_dir, edition)
-    arg_line = " ".join(installer_args)
 
     cache_dir = updates_cache_dir()
-    batch_path = cache_dir / "apply_update.cmd"
+    script_path = cache_dir / "apply_update.ps1"
     log_path = cache_dir / "install.log"
 
-    batch_content = f"""@echo off
-setlocal
-echo [%date% %time%] Update-Installer startet >> "{log_path}"
-:wait_app
-tasklist /FI "IMAGENAME eq SC_Salvage_Tracker.exe" 2>NUL | find /I "SC_Salvage_Tracker.exe" >NUL
-if %ERRORLEVEL%==0 (
-  timeout /t 1 /nobreak >NUL
-  goto wait_app
-)
-timeout /t 2 /nobreak >NUL
-echo [%date% %time%] Starte Setup: {setup_path.name} >> "{log_path}"
-"{setup_path}" {arg_line} >> "{log_path}" 2>&1
-set ERR=%ERRORLEVEL%
-echo [%date% %time%] Setup beendet, Exit=%ERR% >> "{log_path}"
-exit /b %ERR%
+    arg_list = ", ".join(
+        f"'{_powershell_single_quote(arg)}'" for arg in installer_args
+    )
+
+    script_content = f"""$ErrorActionPreference = 'Stop'
+$LogPath = '{_powershell_single_quote(str(log_path))}'
+function Write-Log {{
+    param([string]$Message)
+    Add-Content -Path $LogPath -Value ("$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') " + $Message)
+}}
+Write-Log 'Update-Starter gestartet (PySide Setup, ohne Inno)'
+$SetupPath = '{_powershell_single_quote(str(setup_path))}'
+$InstallDir = '{_powershell_single_quote(str(install_dir))}'
+$AppExe = Join-Path $InstallDir '{_EXE_NAME}'
+while (Get-Process -Name '{_PROCESS_NAME}' -ErrorAction SilentlyContinue) {{
+    Start-Sleep -Seconds 1
+}}
+Start-Sleep -Seconds 2
+Write-Log "Starte Setup: $SetupPath"
+Write-Log "Installationsordner: $InstallDir"
+$argList = @({arg_list})
+try {{
+    $p = Start-Process -FilePath $SetupPath -ArgumentList $argList -Wait -PassThru -WindowStyle Hidden
+    Write-Log "Setup beendet, Exit=$($p.ExitCode)"
+    if ($p.ExitCode -ne 0) {{
+        exit $p.ExitCode
+    }}
+    if (Test-Path $AppExe) {{
+        Write-Log 'Starte aktualisierte Anwendung'
+        Start-Process -FilePath $AppExe
+    }} else {{
+        Write-Log "WARNUNG: $AppExe nicht gefunden"
+    }}
+    exit 0
+}} catch {{
+    Write-Log "FEHLER: $_"
+    exit 1
+}}
 """
-    batch_path.write_text(batch_content, encoding="utf-8")
+    script_path.write_text(script_content, encoding="utf-8")
 
     subprocess.Popen(
-        ["cmd.exe", "/c", str(batch_path)],
+        [
+            "powershell.exe",
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-WindowStyle",
+            "Hidden",
+            "-File",
+            str(script_path),
+        ],
         close_fds=True,
         creationflags=getattr(subprocess, "DETACHED_PROCESS", 0)
         | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0),

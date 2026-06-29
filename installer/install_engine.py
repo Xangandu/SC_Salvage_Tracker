@@ -7,6 +7,8 @@ import os
 import shutil
 import subprocess
 import sys
+import tempfile
+import time
 import uuid
 import zipfile
 from collections.abc import Callable
@@ -191,6 +193,64 @@ def iter_payload_files(payload: Path) -> list[tuple[str, Path]]:
         return files
     with zipfile.ZipFile(payload) as archive:
         return [(name, payload) for name in archive.namelist() if not name.endswith("/")]
+
+
+def install_log_path() -> Path:
+    """Log für In-App-Updates (Setup --quiet / apply_update.ps1)."""
+    from config.paths import updates_cache_dir
+
+    return updates_cache_dir() / "install.log"
+
+
+def append_install_log(message: str) -> None:
+    stamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    try:
+        with install_log_path().open("a", encoding="utf-8") as handle:
+            handle.write(f"[{stamp}] {message}\n")
+    except OSError:
+        pass
+
+
+def _install_file_from_staging(src: Path, dest: Path, *, retries: int = 40) -> None:
+    """Einzelne Datei installieren — mit EXE-Umbenennung bei Sperre."""
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    last_error: OSError | None = None
+
+    for _ in range(retries):
+        try:
+            if dest.exists() and dest.is_file():
+                if dest.suffix.lower() == ".exe":
+                    backup = dest.with_name(dest.name + ".old")
+                    if backup.exists():
+                        backup.unlink(missing_ok=True)
+                    os.replace(dest, backup)
+                else:
+                    dest.unlink()
+            shutil.copy2(src, dest)
+            backup = dest.with_name(dest.name + ".old")
+            if backup.exists():
+                try:
+                    backup.unlink()
+                except OSError:
+                    pass
+            return
+        except OSError as error:
+            last_error = error
+            time.sleep(0.5)
+
+    raise RuntimeError(
+        f"Datei konnte nicht installiert werden: {dest} ({last_error})"
+    ) from last_error
+
+
+def replace_install_tree(source: Path, target: Path) -> None:
+    """Payload-Staging in den Zielordner kopieren (Update-sicher)."""
+    target.mkdir(parents=True, exist_ok=True)
+    for src_path in sorted(source.rglob("*")):
+        if not src_path.is_file():
+            continue
+        rel = src_path.relative_to(source)
+        _install_file_from_staging(src_path, target / rel)
 
 
 def extract_payload(
@@ -626,10 +686,7 @@ def resolve_target_install_dir(
 def is_silent_install_argv(argv: list[str]) -> bool:
     for arg in argv:
         token = arg.strip().lower()
-        if token in ("/verysilent", "/silent", "/quiet", "--quiet", "-quiet"):
-            return True
-        normalized = token.lstrip("/-")
-        if normalized in ("verysilent", "silent", "quiet", "suppressmsgboxes"):
+        if token in ("--quiet", "-quiet", "/quiet"):
             return True
     return False
 
@@ -638,9 +695,7 @@ def run_silent_install(
     edition: str,
     argv: list[str] | None = None,
 ) -> int:
-    """Headless Update/Neuinstallation (In-App-Update, /VERYSILENT, --quiet)."""
-    import time
-
+    """Headless Update/Neuinstallation (In-App-Update, --quiet)."""
     from config.editions import edition_title
     from config.version import APP_BUILD, APP_PRODUCT_NAME, APP_VERSION
 
@@ -648,29 +703,50 @@ def run_silent_install(
     app_name = f"{APP_PRODUCT_NAME} - {edition_title(edition)}"
     target = resolve_target_install_dir(edition, argv, app_name=app_name)
 
-    if is_application_running():
-        stop_application()
-        for _ in range(20):
-            time.sleep(0.25)
-            if not is_application_running():
-                break
+    append_install_log(
+        f"Stille Installation gestartet — Edition={edition}, Ziel={target}"
+    )
+
+    try:
         if is_application_running():
-            raise RuntimeError(
-                "SC Salvage Tracker läuft noch — Installation abgebrochen."
-            )
+            append_install_log("Anwendung läuft noch — beende Prozess …")
+            stop_application()
+            for _ in range(40):
+                time.sleep(0.25)
+                if not is_application_running():
+                    break
+            if is_application_running():
+                raise RuntimeError(
+                    "SC Salvage Tracker läuft noch — Installation abgebrochen."
+                )
 
-    payload = resolve_payload_zip(edition)
-    extract_payload(payload, target)
+        payload = resolve_payload_zip(edition)
+        append_install_log(f"Payload: {payload.name}")
 
-    desktop_shortcut = any(
-        path.exists() for path in _desktop_shortcut_paths(app_name)
-    )
-    finalize_installation(
-        target,
-        app_name=app_name,
-        edition=edition,
-        version=APP_VERSION,
-        build=APP_BUILD,
-        desktop_shortcut=desktop_shortcut,
-    )
-    return 0
+        staging = Path(tempfile.mkdtemp(prefix="sst_update_"))
+        try:
+            extract_payload(payload, staging)
+            append_install_log(f"Payload entpackt nach {staging}")
+            replace_install_tree(staging, target)
+            append_install_log("Dateien in Installationsordner übernommen")
+        finally:
+            shutil.rmtree(staging, ignore_errors=True)
+
+        desktop_shortcut = any(
+            path.exists() for path in _desktop_shortcut_paths(app_name)
+        )
+        finalize_installation(
+            target,
+            app_name=app_name,
+            edition=edition,
+            version=APP_VERSION,
+            build=APP_BUILD,
+            desktop_shortcut=desktop_shortcut,
+        )
+        append_install_log(
+            f"Installation abgeschlossen — {APP_VERSION} Build {APP_BUILD}"
+        )
+        return 0
+    except Exception as exc:
+        append_install_log(f"FEHLER: {exc}")
+        raise

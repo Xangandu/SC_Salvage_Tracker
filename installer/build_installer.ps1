@@ -8,15 +8,11 @@
 #   powershell -ExecutionPolicy Bypass -File installer\build_installer.ps1
 #   powershell -ExecutionPolicy Bypass -File installer\build_installer.ps1 -Edition crew
 #   powershell -ExecutionPolicy Bypass -File installer\build_installer.ps1 -Edition all
-#   powershell -ExecutionPolicy Bypass -File installer\build_installer.ps1 -SkipInno
-#   powershell -ExecutionPolicy Bypass -File installer\build_installer.ps1 -UseInno
 
 param(
     [ValidateSet("solo", "crew", "orga", "all")]
     [string]$Edition = "solo",
-    [switch]$SkipInno,
-    [switch]$SkipPyInstaller,
-    [switch]$UseInno
+    [switch]$SkipPyInstaller
 )
 
 $ErrorActionPreference = "Stop"
@@ -28,7 +24,6 @@ $ReleaseRoot = Join-Path $ScRoot "Release"
 $InstallerOutput = Join-Path $ReleaseRoot "installer"
 $BuildEditionFile = Join-Path $ProjectRoot "config\build_edition.txt"
 $SpecFile = Join-Path $InstallerDir "salvage_tracker.spec"
-$IssFile = Join-Path $InstallerDir "sc_salvage_tracker.iss"
 
 $EditionProfiles = @{
     solo = @{
@@ -180,121 +175,6 @@ function Build-AppBundle {
     Write-Host "App-Build fertig: $AppOutput"
 }
 
-function Build-InnoSetup {
-    param(
-        [Parameter(Mandatory = $true)]
-        [hashtable]$Profile,
-        [Parameter(Mandatory = $true)]
-        [string]$AppOutput,
-        [Parameter(Mandatory = $true)]
-        [hashtable]$VersionMeta
-    )
-
-    $IsccCandidates = @(
-        "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe",
-        "$env:ProgramFiles\Inno Setup 6\ISCC.exe"
-    )
-    $Iscc = $IsccCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
-
-    if (-not $Iscc) {
-        Write-Host ""
-        Write-Host "HINWEIS: Inno Setup 6 nicht gefunden."
-        Write-Host "Die App liegt fertig unter: $AppOutput"
-        return $null
-    }
-
-    $AppVersion = $VersionMeta.FileVersion
-    $AppVersionDisplay = $VersionMeta.DisplayVersion
-    $AppBuild = $VersionMeta.Build
-    $AppCodename = $VersionMeta.Codename
-    $AppVersionInfo = $AppVersion
-    if ($AppVersionInfo -notmatch '^\d+\.\d+\.\d+\.\d+$') {
-        $parts = @($AppVersionInfo -split '\.')
-        while ($parts.Count -lt 4) {
-            $parts += '0'
-        }
-        $AppVersionInfo = ($parts[0..3] -join '.')
-    }
-
-    $SetupName = "SC_Salvage_Tracker_Setup_$($Profile.SetupSuffix)_$AppVersion.exe"
-    $StageDir = Join-Path $env:TEMP ("SC_Salvage_Tracker_installer_" + $Profile.Key + "_" + [guid]::NewGuid().ToString("N").Substring(0, 8))
-    New-Item -ItemType Directory -Force -Path $StageDir | Out-Null
-
-    $AppOutputRelative = "..\..\..\Release\app\$($Profile.AppFolder)"
-    $AppIdDefine = "{{$($Profile.AppId)}}"
-    Write-Host "Inno Setup ($($Profile.SetupSuffix))..."
-    & $Iscc `
-        "/DMyAppVersion=$AppVersionDisplay" `
-        "/DMyAppVersionFile=$AppVersion" `
-        "/DMyAppVersionInfo=$AppVersionInfo" `
-        "/DMyAppBuild=$AppBuild" `
-        "/DMyAppCodename=$AppCodename" `
-        "/DMyAppEdition=$($Profile.Key)" `
-        "/DMyAppName=$($Profile.AppName)" `
-        "/DMyAppId=$AppIdDefine" `
-        "/DMyAppOutputFolder=$AppOutputRelative" `
-        "/DMyAppSetupSuffix=$($Profile.SetupSuffix)" `
-        "/DInstallerOutputDir=$StageDir" `
-        $IssFile
-
-    if ($LASTEXITCODE -ne 0) {
-        throw "Inno Setup fehlgeschlagen fuer $($Profile.SetupSuffix) (Exit-Code $LASTEXITCODE)."
-    }
-
-    $BuiltExe = Join-Path $StageDir $SetupName
-    if (-not (Test-Path $BuiltExe)) {
-        throw "Setup-EXE nicht gefunden: $BuiltExe"
-    }
-
-    New-Item -ItemType Directory -Force -Path $InstallerOutput | Out-Null
-    $SetupExe = Join-Path $InstallerOutput $SetupName
-    $Copied = $false
-
-    for ($attempt = 1; $attempt -le 5; $attempt++) {
-        try {
-            if (Test-Path $SetupExe) {
-                Remove-Item $SetupExe -Force -ErrorAction Stop
-            }
-            Copy-Item -Path $BuiltExe -Destination $SetupExe -Force -ErrorAction Stop
-            $Copied = $true
-            break
-        }
-        catch {
-            if ($attempt -lt 5) {
-                Write-Host "Kopieren blockiert (Versuch $attempt/5), warte 2 Sekunden..."
-                Start-Sleep -Seconds 2
-            }
-        }
-    }
-
-    if (-not $Copied) {
-        Write-Warning "Konnte Setup nicht nach Release kopieren: $SetupExe"
-        Write-Warning "Fertige EXE: $BuiltExe"
-        return $null
-    }
-
-    Write-Host "Setup-EXE: $SetupExe"
-
-    $ManifestScript = Join-Path $InstallerDir "generate_update_manifest.py"
-    $ManifestPath = Join-Path $InstallerOutput ("update-manifest-" + $Profile.Key + ".json")
-    & py -3 $ManifestScript `
-        --setup $SetupExe `
-        --output $ManifestPath `
-        --tag "v$AppVersion" `
-        --edition $Profile.Key `
-        --app-name $Profile.AppName
-    if ($LASTEXITCODE -eq 0) {
-        Write-Host "Update-Manifest: $ManifestPath"
-        if ($Profile.Key -eq "solo") {
-            $DefaultManifest = Join-Path $InstallerOutput "update-manifest.json"
-            Copy-Item -Path $ManifestPath -Destination $DefaultManifest -Force
-            Write-Host "Standard-Manifest: $DefaultManifest"
-        }
-    }
-
-    return $SetupExe
-}
-
 function Build-PySideSetup {
     param(
         [Parameter(Mandatory = $true)]
@@ -369,8 +249,7 @@ function Build-EditionInstaller {
         [string]$EditionKey,
         [Parameter(Mandatory = $true)]
         [hashtable]$VersionMeta,
-        [switch]$SkipPyInstaller,
-        [switch]$SkipInno
+        [switch]$SkipPyInstaller
     )
 
     if (-not $EditionProfiles.ContainsKey($EditionKey)) {
@@ -394,14 +273,6 @@ function Build-EditionInstaller {
             throw "App-Ordner fehlt: $AppOutput (ohne -SkipPyInstaller bauen)"
         }
         Write-Host "PyInstaller uebersprungen: $AppOutput"
-    }
-
-    if ($SkipInno) {
-        return $null
-    }
-
-    if ($UseInno) {
-        return Build-InnoSetup -Profile $Profile -AppOutput $AppOutput -VersionMeta $VersionMeta
     }
 
     return Build-PySideSetup -Profile $Profile -AppOutput $AppOutput -VersionMeta $VersionMeta
@@ -432,8 +303,7 @@ foreach ($EditionKey in $EditionKeys) {
     $setup = Build-EditionInstaller `
         -EditionKey $EditionKey `
         -VersionMeta $VersionMeta `
-        -SkipPyInstaller:$SkipPyInstaller `
-        -SkipInno:$SkipInno
+        -SkipPyInstaller:$SkipPyInstaller
     if ($setup) {
         $BuiltSetups += $setup
     }

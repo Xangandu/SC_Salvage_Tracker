@@ -1,6 +1,21 @@
 SC SALVAGE TRACKER – PATCHNOTES
 ================================
 
+VERSION 0.16.3 Beta | Build 2026.14 | Codename: LOCATION FLOW
+--------------------------------------------------------------------
+
+BUGFIX — IN-APP-UPDATE (NUR PYSIDE-SETUP)
+• Inno Setup vollständig entfernt — kein /VERYSILENT, kein ISCC-Build mehr
+• Updater startet PySide-Setup nur noch mit --quiet --install-dir --edition
+• PowerShell apply_update.ps1 statt CMD-Batch (Warten, Log, Auto-Neustart)
+• Staging-Installation: Payload zuerst entpacken, dann dateisicher kopieren
+• EXE-Ersetzung mit .old-Backup bei gesperrten Dateien (Retry)
+• Installations-Log: %LOCALAPPDATA%\SC Salvage Tracker\data\updates\install.log
+
+HINWEIS
+• Einmal manuell 0.16.3 installieren, wenn In-App-Update von 0.16.1/0.16.2 fehlschlug
+
+
 VERSION 0.16.2 Beta | Build 2026.13 | Codename: LOCATION FLOW
 --------------------------------------------------------------------
 

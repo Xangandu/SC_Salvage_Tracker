@@ -9,11 +9,10 @@ Crew-Auszahlungen.
 
 ## Highlights (Beta)
 
-- **Neue Standortfunktionalität** — Einführung eines Standortkatalogs für eine bessere Übersicht über verfügbare Orte und Landungszonen.  
-- **Überarbeitete Benutzeroberfläche** — Intuitive Navigation durch optimierte Dashboard-Komponenten und neue Icons für Standort- und Lagerfunktionen.  
-- **Fehlerbehebungen** — Behebung von Problemen mit der Dashboard-Persistenz und Stabilitätsverbesserungen bei der Serververbindung.  
-- **Aktualisierte Dokumentation** — Neue Anleitungen zur Nutzung der Standortfunktionen und überarbeitete Entwicklungsdokumentation für bessere Nachvollziehbarkeit.  
-- **Optimierte Ladezeiten** — Verbesserte Performance der Dashboard-Elemente für ein flüssigeres Nutzererlebnis.
+- **In-App-Update verbessert** — Der In-App-Update-Prozess wurde optimiert, um eine reibungslosere Installation zu gewährleisten.
+- **PowerShell-Skript für Updates** — Updates werden jetzt über ein PowerShell-Skript verwaltet, das für Logs und Auto-Neustart sorgt.
+- **Backup bei gesperrten Dateien** — Bei gesperrten Dateien wird eine EXE-Ersetzung mit Backup-Option durchgeführt, um Installationsprobleme zu vermeiden.
+- **Manuelle Installation erforderlich** — Bei fehlgeschlagenem In-App-Update auf Version 0.16.1/0.16.2 ist eine manuelle Installation von 0.16.3 notwendig.
 
 ![SC Salvage Tracker](grafik.png)
 ![SC Salvage Tracker](grafik2.png)

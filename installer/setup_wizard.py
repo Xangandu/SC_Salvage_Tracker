@@ -88,7 +88,9 @@ def main(argv: list[str] | None = None) -> int:
         try:
             return run_silent_install(edition, argv)
         except Exception as exc:
-            print(f"Stille Installation fehlgeschlagen: {exc}", file=sys.stderr)
+            from installer.install_engine import append_install_log
+
+            append_install_log(f"Stille Installation fehlgeschlagen: {exc}")
             return 1
 
     edition = _parse_edition(argv)

@@ -1,4 +1,26 @@
 {
+  "0.16.3": {
+    "de": {
+      "title": "SC Salvage Tracker 0.16.3 Beta — Update-Fix",
+      "summary": "In-App-Update ohne Inno Setup: nur PySide-Setup, robuster PowerShell-Starter, Auto-Neustart nach Installation.",
+      "highlights": [
+        "Inno Setup entfernt — Updates nur noch über PySide-Setup",
+        "Robustere Datei-Ersetzung beim Update (Staging + EXE-Backup)",
+        "App startet nach erfolgreichem Update automatisch neu",
+        "Installations-Log unter data/updates/install.log"
+      ]
+    },
+    "en": {
+      "title": "SC Salvage Tracker 0.16.3 Beta — Update Fix",
+      "summary": "In-app update without Inno Setup: PySide setup only, robust PowerShell launcher, auto-restart after install.",
+      "highlights": [
+        "Inno Setup removed — updates use PySide setup only",
+        "More robust file replacement during update (staging + EXE backup)",
+        "App auto-restarts after a successful update",
+        "Install log at data/updates/install.log"
+      ]
+    }
+  },
   "0.16.2": {
     "de": {
       "title": "SC Salvage Tracker 0.16.2 Beta — Update-Test",
