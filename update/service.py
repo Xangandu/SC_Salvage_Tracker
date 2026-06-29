@@ -28,11 +28,28 @@ SETTING_SKIPPED_VERSION = "update_skipped_version"
 SETTING_LAST_CHECK = "update_last_check"
 
 DOWNLOAD_CHUNK_BYTES = 256 * 1024
-INSTALLER_SILENT_ARGS = (
+
+INNO_SILENT_ARGS = (
     "/VERYSILENT",
     "/SUPPRESSMSGBOXES",
     "/NORESTART",
+    "/CLOSEAPPLICATIONS",
 )
+
+PYSIDE_SILENT_ARGS = (
+    "--quiet",
+)
+
+
+def _installer_cli_args(install_dir: Path, edition: str) -> list[str]:
+    install_dir_str = str(install_dir)
+    return [
+        *INNO_SILENT_ARGS,
+        f'/DIR="{install_dir_str}"',
+        *PYSIDE_SILENT_ARGS,
+        f'--install-dir="{install_dir_str}"',
+        f"--edition={edition}",
+    ]
 
 
 def is_auto_check_enabled(db) -> bool:
@@ -178,8 +195,41 @@ def launch_installer(setup_path: Path) -> None:
     if not can_launch_installer():
         raise RuntimeError(tr("update.error.installer_frozen_only"))
 
+    from config.paths import install_root
+    from config.version import APP_EDITION
+
+    setup_path = setup_path.resolve()
+    install_dir = install_root()
+    edition = APP_EDITION or "solo"
+
+    installer_args = _installer_cli_args(install_dir, edition)
+    arg_line = " ".join(installer_args)
+
+    cache_dir = updates_cache_dir()
+    batch_path = cache_dir / "apply_update.cmd"
+    log_path = cache_dir / "install.log"
+
+    batch_content = f"""@echo off
+setlocal
+echo [%date% %time%] Update-Installer startet >> "{log_path}"
+:wait_app
+tasklist /FI "IMAGENAME eq SC_Salvage_Tracker.exe" 2>NUL | find /I "SC_Salvage_Tracker.exe" >NUL
+if %ERRORLEVEL%==0 (
+  timeout /t 1 /nobreak >NUL
+  goto wait_app
+)
+timeout /t 2 /nobreak >NUL
+echo [%date% %time%] Starte Setup: {setup_path.name} >> "{log_path}"
+"{setup_path}" {arg_line} >> "{log_path}" 2>&1
+set ERR=%ERRORLEVEL%
+echo [%date% %time%] Setup beendet, Exit=%ERR% >> "{log_path}"
+exit /b %ERR%
+"""
+    batch_path.write_text(batch_content, encoding="utf-8")
+
     subprocess.Popen(
-        [str(setup_path), *INSTALLER_SILENT_ARGS],
+        ["cmd.exe", "/c", str(batch_path)],
         close_fds=True,
-        creationflags=getattr(subprocess, "DETACHED_PROCESS", 0),
+        creationflags=getattr(subprocess, "DETACHED_PROCESS", 0)
+        | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0),
     )

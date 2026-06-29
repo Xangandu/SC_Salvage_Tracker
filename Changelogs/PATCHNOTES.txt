@@ -1,6 +1,22 @@
 SC SALVAGE TRACKER – PATCHNOTES
 ================================
 
+VERSION 0.16.1 Beta | Build 2026.12 | Codename: LOCATION FLOW
+--------------------------------------------------------------------
+
+BUGFIX — IN-APP-UPDATE (EXE)
+• Setup-Assistent versteht jetzt stille Installation (/VERYSILENT, /SILENT, --quiet)
+• run_silent_install(): App beenden → Payload entpacken → Installation abschließen
+• Updater wartet per Hintergrund-Skript, bis SC_Salvage_Tracker.exe beendet ist
+• Korrekte Installationspfade (--install-dir, /DIR=) auch bei Leerzeichen im Pfad
+• Installations-Log: %LOCALAPPDATA%\SC Salvage Tracker\data\updates\install.log
+• Inno-Setup-Vorlage: CloseApplications=force (für zukünftige Inno-Builds)
+
+HINWEIS
+• Wer 0.16.0 nutzt und das Update nicht funktionierte: einmal Setup 0.16.1 manuell
+  installieren — danach funktionieren In-App-Updates wieder automatisch.
+
+
 VERSION 0.16.0 Beta | Build 2026.11 | Codename: LOCATION FLOW
 --------------------------------------------------------------------
 

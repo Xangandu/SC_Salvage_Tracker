@@ -577,6 +577,10 @@ def _parse_install_dir_arg(argv: list[str]) -> Path | None:
     for index, arg in enumerate(argv):
         if arg == "--install-dir" and index + 1 < len(argv):
             return Path(argv[index + 1])
+        if arg.startswith("--install-dir="):
+            value = arg.split("=", 1)[1].strip().strip('"')
+            if value:
+                return Path(value)
     return None
 
 
@@ -601,3 +605,72 @@ def resolve_install_dir(argv: list[str], edition: str) -> Path | None:
     if explicit is not None:
         return explicit
     return find_install_dir_from_registry(edition)
+
+
+def default_install_dir(app_name: str) -> Path:
+    return Path.home() / "AppData" / "Local" / "Programs" / app_name
+
+
+def resolve_target_install_dir(
+    edition: str,
+    argv: list[str],
+    *,
+    app_name: str,
+) -> Path:
+    existing = resolve_install_dir(argv, edition)
+    if existing is not None:
+        return existing
+    return default_install_dir(app_name)
+
+
+def is_silent_install_argv(argv: list[str]) -> bool:
+    for arg in argv:
+        token = arg.strip().lower()
+        if token in ("/verysilent", "/silent", "/quiet", "--quiet", "-quiet"):
+            return True
+        normalized = token.lstrip("/-")
+        if normalized in ("verysilent", "silent", "quiet", "suppressmsgboxes"):
+            return True
+    return False
+
+
+def run_silent_install(
+    edition: str,
+    argv: list[str] | None = None,
+) -> int:
+    """Headless Update/Neuinstallation (In-App-Update, /VERYSILENT, --quiet)."""
+    import time
+
+    from config.editions import edition_title
+    from config.version import APP_BUILD, APP_PRODUCT_NAME, APP_VERSION
+
+    argv = list(argv or [])
+    app_name = f"{APP_PRODUCT_NAME} - {edition_title(edition)}"
+    target = resolve_target_install_dir(edition, argv, app_name=app_name)
+
+    if is_application_running():
+        stop_application()
+        for _ in range(20):
+            time.sleep(0.25)
+            if not is_application_running():
+                break
+        if is_application_running():
+            raise RuntimeError(
+                "SC Salvage Tracker läuft noch — Installation abgebrochen."
+            )
+
+    payload = resolve_payload_zip(edition)
+    extract_payload(payload, target)
+
+    desktop_shortcut = any(
+        path.exists() for path in _desktop_shortcut_paths(app_name)
+    )
+    finalize_installation(
+        target,
+        app_name=app_name,
+        edition=edition,
+        version=APP_VERSION,
+        build=APP_BUILD,
+        desktop_shortcut=desktop_shortcut,
+    )
+    return 0

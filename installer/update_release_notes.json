@@ -1,4 +1,26 @@
 {
+  "0.16.1": {
+    "de": {
+      "title": "SC Salvage Tracker 0.16.1 Beta — Location Flow",
+      "summary": "Bugfix: In-App-Update installiert neue Versionen wieder korrekt. Stille Setup-Installation und verzögerter Installer-Start nach App-Beendigung.",
+      "highlights": [
+        "In-App-Update funktioniert wieder — Download, stille Installation, Neustart",
+        "Setup versteht /VERYSILENT, /SILENT und --quiet",
+        "Updater wartet, bis die App beendet ist, bevor das Setup startet",
+        "Installations-Log unter data/updates/install.log bei Problemen"
+      ]
+    },
+    "en": {
+      "title": "SC Salvage Tracker 0.16.1 Beta — Location Flow",
+      "summary": "Bugfix: in-app updates install new versions correctly again. Silent setup installation and deferred installer launch after the app exits.",
+      "highlights": [
+        "In-app update works again — download, silent install, restart",
+        "Setup understands /VERYSILENT, /SILENT, and --quiet",
+        "Updater waits until the app has exited before starting setup",
+        "Install log at data/updates/install.log if something goes wrong"
+      ]
+    }
+  },
   "0.16.0": {
     "de": {
       "title": "SC Salvage Tracker 0.16.0 Beta — Location Flow",

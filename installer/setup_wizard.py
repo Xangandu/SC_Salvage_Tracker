@@ -13,7 +13,12 @@ from PySide6.QtWidgets import QApplication, QMessageBox
 
 from config.editions import EDITION_TITLES, edition_title
 from config.version import APP_PRODUCT_NAME
-from installer.install_engine import resolve_install_dir, uninstall_installation
+from installer.install_engine import (
+    is_silent_install_argv,
+    resolve_install_dir,
+    run_silent_install,
+    uninstall_installation,
+)
 from installer.wizard_app import run_wizard
 
 
@@ -77,6 +82,14 @@ def main(argv: list[str] | None = None) -> int:
 
     if "--uninstall" in argv:
         return _run_uninstall(argv)
+
+    if is_silent_install_argv(argv):
+        edition = _parse_edition(argv)
+        try:
+            return run_silent_install(edition, argv)
+        except Exception as exc:
+            print(f"Stille Installation fehlgeschlagen: {exc}", file=sys.stderr)
+            return 1
 
     edition = _parse_edition(argv)
     return run_wizard(demo_mode=False, edition=edition, argv=argv)
