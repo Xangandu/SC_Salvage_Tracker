@@ -1,4 +1,22 @@
 {
+  "0.16.2": {
+    "de": {
+      "title": "SC Salvage Tracker 0.16.2 Beta — Update-Test",
+      "summary": "Test-Release zur Verifikation des In-App-Updates von 0.16.1. Keine neuen Features.",
+      "highlights": [
+        "Automatisches Update von 0.16.1 testen",
+        "Nach Update sollte 0.16.2 Beta in der Navigation stehen"
+      ]
+    },
+    "en": {
+      "title": "SC Salvage Tracker 0.16.2 Beta — Update Test",
+      "summary": "Test release to verify in-app update from 0.16.1. No new features.",
+      "highlights": [
+        "Test automatic update from 0.16.1",
+        "After update, navigation should show 0.16.2 Beta"
+      ]
+    }
+  },
   "0.16.1": {
     "de": {
       "title": "SC Salvage Tracker 0.16.1 Beta — Location Flow",

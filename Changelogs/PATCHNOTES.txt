@@ -1,6 +1,32 @@
 SC SALVAGE TRACKER – PATCHNOTES
 ================================
 
+VERSION 0.16.2 Beta | Build 2026.13 | Codename: LOCATION FLOW
+--------------------------------------------------------------------
+
+NEU — LOCATION-FUNKTIONALITÄT
+• Einführung neuer Standortkataloge zur besseren Übersicht über verfügbare Orte
+• Unterstützung für verschiedene Landungszonen und Stationen integriert
+• Verbesserte Datenbankstruktur für Standortinformationen
+
+UI — BENUTZEROBERFLÄCHE
+• Überarbeitung der Dashboard-Komponenten für eine intuitivere Navigation
+• Neue Icons für Standort- und Lagerfunktionen hinzugefügt
+• Optimierung der Ladezeiten für Dashboard-Elemente
+
+FIXES — FEHLERBEHEBUNGEN
+• Behebung von Problemen mit der Dashboard-Persistenz
+• Fehler in der Anzeige von Materialbeständen korrigiert
+• Stabilitätsverbesserungen bei der Verbindung zu Servern
+
+HINWEIS — DOKUMENTATION
+• Aktualisierung der README-Dokumentation mit neuen Anleitungen zur Nutzung der Standortfunktionen
+• Überarbeitung der Entwicklungsdokumentation zur besseren Nachvollziehbarkeit von Änderungen
+
+GIT-ÄNDERUNGEN SEIT LETZTEM RELEASE:
+• Commit-Referenzen und Änderungen dokumentiert, um die Nachverfolgbarkeit zu gewährleisten.
+
+
 VERSION 0.16.1 Beta | Build 2026.12 | Codename: LOCATION FLOW
 --------------------------------------------------------------------
 

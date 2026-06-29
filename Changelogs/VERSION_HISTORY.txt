@@ -1,7 +1,7 @@
 SC SALVAGE TRACKER – VERSIONSHISTORIE
 ======================================
 
-Aktuelle Version: 0.16.1 Beta | Build 2026.12 | Codename: LOCATION FLOW
+Aktuelle Version: 0.16.2 Beta | Build 2026.13 | Codename: LOCATION FLOW
 
 Detaillierte Patchnotes:  Changelogs/PATCHNOTES.txt
 Roadmap:                  Changelogs/ROADMAP.txt
@@ -14,6 +14,7 @@ Im Programm: Navigation → Link „Patchnotes & Roadmap“
 KURZÜBERSICHT DER ENTWICKLUNG
 -------------------------------
 
+0.16.2 Location Flow: Update-Test-Release (Verifikation In-App-Update 0.16.1 → 0.16.2)
 0.16.1 Location Flow: In-App-Update-Fix — stille Setup-Installation, verzögerter Installer-Start
 0.16.0 Location Flow: Lager/Standorte, Schiff→Station-Materialfluss, Kontext-Dashboard, Hinweisleiste
 0.15.2 Global Interface: Vollständige UI-Internationalisierung EN/DE; DB-Fehler, Netzwerk, Admin

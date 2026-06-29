@@ -9,11 +9,11 @@ Crew-Auszahlungen.
 
 ## Highlights (Beta)
 
-- **Lager / Standorte** — Neue Seite zur Verwaltung von Materialbeständen nach Standort, inklusive Historie und sortierbaren Einträgen.
-- **Materialfluss** — Erfassung des Materialflusses zwischen Schiff und Station, mit automatischen Abzügen und verbesserter Lagerverwaltung.
-- **Raffinerie-Integration** — Nahtlose Einbindung von Raffinerie-Prozessen, die den Materialfluss optimiert und Doppelzählungen vermeidet.
-- **Kontext-Dashboard** — Neues modulares Dashboard für eine bessere Übersicht über verschiedene Aktionen und Status in Echtzeit.
-- **Idle-Warnungen** — Einführung von Warnungen für inaktiven Bestand mit der Möglichkeit, Reserven zu setzen und Warnungen zu unterdrücken.
+- **Neue Standortfunktionalität** — Einführung eines Standortkatalogs für eine bessere Übersicht über verfügbare Orte und Landungszonen.  
+- **Überarbeitete Benutzeroberfläche** — Intuitive Navigation durch optimierte Dashboard-Komponenten und neue Icons für Standort- und Lagerfunktionen.  
+- **Fehlerbehebungen** — Behebung von Problemen mit der Dashboard-Persistenz und Stabilitätsverbesserungen bei der Serververbindung.  
+- **Aktualisierte Dokumentation** — Neue Anleitungen zur Nutzung der Standortfunktionen und überarbeitete Entwicklungsdokumentation für bessere Nachvollziehbarkeit.  
+- **Optimierte Ladezeiten** — Verbesserte Performance der Dashboard-Elemente für ein flüssigeres Nutzererlebnis.
 
 ![SC Salvage Tracker](grafik.png)
 ![SC Salvage Tracker](grafik2.png)
