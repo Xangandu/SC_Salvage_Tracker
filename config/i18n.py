@@ -128,6 +128,7 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "nav.dashboard": "Overview",
         "nav.session": "Session",
         "nav.refinery": "Refinery",
+        "nav.storage": "Storage",
         "nav.sales": "Sales",
         "nav.payout": "Payout",
         "nav.history": "History",
@@ -687,6 +688,10 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "dates.error.invalid_timestamp": "Invalid timestamp.",
         "dates.error.invalid_datetime": "Invalid date or time.",
         "error.session.not_found": "Session not found.",
+        "error.session.ship_not_found": (
+            "Could not resolve the session ship. "
+            "Start the session with a known salvage ship."
+        ),
         "error.session.has_refinery_jobs": (
             "Session has refinery jobs. "
             "Please cancel the jobs first."
@@ -912,6 +917,15 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         ),
         "session.mission.line": "Mission {index}: {amount} aUEC ({paid_by})",
         "session.mission.none": "No missions recorded yet.",
+        "session.section.refinery_costs": "◆ REFINERY (COSTS)",
+        "session.refinery.costs_total": (
+            "Refinery costs: {refinery_total} aUEC · "
+            "Session total: {session_total} aUEC"
+        ),
+        "session.refinery.line": (
+            "Job #{job_id}: {amount} aUEC ({station} · {paid_by})"
+        ),
+        "session.refinery.none": "No refinery costs recorded yet.",
         "session.msg.no_session": (
             "No active session — please start a session first."
         ),
@@ -985,12 +999,26 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "refinery.label.paid_by": "Paid by",
         "refinery.label.batch": "Material batch",
         "refinery.label.input_scu": "Input (SCU)",
+        "refinery.label.input_cscu": "Input (cSCU) — terminal",
         "refinery.label.hours": "Hours",
         "refinery.label.minutes": "Minutes",
         "refinery.label.notes": "Note",
-        "refinery.placeholder.station": "e.g. Orison",
+        "refinery.placeholder.station": "Select or type station",
         "refinery.placeholder.cost": "Cost in aUEC (when creating)",
         "refinery.placeholder.input_scu": "Input quantity in SCU",
+        "refinery.placeholder.input_cscu": "Quantity at refinery terminal (cSCU)",
+        "refinery.hint.cscu_formula": "1000 cSCU = 10 SCU · 100 cSCU = 1 SCU",
+        "refinery.hint.scu_from_cscu": "→ {scu} SCU in tracker ({cscu} cSCU terminal)",
+        "refinery.hint.cscu": "Terminal: {cscu} cSCU ({scu} SCU)",
+        "location.placeholder.custom": "Select or type location",
+        "location.placeholder.select": "— Select location —",
+        "location.label.system": "System",
+        "location.label.station": "Space station",
+        "location.label.city": "City / landing zone",
+        "location.placeholder.system": "— Select system —",
+        "location.placeholder.station": "— Select station —",
+        "location.placeholder.city": "— Select city —",
+        "error.location.not_selected": "Please select a station or city from the list.",
         "refinery.placeholder.hours": "Hours",
         "refinery.placeholder.minutes": "Minutes",
         "refinery.placeholder.notes": "Note (optional)",
@@ -1024,6 +1052,14 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         ),
         "refinery.job.ready_at": "Ready: {time}",
         "refinery.job.remaining": "Remaining: {remaining}",
+        "refinery.job.countdown": "Countdown: {countdown}",
+        "refinery.job.progress": "Progress: {percent}%",
+        "refinery.banner.ready_one": (
+            "Job #{job_id} at {station} is ready for pickup!"
+        ),
+        "refinery.banner.ready_many": (
+            "{count} refinery jobs are ready for pickup!"
+        ),
         "refinery.batch.combo": "#{batch_id} | {material} | {remaining} SCU",
         "refinery.history.input_line": (
             "{quantity} SCU {material} (Batch #{batch_id})"
@@ -1031,10 +1067,10 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "refinery.history.output_line": "{quantity} SCU {material}",
         "refinery.history.yield_pct": "{yield_pct} %",
         "refinery.complete.dialog.title": "Complete refinery job",
-        "refinery.complete.dialog.field": "CM Raf Output (SCU)",
+        "refinery.complete.dialog.field": "CM Raf Output (cSCU)",
         "refinery.complete.dialog.tooltip": (
-            "Actual quantity of refined Construction Material "
-            "after completing the refinery job."
+            "Quantity shown at the refinery terminal in cSCU "
+            "(1000 cSCU = 10 SCU in the tracker)."
         ),
         "refinery.complete.hint": (
             "Your average yield for {material}: {efficiency} % "
@@ -1084,6 +1120,110 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "refinery.job_status.READY": "READY",
         "refinery.job_status.COMPLETED": "COMPLETED",
         "refinery.job_status.CANCELLED": "CANCELLED",
+        "storage.title": "STORAGE / LOCATIONS",
+        "storage.section.list": "◆ STOCK BY LOCATION",
+        "storage.section.add": "◆ ADD ENTRY",
+        "storage.section.history": "◆ HISTORY",
+        "storage.section.totals": "◆ TOTALS",
+        "storage.table.location": "Location",
+        "storage.table.material": "Material",
+        "storage.table.quantity": "Quantity (SCU)",
+        "storage.table.status": "Status",
+        "storage.table.ship": "Ship",
+        "storage.table.activity": "Last activity",
+        "storage.table.reserve": "Reserve",
+        "storage.table.notes": "Note",
+        "storage.label.location_type": "Location type",
+        "storage.label.location": "Location",
+        "storage.label.ship": "Ship",
+        "storage.label.material": "Material",
+        "storage.label.quantity": "Quantity (SCU)",
+        "storage.label.reserve": "Reserve tag",
+        "storage.label.notes": "Note",
+        "storage.label.sort": "Sort by",
+        "storage.location_type.station": "Station / city",
+        "storage.location_type.ship": "In ship",
+        "storage.location.ship": "Ship · {ship}",
+        "storage.event.session_salvage": "Salvage run",
+        "storage.event.from_ship": "From ship",
+        "storage.event.to_refinery": "To refinery · {station}",
+        "storage.event.refinery_cancelled": "Refinery cancelled",
+        "storage.status.IN_SHIP": "In ship",
+        "storage.status.STORED": "Stored",
+        "storage.status.IN_REFINERY": "In refinery",
+        "storage.status.READY_PICKUP": "Ready for pickup",
+        "storage.status.RESERVED": "Reserve",
+        "storage.sort.location": "Location",
+        "storage.sort.material": "Material",
+        "storage.sort.age": "Age (oldest first)",
+        "storage.placeholder.reserve": "e.g. Reserve — no warning",
+        "storage.placeholder.notes": "Note (optional)",
+        "storage.empty": "No stored material recorded yet.",
+        "storage.totals.line": "{material}: {quantity} SCU",
+        "storage.totals.none": "No stock totals.",
+        "storage.button.save": "Save entry",
+        "storage.button.delete": "Delete entry",
+        "storage.button.delete_event": "Delete history entry",
+        "storage.button.reminded": "Acknowledged",
+        "storage.button.set_reserve": "Set reserve tag",
+        "storage.button.moved": "Moved / withdrawn",
+        "storage.filter.warnings_only": "Warnings only",
+        "storage.idle.banner.title": (
+            "{count} stockpile(s) idle for more than {days} days"
+        ),
+        "storage.idle.banner.hint": (
+            "Select an entry below and mark it as acknowledged, "
+            "reserve, or moved."
+        ),
+        "storage.idle.banner.collapse": "Hide",
+        "storage.idle.banner.expand": "Show",
+        "storage.activity.today": "Today",
+        "storage.activity.yesterday": "Yesterday",
+        "storage.activity.days_ago": "{days} days ago",
+        "storage.activity.warning_prefix": "⚠ ",
+        "storage.msg.reminded": "Reminder acknowledged.",
+        "storage.msg.reserve_set": "Reserve tag saved.",
+        "storage.msg.moved": "Activity updated.",
+        "storage.msg.reserve_prompt.title": "Reserve tag",
+        "storage.msg.reserve_prompt.label": "Tag for this stockpile",
+        "nav.badge.storage_idle": "◆ {count} IDLE",
+        "error.storage.reserve_required": "Please enter a reserve tag.",
+        "storage.history.type.DEPOSIT": "Deposit",
+        "storage.history.type.UPDATE": "Update",
+        "storage.history.type.DELETE": "Delete",
+        "storage.history.type.IDLE_REMINDED": "Idle reminder",
+        "storage.history.type.TAG_SET": "Reserve tag",
+        "storage.history.type.ACTIVITY": "Activity",
+        "storage.history.type": "Type",
+        "storage.history.delta": "Change",
+        "storage.history.when": "When",
+        "storage.msg.saved": "Storage entry saved.",
+        "storage.msg.deleted": "Storage entry deleted.",
+        "storage.msg.no_selection": "Please select an entry.",
+        "storage.msg.delete_confirm.title": "Delete entry",
+        "storage.msg.delete_confirm.message": (
+            "Delete this storage entry?\n\n{location} · {material} · {quantity} SCU"
+        ),
+        "storage.msg.delete_event_confirm.title": "Delete history entry",
+        "storage.msg.delete_event_confirm.message": (
+            "Remove this history entry permanently?"
+        ),
+        "error.storage.not_available": "Storage module is not available.",
+        "error.storage.not_found": "Storage entry not found.",
+        "error.storage.event_not_found": "History entry not found.",
+        "error.storage.quantity_positive": "Quantity must be greater than zero.",
+        "error.storage.location_required": "Please enter a location.",
+        "error.storage.ship_required": "Please select a ship.",
+        "error.storage.insufficient_global": (
+            "Not enough unassigned material available "
+            "({available} SCU {material}). "
+            "Record salvage in the session first, or reduce the quantity."
+        ),
+        "error.storage.insufficient_on_ship": (
+            "Not enough material on ships "
+            "({available} SCU {material}). "
+            "Record salvage in the session first, or reduce the quantity."
+        ),
         "sales.title": "SALES",
         "sales.section.inventory": "◆ AVAILABLE INVENTORY",
         "sales.section.new": "◆ NEW SALE",
@@ -1098,7 +1238,7 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "sales.label.quantity": "Quantity (SCU)",
         "sales.label.unit_price": "Unit price (aUEC)",
         "sales.label.notes": "Note",
-        "sales.placeholder.location": "e.g. Area18",
+        "sales.placeholder.location": "Select or type location",
         "sales.placeholder.date": "DD.MM.YYYY",
         "sales.placeholder.quantity": "Quantity in SCU",
         "sales.placeholder.unit_price": "Price per SCU (aUEC)",
@@ -1238,6 +1378,7 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "dashboard.nav.embedded": "Overview ⧉",
         "dashboard.widget.status": "STATUS",
         "dashboard.widget.crew": "CREW",
+        "dashboard.widget.session_crew": "CREW (session)",
         "dashboard.widget.refinery_jobs": "REFINERY",
         "dashboard.widget.active_sessions": "ACTIVE",
         "dashboard.widget.total_sessions": "SESSIONS",
@@ -1247,6 +1388,145 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "dashboard.widget.total_profit": "PROFIT",
         "dashboard.widget.session": "◆ ACTIVE SESSION",
         "dashboard.widget.refinery_stats": "◆ REFINERY STATISTICS",
+        "dashboard.operations.title": "OPEN ACTIONS",
+        "dashboard.alert.show": "Show",
+        "dashboard.context.pin": "Pin",
+        "dashboard.context.unpin": "Unpin",
+        "dashboard.context.mode_follow": "Mode: Follow navigation",
+        "dashboard.context.mode_pinned": "Mode: Pinned",
+        "dashboard.context.nav_pinned": "Nav: {nav} (pinned)",
+        "dashboard.context.overview.title": "◆ OVERVIEW",
+        "dashboard.context.overview.subtitle": "All areas · Next actions",
+        "dashboard.context.session.title": "◆ SESSION",
+        "dashboard.context.session.subtitle": "Active session · Materials & flow",
+        "dashboard.context.refinery.title": "◆ REFINERY",
+        "dashboard.context.refinery.subtitle": "Open jobs · Pickup & efficiency",
+        "dashboard.context.storage.title": "◆ STORAGE",
+        "dashboard.context.storage.subtitle": "Stock · Locations · Idle warnings",
+        "dashboard.context.sales.title": "◆ SALES",
+        "dashboard.context.sales.subtitle": "Ready to sell · Open sales",
+        "dashboard.context.payout.title": "◆ PAYOUT",
+        "dashboard.context.payout.subtitle": "Open payouts · Session mapping",
+        "dashboard.context.history.title": "◆ HISTORY",
+        "dashboard.context.history.subtitle": "Timeline · Statistics · Trends",
+        "dashboard.context.session_scu": "SESSION SCU",
+        "dashboard.context.mission_costs_subtotal": (
+            "Mission costs: {mission_total} aUEC"
+        ),
+        "dashboard.context.refinery_costs_subtotal": (
+            "Refinery costs: {refinery_total} aUEC"
+        ),
+        "dashboard.context.session_costs_total": (
+            "Session total costs: {session_total} aUEC"
+        ),
+        "dashboard.context.locations": "LOCATIONS",
+        "dashboard.context.processes": "CURRENT PROCESSES",
+        "dashboard.context.no_locations": "No material locations recorded.",
+        "dashboard.context.no_processes": "No active processes.",
+        "dashboard.context.open": "OPEN",
+        "dashboard.context.avg_efficiency": "AVG EFFICIENCY",
+        "dashboard.context.active_jobs": "ACTIVE JOBS",
+        "dashboard.context.total": "TOTAL",
+        "dashboard.context.by_location": "BY LOCATION",
+        "dashboard.context.inventory": "STOCK",
+        "dashboard.context.storage_inventory_detail": (
+            "{material} · {quantity} · from {source} · {location} · "
+            "stored {stored_since}"
+        ),
+        "dashboard.context.no_inventory": "No stored material recorded.",
+        "dashboard.context.recent_moves": "RECENT MOVEMENTS",
+        "dashboard.context.pending": "OPEN SALES",
+        "dashboard.context.pending_amount": "OPEN (aUEC)",
+        "dashboard.context.sale_items": "READY TO SELL",
+        "dashboard.context.open_payouts": "OPEN PAYOUTS",
+        "dashboard.context.open_total": "TOTAL OPEN",
+        "dashboard.context.revenue_trend": "REVENUE TREND",
+        "dashboard.context.recent_events": "RECENT EVENTS",
+        "dashboard.context.refinery_station": "Refinery · {station}",
+        "dashboard.context.refinery_job_detail": "Job #{job_id} · {status} · {scu} SCU",
+        "dashboard.context.session_batches": "Session batches",
+        "dashboard.context.session_materials": "Unassigned material",
+        "dashboard.context.process_pickup": "Pickup at {station} · Job #{job_id}",
+        "dashboard.context.process_running": "Running at {station} · Job #{job_id}",
+        "dashboard.context.process_status": "Session workflow status",
+        "dashboard.context.storage_event": "Stock event",
+        "dashboard.context.storage_event_detail": "{material} {delta} SCU · {location}",
+        "dashboard.context.storage_deposit_event_detail": (
+            "{material} {delta} SCU · from {source} · {location}"
+        ),
+        "dashboard.context.history_sale": "Sale completed",
+        "dashboard.context.history_sale_detail": "{location} · {amount} aUEC · {materials}",
+        "dashboard.context.materials_sellable": "SELLABLE MATERIALS",
+        "dashboard.context.materials_raw": "RAW MATERIALS",
+        "dashboard.context.overview.help": (
+            "Cross-domain summary: urgent actions sorted by priority, "
+            "plus revenue, profit, open refinery jobs and sellable storage."
+        ),
+        "dashboard.context.session.help": (
+            "Your current or latest session at a glance: workflow status, "
+            "crew, mission and refinery costs, collected materials "
+            "(sellable vs. raw), where stock is located, and what happens next."
+        ),
+        "dashboard.context.refinery.help": (
+            "Active refinery jobs (running or ready for pickup), total "
+            "input/output SCU, and average efficiency by material from "
+            "completed jobs."
+        ),
+        "dashboard.context.storage.help": (
+            "All stored materials with deposit time, pickup source, "
+            "current location and storage age, plus recent moves."
+        ),
+        "dashboard.context.sales.help": (
+            "Materials ready to sell by location, open sales awaiting payout, "
+            "and total sellable SCU in storage and stockpiles."
+        ),
+        "dashboard.context.payout.help": (
+            "Sales completed but not yet paid out — grouped by session with "
+            "material, quantity, amount and location."
+        ),
+        "dashboard.context.history.help": (
+            "Completed sales over time, session counts, total revenue, "
+            "monthly trend and the latest sale events."
+        ),
+        "dashboard.operations.hint": (
+            "Sorted by urgency — payout first, then pickup and sales."
+        ),
+        "dashboard.operations.empty": (
+            "No open actions. Start a session or add stock in Storage."
+        ),
+        "dashboard.operations.col.status": "Status",
+        "dashboard.operations.col.material": "Material",
+        "dashboard.operations.col.quantity": "Quantity",
+        "dashboard.operations.col.context": "Location / session",
+        "dashboard.operations.col.detail": "Details",
+        "dashboard.operations.summary.idle": "Idle warnings",
+        "dashboard.next_action.all_clear": (
+            "No urgent actions — you're up to date."
+        ),
+        "dashboard.next_action.payout": (
+            "Payout pending — {material} ({session})"
+        ),
+        "dashboard.next_action.refinery_ready": (
+            "Refinery ready for pickup — {station}"
+        ),
+        "dashboard.next_action.sale": (
+            "Ready to sell — {material} · {location} · {when}"
+        ),
+        "dashboard.next_action.storage_idle": (
+            "Stock idle for more than {days} days"
+        ),
+        "dashboard.action.payout_pending": "Payout pending",
+        "dashboard.action.refinery_ready": "Ready for pickup",
+        "dashboard.action.refinery_running": "Refinery running",
+        "dashboard.action.refinery_material": "Refinery input",
+        "dashboard.action.sale_ready": "Ready to sell",
+        "dashboard.action.storage_idle": "Idle stock",
+        "dashboard.action.session": "Active session",
+        "dashboard.action.legacy_storage": "Global storage",
+        "dashboard.action.detail.session": "Session · {session}",
+        "dashboard.action.detail.job": "Job #{job_id}",
+        "dashboard.action.detail.legacy": "Legacy inventory",
+        "dashboard.action.detail.idle": "Check Storage page",
         "dashboard.session.none": "NO SESSION",
         "dashboard.session.active": "ACTIVE SESSION",
         "dashboard.session.materials": "MATERIALS",
@@ -1838,6 +2118,7 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "nav.dashboard": "Übersicht",
         "nav.session": "Sitzung",
         "nav.refinery": "Raffinerie",
+        "nav.storage": "Lager",
         "nav.sales": "Verkäufe",
         "nav.payout": "Auszahlung",
         "nav.history": "Historie",
@@ -2495,6 +2776,10 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
             "Ungültiges Datum oder Uhrzeit."
         ),
         "error.session.not_found": "Sitzung nicht gefunden.",
+        "error.session.ship_not_found": (
+            "Session-Schiff konnte nicht ermittelt werden. "
+            "Sitzung mit einem bekannten Salvage-Schiff starten."
+        ),
         "error.session.has_refinery_jobs": (
             "Sitzung hat Raffinerieaufträge. "
             "Bitte zuerst die Aufträge stornieren."
@@ -2770,6 +3055,15 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
             "Mission {index}: {amount} aUEC ({paid_by})"
         ),
         "session.mission.none": "Noch keine Missionen erfasst.",
+        "session.section.refinery_costs": "◆ RAFFINERIE (KOSTEN)",
+        "session.refinery.costs_total": (
+            "Raffineriekosten: {refinery_total} aUEC · "
+            "Gesamtkosten Sitzung: {session_total} aUEC"
+        ),
+        "session.refinery.line": (
+            "Job #{job_id}: {amount} aUEC ({station} · {paid_by})"
+        ),
+        "session.refinery.none": "Noch keine Raffineriekosten erfasst.",
         "session.msg.no_session": (
             "Keine aktive Sitzung — bitte zuerst eine Sitzung starten."
         ),
@@ -2849,12 +3143,26 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "refinery.label.paid_by": "Bezahlt von",
         "refinery.label.batch": "Material-Batch",
         "refinery.label.input_scu": "Eingabe (SCU)",
+        "refinery.label.input_cscu": "Eingabe (cSCU) — Terminal",
         "refinery.label.hours": "Stunden",
         "refinery.label.minutes": "Minuten",
         "refinery.label.notes": "Notiz",
-        "refinery.placeholder.station": "z.B. Orison",
+        "refinery.placeholder.station": "Station wählen oder eingeben",
         "refinery.placeholder.cost": "Kosten in aUEC (beim Anlegen)",
         "refinery.placeholder.input_scu": "Eingabemenge in SCU",
+        "refinery.placeholder.input_cscu": "Menge am Raffinerie-Terminal (cSCU)",
+        "refinery.hint.cscu_formula": "1000 cSCU = 10 SCU · 100 cSCU = 1 SCU",
+        "refinery.hint.scu_from_cscu": "→ {scu} SCU im Tracker ({cscu} cSCU Terminal)",
+        "refinery.hint.cscu": "Terminal: {cscu} cSCU ({scu} SCU)",
+        "location.placeholder.custom": "Ort wählen oder eingeben",
+        "location.placeholder.select": "— Standort wählen —",
+        "location.label.system": "System",
+        "location.label.station": "Weltraum-Station",
+        "location.label.city": "Stadt / Landeplatz",
+        "location.placeholder.system": "— System wählen —",
+        "location.placeholder.station": "— Station wählen —",
+        "location.placeholder.city": "— Stadt wählen —",
+        "error.location.not_selected": "Bitte eine Station oder Stadt aus der Liste wählen.",
         "refinery.placeholder.hours": "Stunden",
         "refinery.placeholder.minutes": "Minuten",
         "refinery.placeholder.notes": "Notiz (optional)",
@@ -2888,6 +3196,14 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         ),
         "refinery.job.ready_at": "Fertig: {time}",
         "refinery.job.remaining": "Verbleibend: {remaining}",
+        "refinery.job.countdown": "Countdown: {countdown}",
+        "refinery.job.progress": "Fortschritt: {percent} %",
+        "refinery.banner.ready_one": (
+            "Auftrag #{job_id} in {station} ist abholbereit!"
+        ),
+        "refinery.banner.ready_many": (
+            "{count} Raffinerie-Aufträge sind abholbereit!"
+        ),
         "refinery.batch.combo": "#{batch_id} | {material} | {remaining} SCU",
         "refinery.history.input_line": (
             "{quantity} SCU {material} (Batch #{batch_id})"
@@ -2895,10 +3211,10 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "refinery.history.output_line": "{quantity} SCU {material}",
         "refinery.history.yield_pct": "{yield_pct} %",
         "refinery.complete.dialog.title": "Raffinerie abschließen",
-        "refinery.complete.dialog.field": "CM Raf Output (SCU)",
+        "refinery.complete.dialog.field": "CM Raf Output (cSCU)",
         "refinery.complete.dialog.tooltip": (
-            "Tatsächliche Menge an raffiniertem Construction "
-            "Material nach Abschluss des Raffinerieauftrags."
+            "Menge laut Raffinerie-Terminal in cSCU "
+            "(1000 cSCU = 10 SCU im Tracker)."
         ),
         "refinery.complete.hint": (
             "Dein bisheriger Durchschnitt für {material}: {efficiency} % "
@@ -2948,6 +3264,110 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "refinery.job_status.READY": "ABHOLBEREIT",
         "refinery.job_status.COMPLETED": "ABGESCHLOSSEN",
         "refinery.job_status.CANCELLED": "STORNIERT",
+        "storage.title": "LAGER / STANDORTE",
+        "storage.section.list": "◆ BESTAND NACH ORT",
+        "storage.section.add": "◆ EINTRAG ERFASSEN",
+        "storage.section.history": "◆ HISTORIE",
+        "storage.section.totals": "◆ SUMMEN",
+        "storage.table.location": "Standort",
+        "storage.table.material": "Material",
+        "storage.table.quantity": "Menge (SCU)",
+        "storage.table.status": "Status",
+        "storage.table.ship": "Schiff",
+        "storage.table.activity": "Letzte Aktivität",
+        "storage.table.reserve": "Reserve",
+        "storage.table.notes": "Notiz",
+        "storage.label.location_type": "Standort-Typ",
+        "storage.label.location": "Standort",
+        "storage.label.ship": "Schiff",
+        "storage.label.material": "Material",
+        "storage.label.quantity": "Menge (SCU)",
+        "storage.label.reserve": "Reserve-Tag",
+        "storage.label.notes": "Notiz",
+        "storage.label.sort": "Sortierung",
+        "storage.location_type.station": "Station / Stadt",
+        "storage.location_type.ship": "Im Schiff",
+        "storage.location.ship": "Schiff · {ship}",
+        "storage.event.session_salvage": "Einsatz",
+        "storage.event.from_ship": "Vom Schiff",
+        "storage.event.to_refinery": "Zur Raffinerie · {station}",
+        "storage.event.refinery_cancelled": "Raffinerie abgebrochen",
+        "storage.status.IN_SHIP": "Im Schiff",
+        "storage.status.STORED": "Eingelagert",
+        "storage.status.IN_REFINERY": "In Raffinerie",
+        "storage.status.READY_PICKUP": "Abholbereit",
+        "storage.status.RESERVED": "Reserve",
+        "storage.sort.location": "Standort",
+        "storage.sort.material": "Material",
+        "storage.sort.age": "Alter (älteste zuerst)",
+        "storage.placeholder.reserve": "z.B. Reserve — keine Warnung",
+        "storage.placeholder.notes": "Notiz (optional)",
+        "storage.empty": "Noch kein Material an Standorten erfasst.",
+        "storage.totals.line": "{material}: {quantity} SCU",
+        "storage.totals.none": "Keine Bestandssummen.",
+        "storage.button.save": "Eintrag speichern",
+        "storage.button.delete": "Eintrag löschen",
+        "storage.button.delete_event": "Historie-Eintrag löschen",
+        "storage.button.reminded": "Erinnert",
+        "storage.button.set_reserve": "Reserve setzen",
+        "storage.button.moved": "Verschoben / entnommen",
+        "storage.filter.warnings_only": "Nur Warnungen",
+        "storage.idle.banner.title": (
+            "{count} Bestand/Bestände seit über {days} Tagen ohne Bewegung"
+        ),
+        "storage.idle.banner.hint": (
+            "Eintrag in der Liste wählen und als erinnert, Reserve "
+            "oder verschoben markieren."
+        ),
+        "storage.idle.banner.collapse": "Ausblenden",
+        "storage.idle.banner.expand": "Anzeigen",
+        "storage.activity.today": "Heute",
+        "storage.activity.yesterday": "Gestern",
+        "storage.activity.days_ago": "vor {days} Tagen",
+        "storage.activity.warning_prefix": "⚠ ",
+        "storage.msg.reminded": "Erinnerung bestätigt.",
+        "storage.msg.reserve_set": "Reserve-Tag gespeichert.",
+        "storage.msg.moved": "Aktivität aktualisiert.",
+        "storage.msg.reserve_prompt.title": "Reserve-Tag",
+        "storage.msg.reserve_prompt.label": "Tag für diesen Bestand",
+        "nav.badge.storage_idle": "◆ {count} INAKTIV",
+        "error.storage.reserve_required": "Bitte einen Reserve-Tag eingeben.",
+        "storage.history.type.DEPOSIT": "Einlagerung",
+        "storage.history.type.UPDATE": "Änderung",
+        "storage.history.type.DELETE": "Löschung",
+        "storage.history.type.IDLE_REMINDED": "Idle-Erinnerung",
+        "storage.history.type.TAG_SET": "Reserve-Tag",
+        "storage.history.type.ACTIVITY": "Aktivität",
+        "storage.history.type": "Typ",
+        "storage.history.delta": "Änderung",
+        "storage.history.when": "Zeitpunkt",
+        "storage.msg.saved": "Lager-Eintrag gespeichert.",
+        "storage.msg.deleted": "Lager-Eintrag gelöscht.",
+        "storage.msg.no_selection": "Bitte einen Eintrag auswählen.",
+        "storage.msg.delete_confirm.title": "Eintrag löschen",
+        "storage.msg.delete_confirm.message": (
+            "Diesen Lager-Eintrag löschen?\n\n{location} · {material} · {quantity} SCU"
+        ),
+        "storage.msg.delete_event_confirm.title": "Historie-Eintrag löschen",
+        "storage.msg.delete_event_confirm.message": (
+            "Diesen Historie-Eintrag wirklich entfernen?"
+        ),
+        "error.storage.not_available": "Lager-Modul ist nicht verfügbar.",
+        "error.storage.not_found": "Lager-Eintrag nicht gefunden.",
+        "error.storage.event_not_found": "Historie-Eintrag nicht gefunden.",
+        "error.storage.quantity_positive": "Menge muss größer als null sein.",
+        "error.storage.location_required": "Bitte einen Standort angeben.",
+        "error.storage.ship_required": "Bitte ein Schiff auswählen.",
+        "error.storage.insufficient_global": (
+            "Nicht genug unzugeordnetes Material verfügbar "
+            "({available} SCU {material}). "
+            "Bitte zuerst in der Session erfassen oder die Menge reduzieren."
+        ),
+        "error.storage.insufficient_on_ship": (
+            "Nicht genug Material auf Schiffen "
+            "({available} SCU {material}). "
+            "Bitte zuerst in der Session erfassen oder die Menge reduzieren."
+        ),
         "sales.title": "VERKÄUFE",
         "sales.section.inventory": "◆ VERFÜGBARER LAGERBESTAND",
         "sales.section.new": "◆ NEUER VERKAUF",
@@ -2962,7 +3382,7 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "sales.label.quantity": "Menge (SCU)",
         "sales.label.unit_price": "Stückpreis (aUEC)",
         "sales.label.notes": "Notiz",
-        "sales.placeholder.location": "z.B. Area18",
+        "sales.placeholder.location": "Ort wählen oder eingeben",
         "sales.placeholder.date": "TT.MM.JJJJ",
         "sales.placeholder.quantity": "Menge in SCU",
         "sales.placeholder.unit_price": "Preis pro SCU (aUEC)",
@@ -3115,6 +3535,7 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "dashboard.nav.embedded": "Übersicht ⧉",
         "dashboard.widget.status": "STATUS",
         "dashboard.widget.crew": "CREW",
+        "dashboard.widget.session_crew": "CREW (Sitzung)",
         "dashboard.widget.refinery_jobs": "RAFFINERIE",
         "dashboard.widget.active_sessions": "AKTIV",
         "dashboard.widget.total_sessions": "SITZUNGEN",
@@ -3124,6 +3545,147 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "dashboard.widget.total_profit": "GEWINN",
         "dashboard.widget.session": "◆ AKTIVE SITZUNG",
         "dashboard.widget.refinery_stats": "◆ RAFFINERIE-STATISTIK",
+        "dashboard.operations.title": "OFFENE AKTIONEN",
+        "dashboard.alert.show": "Anzeigen",
+        "dashboard.context.pin": "Anheften",
+        "dashboard.context.unpin": "Loslösen",
+        "dashboard.context.mode_follow": "Modus: Folgt Navigation",
+        "dashboard.context.mode_pinned": "Modus: Angeheftet",
+        "dashboard.context.nav_pinned": "Nav: {nav} (angeheftet)",
+        "dashboard.context.overview.title": "◆ ÜBERSICHT",
+        "dashboard.context.overview.subtitle": "Alle Bereiche · Nächste Aktionen",
+        "dashboard.context.session.title": "◆ SESSION",
+        "dashboard.context.session.subtitle": "Aktive Sitzung · Material & Fluss",
+        "dashboard.context.refinery.title": "◆ RAFFINERIE",
+        "dashboard.context.refinery.subtitle": "Offene Jobs · Abholung & Effizienz",
+        "dashboard.context.storage.title": "◆ LAGER",
+        "dashboard.context.storage.subtitle": "Bestand · Standorte · Inaktiv-Warnungen",
+        "dashboard.context.sales.title": "◆ VERKAUF",
+        "dashboard.context.sales.subtitle": "Verkaufsbereit · Offene Verkäufe",
+        "dashboard.context.payout.title": "◆ AUSZAHLUNG",
+        "dashboard.context.payout.subtitle": "Offene Payouts · Session-Zuordnung",
+        "dashboard.context.history.title": "◆ HISTORIE",
+        "dashboard.context.history.subtitle": "Verlauf · Statistik · Trends",
+        "dashboard.context.session_scu": "SESSION-SCU",
+        "dashboard.context.mission_costs_subtotal": (
+            "Missionskosten: {mission_total} aUEC"
+        ),
+        "dashboard.context.refinery_costs_subtotal": (
+            "Raffineriekosten: {refinery_total} aUEC"
+        ),
+        "dashboard.context.session_costs_total": (
+            "Gesamtkosten Sitzung: {session_total} aUEC"
+        ),
+        "dashboard.context.locations": "STANDORTE",
+        "dashboard.context.processes": "AKTUELLE PROZESSE",
+        "dashboard.context.no_locations": "Keine Material-Standorte erfasst.",
+        "dashboard.context.no_processes": "Keine aktiven Prozesse.",
+        "dashboard.context.open": "OFFEN",
+        "dashboard.context.avg_efficiency": "Ø EFFIZIENZ",
+        "dashboard.context.active_jobs": "AKTIVE JOBS",
+        "dashboard.context.total": "GESAMT",
+        "dashboard.context.by_location": "NACH STANDORT",
+        "dashboard.context.inventory": "BESTAND",
+        "dashboard.context.storage_inventory_detail": (
+            "{material} · {quantity} · von {source} · {location} · "
+            "gelagert {stored_since}"
+        ),
+        "dashboard.context.no_inventory": "Kein Lagerbestand erfasst.",
+        "dashboard.context.recent_moves": "LETZTE BEWEGUNGEN",
+        "dashboard.context.pending": "OFFENE VERKÄUFE",
+        "dashboard.context.pending_amount": "OFFEN (aUEC)",
+        "dashboard.context.sale_items": "VERKAUFSBEREIT",
+        "dashboard.context.open_payouts": "OFFENE PAYOUTS",
+        "dashboard.context.open_total": "SUMME OFFEN",
+        "dashboard.context.revenue_trend": "UMSATZ-TREND",
+        "dashboard.context.recent_events": "LETZTE EREIGNISSE",
+        "dashboard.context.refinery_station": "Raffinerie · {station}",
+        "dashboard.context.refinery_job_detail": "Job #{job_id} · {status} · {scu} SCU",
+        "dashboard.context.session_batches": "Session-Batches",
+        "dashboard.context.session_materials": "Noch nicht zugeordnet",
+        "dashboard.context.process_pickup": "Abholung · {station} · Job #{job_id}",
+        "dashboard.context.process_running": "Läuft · {station} · Job #{job_id}",
+        "dashboard.context.process_status": "Session-Workflow-Status",
+        "dashboard.context.storage_event": "Lager-Ereignis",
+        "dashboard.context.storage_event_detail": "{material} {delta} SCU · {location}",
+        "dashboard.context.storage_deposit_event_detail": (
+            "{material} {delta} SCU · von {source} · {location}"
+        ),
+        "dashboard.context.history_sale": "Verkauf abgeschlossen",
+        "dashboard.context.history_sale_detail": "{location} · {amount} aUEC · {materials}",
+        "dashboard.context.materials_sellable": "VERKAUFSFÄHIG",
+        "dashboard.context.materials_raw": "ROHSTOFFE",
+        "dashboard.context.overview.help": (
+            "App-weite Zusammenfassung: dringende Aktionen nach Priorität, "
+            "dazu Umsatz, Gewinn, offene Raffinerie-Jobs und verkaufbares Lager."
+        ),
+        "dashboard.context.session.help": (
+            "Deine aktuelle oder letzte Sitzung: Workflow-Status, Crew, "
+            "Missions- und Raffineriekosten, gesammeltes Material "
+            "(verkaufsfähig vs. Rohstoff), Standorte und nächste Schritte."
+        ),
+        "dashboard.context.refinery.help": (
+            "Laufende und abholbereite Raffinerie-Jobs, Input/Output in SCU "
+            "sowie durchschnittliche Effizienz nach Material (abgeschlossene Jobs)."
+        ),
+        "dashboard.context.storage.help": (
+            "Alle gelagerten Materialien mit Einlagerungszeit, "
+            "Abholquelle, aktuellem Standort und Lagerdauer, "
+            "dazu letzte Bewegungen."
+        ),
+        "dashboard.context.sales.help": (
+            "Verkaufsbereites Material nach Standort, offene Verkäufe ohne "
+            "Auszahlung und gesamt verkaufbare SCU."
+        ),
+        "dashboard.context.payout.help": (
+            "Abgeschlossene Verkäufe ohne Auszahlung — nach Session mit Material, "
+            "Menge, Betrag und Ort."
+        ),
+        "dashboard.context.history.help": (
+            "Abgeschlossene Verkäufe im Zeitverlauf, Session-Zahlen, Gesamtumsatz, "
+            "Monats-Trend und letzte Verkäufe."
+        ),
+        "dashboard.operations.hint": (
+            "Nach Dringlichkeit sortiert — zuerst Auszahlung, "
+            "dann Abholung und Verkauf."
+        ),
+        "dashboard.operations.empty": (
+            "Keine offenen Aktionen. Session starten oder "
+            "Bestand im Lager erfassen."
+        ),
+        "dashboard.operations.col.status": "Status",
+        "dashboard.operations.col.material": "Material",
+        "dashboard.operations.col.quantity": "Menge",
+        "dashboard.operations.col.context": "Ort / Session",
+        "dashboard.operations.col.detail": "Details",
+        "dashboard.operations.summary.idle": "Inaktiv-Warnungen",
+        "dashboard.next_action.all_clear": (
+            "Keine dringenden Aktionen — alles erledigt."
+        ),
+        "dashboard.next_action.payout": (
+            "Auszahlung offen — {material} ({session})"
+        ),
+        "dashboard.next_action.refinery_ready": (
+            "Raffinerie abholbereit — {station}"
+        ),
+        "dashboard.next_action.sale": (
+            "Verkaufsbereit — {material} · {location} · {when}"
+        ),
+        "dashboard.next_action.storage_idle": (
+            "Bestand seit über {days} Tagen ohne Bewegung"
+        ),
+        "dashboard.action.payout_pending": "Auszahlung offen",
+        "dashboard.action.refinery_ready": "Abholbereit",
+        "dashboard.action.refinery_running": "Raffinerie läuft",
+        "dashboard.action.refinery_material": "Raffinerie-Input",
+        "dashboard.action.sale_ready": "Verkaufsbereit",
+        "dashboard.action.storage_idle": "Inaktiver Bestand",
+        "dashboard.action.session": "Aktive Session",
+        "dashboard.action.legacy_storage": "Globales Lager",
+        "dashboard.action.detail.session": "Session · {session}",
+        "dashboard.action.detail.job": "Job #{job_id}",
+        "dashboard.action.detail.legacy": "Legacy-Bestand",
+        "dashboard.action.detail.idle": "Lager prüfen",
         "dashboard.session.none": "KEINE SITZUNG",
         "dashboard.session.active": "AKTIVE SITZUNG",
         "dashboard.session.materials": "MATERIALIEN",
@@ -3738,6 +4300,19 @@ def format_number(value, decimals: int = 0) -> str:
         return format_number_de(value, decimals)
     formatted = f"{float(value):,.{decimals}f}"
     return formatted
+
+
+def format_scu(value) -> str:
+    """SCU ohne Nachkommastellen (3 SCU statt 3,0 SCU)."""
+    return f"{format_number(value, 0)} SCU"
+
+
+def format_scu_delta(value) -> str:
+    """SCU-Delta mit Vorzeichen, ohne Nachkommastellen."""
+    amount = float(value or 0)
+    if amount > 0:
+        return f"+{format_number(amount, 0)}"
+    return format_number(amount, 0)
 
 
 def status_label(status: str) -> str:

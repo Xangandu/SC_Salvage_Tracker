@@ -25,10 +25,15 @@ from config.materials import (
     REFINERY_OUTPUT_CODE,
     material_label,
 )
-from config.refinery_methods import REFINERY_METHODS
+from config.refinery_methods import (
+    REFINERY_METHODS,
+    display_refinery_method,
+)
+from config.locations.cscu import cscu_to_scu
 from config.i18n import tr, format_number
 from config.strings_de import parse_int_de, parse_number_de
 from config.permissions import apply_widget_permissions
+from ui.system_location_picker import SystemLocationPicker
 from ui.table_utils import (
     configure_mobiglas_table,
     finalize_table_columns,
@@ -46,6 +51,7 @@ from ui.page_layout import (
     svg_icon_widget,
 )
 from ui.mobiglas_input_dialog import MobiglasDoubleInputDialog
+from ui.refinery_job_card import RefineryJobCard
 
 
 def _parse_db_datetime(value):
@@ -120,11 +126,10 @@ class RefineryPage(QWidget):
             subsection_title(tr("refinery.section.create"))
         )
 
-        self.refinery_name_input = QLineEdit()
-        self.refinery_name_input.setPlaceholderText(
-            tr("refinery.placeholder.station")
+        self.refinery_location_picker = SystemLocationPicker(
+            refinery_stations_only=True,
         )
-        self.refinery_name_input.setText("Orison")
+        self.refinery_location_picker.set_location("Orison")
 
         self.refinery_method_combo = QComboBox()
         self.refinery_method_combo.addItem(
@@ -146,10 +151,27 @@ class RefineryPage(QWidget):
 
         self.batch_combo = QComboBox()
 
-        self.input_scu = QLineEdit()
-        self.input_scu.setPlaceholderText(
-            tr("refinery.placeholder.input_scu")
+        self.input_cscu = QLineEdit()
+        self.input_cscu.setPlaceholderText(
+            tr("refinery.placeholder.input_cscu")
         )
+
+        self.input_cscu_formula = QLabel(
+            tr("refinery.hint.cscu_formula")
+        )
+        self.input_cscu_formula.setObjectName("refineryCscuFormula")
+
+        self.input_scu_hint = QLabel()
+        self.input_scu_hint.setObjectName("refineryScuConversion")
+        self.input_scu_hint.hide()
+
+        input_cscu_col = QWidget()
+        input_cscu_layout = QVBoxLayout(input_cscu_col)
+        input_cscu_layout.setContentsMargins(0, 0, 0, 0)
+        input_cscu_layout.setSpacing(6)
+        input_cscu_layout.addWidget(self.input_cscu)
+        input_cscu_layout.addWidget(self.input_cscu_formula)
+        input_cscu_layout.addWidget(self.input_scu_hint)
 
         self.hours_input = QLineEdit()
         self.hours_input.setPlaceholderText(
@@ -175,11 +197,7 @@ class RefineryPage(QWidget):
             tr("refinery.button.create")
         )
 
-        add_form_field(
-            form_layout,
-            tr("refinery.label.station"),
-            self.refinery_name_input,
-        )
+        form_layout.addWidget(self.refinery_location_picker)
         add_form_field(
             form_layout,
             tr("refinery.label.method"),
@@ -202,8 +220,8 @@ class RefineryPage(QWidget):
         )
         add_form_field(
             form_layout,
-            tr("refinery.label.input_scu"),
-            self.input_scu,
+            tr("refinery.label.input_cscu"),
+            input_cscu_col,
         )
 
         time_row = QHBoxLayout()
@@ -239,11 +257,25 @@ class RefineryPage(QWidget):
             section_accent(tr("refinery.section.active"))
         )
 
+        self._ready_banner = QFrame()
+        self._ready_banner.setObjectName("refineryReadyBanner")
+        self._ready_banner.hide()
+        banner_layout = QHBoxLayout(self._ready_banner)
+        banner_layout.setContentsMargins(12, 10, 12, 10)
+        self._ready_banner_label = QLabel()
+        self._ready_banner_label.setObjectName("refineryReadyBannerText")
+        self._ready_banner_label.setWordWrap(True)
+        banner_layout.addWidget(self._ready_banner_label, 1)
+        layout.addWidget(self._ready_banner)
+
         self.jobs_container = QVBoxLayout()
         self.jobs_container.setSpacing(10)
-        jobs_widget = QWidget()
-        jobs_widget.setLayout(self.jobs_container)
-        layout.addWidget(jobs_widget)
+        self._jobs_host = QWidget()
+        self._jobs_host.setLayout(self.jobs_container)
+        layout.addWidget(self._jobs_host)
+
+        self._job_cards: dict[int, RefineryJobCard] = {}
+        self._live_sync = None
 
         layout.addWidget(
             section_accent(tr("refinery.section.history"))
@@ -296,11 +328,140 @@ class RefineryPage(QWidget):
         self.batch_combo.currentIndexChanged.connect(
             self._update_refinery_cost_payers
         )
+        self.input_cscu.textChanged.connect(
+            self._update_input_scu_hint
+        )
         self.create_button.clicked.connect(
             self.create_job
         )
 
         self.load_data()
+
+    def attach_live_sync(self, live_sync) -> None:
+        if self._live_sync is live_sync:
+            return
+
+        if self._live_sync is not None:
+            try:
+                self._live_sync.jobs_updated.disconnect(
+                    self._on_jobs_updated
+                )
+                self._live_sync.jobs_became_ready.disconnect(
+                    self._on_jobs_became_ready
+                )
+            except RuntimeError:
+                pass
+
+        self._live_sync = live_sync
+        live_sync.jobs_updated.connect(self._on_jobs_updated)
+        live_sync.jobs_became_ready.connect(
+            self._on_jobs_became_ready
+        )
+
+    def _on_jobs_updated(self) -> None:
+        jobs = self.db.get_active_refinery_jobs()
+        self._sync_job_cards(jobs)
+        for card in self._job_cards.values():
+            card.tick()
+        self._update_ready_banner(jobs)
+
+    def _on_jobs_became_ready(self, job_ids: list) -> None:
+        jobs = self.db.get_active_refinery_jobs()
+        ready_jobs = [
+            job for job in jobs if job["id"] in job_ids
+        ]
+        if len(ready_jobs) == 1:
+            job = ready_jobs[0]
+            text = tr(
+                "refinery.banner.ready_one",
+                job_id=job["id"],
+                station=job["refinery_name"],
+            )
+        else:
+            text = tr(
+                "refinery.banner.ready_many",
+                count=len(job_ids),
+            )
+        self._ready_banner_label.setText(text)
+        self._ready_banner.show()
+        self._on_jobs_updated()
+
+    def _update_ready_banner(self, jobs=None) -> None:
+        if jobs is None:
+            jobs = self.db.get_active_refinery_jobs()
+
+        ready_jobs = [
+            job
+            for job in jobs
+            if job.get("status") == "READY"
+        ]
+        if not ready_jobs:
+            self._ready_banner.hide()
+            return
+
+        if not self._ready_banner.isVisible():
+            if len(ready_jobs) == 1:
+                job = ready_jobs[0]
+                text = tr(
+                    "refinery.banner.ready_one",
+                    job_id=job["id"],
+                    station=job["refinery_name"],
+                )
+            else:
+                text = tr(
+                    "refinery.banner.ready_many",
+                    count=len(ready_jobs),
+                )
+            self._ready_banner_label.setText(text)
+            self._ready_banner.show()
+
+    def _clear_job_cards(self) -> None:
+        for card in self._job_cards.values():
+            self.jobs_container.removeWidget(card)
+            card.deleteLater()
+        self._job_cards.clear()
+
+    def _sync_job_cards(self, jobs) -> None:
+        job_ids = {job["id"] for job in jobs}
+
+        for job_id in list(self._job_cards):
+            if job_id not in job_ids:
+                card = self._job_cards.pop(job_id)
+                self.jobs_container.removeWidget(card)
+                card.deleteLater()
+                if self._live_sync is not None:
+                    self._live_sync.clear_notified(job_id)
+
+        if not jobs:
+            if self.jobs_container.count() == 0:
+                self.jobs_container.addWidget(
+                    empty_info_panel(
+                        tr("refinery.active.empty"),
+                        "assets/images/icons/info.svg",
+                    )
+                )
+            return
+
+        while self.jobs_container.count():
+            item = self.jobs_container.takeAt(0)
+            widget = item.widget()
+            if widget and not isinstance(widget, RefineryJobCard):
+                widget.deleteLater()
+
+        for job in jobs:
+            job_id = job["id"]
+            if job_id in self._job_cards:
+                self._job_cards[job_id].set_job(job)
+                self.jobs_container.addWidget(
+                    self._job_cards[job_id]
+                )
+                continue
+
+            card = RefineryJobCard(job, self._jobs_host)
+            card.complete_requested.connect(self.complete_job)
+            card.cancel_requested.connect(self.cancel_job)
+            self._job_cards[job_id] = card
+            self.jobs_container.addWidget(card)
 
     def apply_permissions(
         self,
@@ -348,12 +509,12 @@ class RefineryPage(QWidget):
             self.batches_table.setItem(
                 row,
                 2,
-                QTableWidgetItem(format_number(remaining, 1)),
+                QTableWidgetItem(format_number(remaining, 0)),
             )
             self.batches_table.setItem(
                 row,
                 3,
-                QTableWidgetItem(format_number(original, 1)),
+                QTableWidgetItem(format_number(original, 0)),
             )
             self.batches_table.setItem(
                 row,
@@ -365,7 +526,7 @@ class RefineryPage(QWidget):
                 "refinery.batch.combo",
                 batch_id=batch_id,
                 material=label,
-                remaining=format_number(remaining, 1),
+                remaining=format_number(remaining, 0),
             )
             self.batch_combo.addItem(
                 combo_text,
@@ -420,7 +581,7 @@ class RefineryPage(QWidget):
             input_text = ", ".join(
                 tr(
                     "refinery.history.input_line",
-                    quantity=f"{item['input_quantity']:g}",
+                    quantity=format_number(item["input_quantity"], 0),
                     material=material_label(item["input_material"]),
                     batch_id=item["batch_id"],
                 )
@@ -430,7 +591,7 @@ class RefineryPage(QWidget):
             output_text = (
                 tr(
                     "refinery.history.output_line",
-                    quantity=f"{output_scu:g}",
+                    quantity=format_number(output_scu, 0),
                     material=material_label(REFINERY_OUTPUT_CODE),
                 )
                 if output_scu > 0
@@ -463,7 +624,9 @@ class RefineryPage(QWidget):
                 row,
                 2,
                 QTableWidgetItem(
-                    job.get("refinery_method") or "—"
+                    display_refinery_method(
+                        job.get("refinery_method") or ""
+                    ) or "—"
                 ),
             )
             self.history_table.setItem(
@@ -540,170 +703,28 @@ class RefineryPage(QWidget):
             )
         )
 
-    def load_active_jobs(self):
-        while self.jobs_container.count():
-            item = self.jobs_container.takeAt(0)
-            if item.widget():
-                item.widget().deleteLater()
-
-        jobs = self.db.get_active_refinery_jobs()
-
-        if not jobs:
-            self.jobs_container.addWidget(
-                empty_info_panel(
-                    tr("refinery.active.empty"),
-                    "assets/images/icons/info.svg",
-                )
-            )
+    def _update_input_scu_hint(self):
+        cscu = parse_number_de(self.input_cscu.text())
+        if cscu is None or cscu <= 0:
+            self.input_scu_hint.hide()
             return
 
-        for job in jobs:
-            try:
-                self._add_job_card(job)
-            except Exception as error:
-                debug_log(
-                    "JOB CARD FEHLER:",
-                    error,
-                )
-
-    def _add_job_card(self, job):
-        job_id = job["id"]
-        ready_time = _parse_db_datetime(
-            job["end_time"]
-        )
-        remaining = ready_time - datetime.now()
-        remaining_minutes = int(
-            remaining.total_seconds() / 60
-        )
-
-        job_status = job.get("status", "RUNNING")
-
-        if job_status == "READY" or remaining_minutes <= 0:
-            is_ready = True
-            status_text = tr("refinery.status.ready_for_pickup")
-            status_icon = (
-                "assets/images/icons/ready.svg"
-            )
-            remaining_text = tr("refinery.status.finished")
-        elif remaining_minutes <= 60:
-            is_ready = False
-            status_text = tr("refinery.status.final_phase")
-            status_icon = (
-                "assets/images/icons/processing.svg"
-            )
-            remaining_text = tr(
-                "refinery.status.remaining_min",
-                minutes=remaining_minutes,
-            )
-        else:
-            is_ready = False
-            hours = remaining_minutes // 60
-            minutes = remaining_minutes % 60
-            status_text = tr("refinery.status.in_progress")
-            status_icon = (
-                "assets/images/icons/processing.svg"
-            )
-            remaining_text = tr(
-                "refinery.status.remaining_hm",
-                hours=hours,
-                minutes=minutes,
-            )
-
-        card = QFrame()
-        card.setObjectName(
-            "jobCardReady" if is_ready else "jobCard"
-        )
-        card_layout = QVBoxLayout()
-
-        header_layout = QHBoxLayout()
-        icon_widget = svg_icon_widget(
-            status_icon,
-            size=36,
-            object_name="jobStatusIcon",
-        )
-        status_label = QLabel(status_text)
-        status_label.setObjectName(
-            "jobStatusLabelReady"
-            if is_ready
-            else "jobStatusLabel"
-        )
-        header_layout.addWidget(icon_widget)
-        header_layout.addWidget(status_label)
-        header_layout.addStretch()
-        card_layout.addLayout(header_layout)
-
-        card_layout.addWidget(_detail_label(
+        scu = cscu_to_scu(cscu)
+        self.input_scu_hint.setText(
             tr(
-                "refinery.job.detail",
-                job_id=job_id,
-                name=job["refinery_name"],
+                "refinery.hint.scu_from_cscu",
+                scu=format_number(scu, 0),
+                cscu=format_number(cscu),
             )
-        ))
-        method = (job.get("refinery_method") or "").strip()
-        if method:
-            card_layout.addWidget(_detail_label(
-                tr("refinery.job.method", method=method)
-            ))
-        cost = job.get("cost", 0) or 0
-        payer = (job.get("cost_paid_by") or "").strip()
-
-        if cost > 0 and payer:
-            cost_line = tr(
-                "refinery.job.cost_paid",
-                cost=format_number(cost),
-                payer=payer,
-            )
-        else:
-            cost_line = tr(
-                "refinery.job.cost",
-                cost=format_number(cost),
-            )
-
-        card_layout.addWidget(_detail_label(cost_line))
-        card_layout.addWidget(_detail_label(
-            tr("refinery.job.created_by", name=job["created_by"])
-        ))
-
-        for item in job["items"]:
-            card_layout.addWidget(_detail_label(
-                tr(
-                    "refinery.job.batch_line",
-                    batch_id=item["batch_id"],
-                    material=material_label(item["input_material"]),
-                    quantity=format_number(item["input_quantity"]),
-                )
-            ))
-
-        card_layout.addWidget(_detail_label(
-            tr(
-                "refinery.job.ready_at",
-                time=format_datetime(ready_time),
-            )
-        ))
-        card_layout.addWidget(_detail_label(
-            tr(
-                "refinery.job.remaining",
-                remaining=remaining_text,
-            )
-        ))
-
-        cancel_button = _secondary_button(tr("refinery.button.cancel"))
-        cancel_button.clicked.connect(
-            lambda checked=False, jid=job_id:
-            self.cancel_job(jid)
         )
-        card_layout.addWidget(cancel_button)
+        self.input_scu_hint.show()
 
-        if is_ready:
-            collect_button = primary_button(tr("refinery.button.complete"))
-            collect_button.clicked.connect(
-                lambda checked=False, jid=job_id:
-                self.complete_job(jid)
-            )
-            card_layout.addWidget(collect_button)
-
-        card.setLayout(card_layout)
-        self.jobs_container.addWidget(card)
+    def load_active_jobs(self):
+        jobs = self.db.get_active_refinery_jobs()
+        self._sync_job_cards(jobs)
+        for card in self._job_cards.values():
+            card.tick()
+        self._update_ready_banner(jobs)
 
     def create_job(self):
         batch_data = self.batch_combo.currentData()
@@ -722,11 +743,9 @@ class RefineryPage(QWidget):
             )
             return
 
-        refinery_name = (
-            self.refinery_name_input.text().strip()
-        )
+        refinery_name = self.refinery_location_picker.location_label()
 
-        if not refinery_name:
+        if not self.refinery_location_picker.is_selected():
             QMessageBox.warning(
                 self,
                 tr("common.error"),
@@ -734,20 +753,30 @@ class RefineryPage(QWidget):
             )
             return
 
-        input_scu = parse_number_de(self.input_scu.text())
+        input_cscu = parse_number_de(self.input_cscu.text())
         hours = parse_int_de(self.hours_input.text(), default=0)
         minutes = parse_int_de(self.minutes_input.text(), default=0)
         cost = parse_number_de(
             self.refinery_cost_input.text(),
             default=0,
         )
-        if input_scu is None or hours is None or minutes is None or cost is None:
+        if input_cscu is None or hours is None or minutes is None or cost is None:
             QMessageBox.warning(
                 self,
                 tr("common.error"),
                 tr("refinery.msg.invalid_values"),
             )
             return
+
+        if input_cscu <= 0:
+            QMessageBox.warning(
+                self,
+                tr("common.error"),
+                tr("refinery.msg.invalid_values"),
+            )
+            return
+
+        input_scu = cscu_to_scu(input_cscu)
 
         if cost < 0:
             QMessageBox.warning(
@@ -808,7 +837,7 @@ class RefineryPage(QWidget):
             )
             return
 
-        self.input_scu.clear()
+        self.input_cscu.clear()
         self.hours_input.clear()
         self.minutes_input.clear()
         self.notes_input.clear()
@@ -846,25 +875,40 @@ class RefineryPage(QWidget):
                     job_count=stats["job_count"],
                 )
 
-        output_cm, ok = MobiglasDoubleInputDialog.get_double(
+        dialog_hints = [tr("refinery.hint.cscu_formula")]
+        if hint_text:
+            dialog_hints.insert(0, hint_text)
+
+        output_cscu, ok = MobiglasDoubleInputDialog.get_double(
             self,
             tr("refinery.complete.dialog.title"),
             tr("refinery.complete.dialog.field"),
             0,
             0,
-            100000,
-            1,
-            hint_text=hint_text,
+            10000000,
+            0,
+            hint_text="\n\n".join(dialog_hints),
             field_tooltip=tr("refinery.complete.dialog.tooltip"),
+            live_scu_from_cscu=True,
         )
 
         if not ok:
             return
 
+        if output_cscu <= 0:
+            QMessageBox.warning(
+                self,
+                tr("common.error"),
+                tr("refinery.msg.invalid_values"),
+            )
+            return
+
+        output_scu = cscu_to_scu(output_cscu)
+
         try:
             result = self.db.complete_refinery_job(
                 job_id,
-                output_cm,
+                output_scu,
             )
         except ValueError as error:
             QMessageBox.warning(
@@ -886,7 +930,7 @@ class RefineryPage(QWidget):
             tr("refinery.msg.completed.title"),
             tr(
                 "refinery.msg.completed.message",
-                quantity=format_number(result["output_quantity"], 1),
+                quantity=format_number(result["output_quantity"], 0),
                 material=material_label(REFINERY_OUTPUT_CODE),
                 yield_pct=format_number(result["yield_percent"], 1),
             ),
@@ -894,6 +938,9 @@ class RefineryPage(QWidget):
 
         self.load_data()
         self._refresh_dashboard()
+
+        if self._live_sync is not None:
+            self._live_sync.clear_notified(job_id)
 
     def _selected_history_job_id(self):
         row = self.history_table.currentRow()
@@ -942,6 +989,9 @@ class RefineryPage(QWidget):
 
         self.load_data()
         self._refresh_dashboard()
+
+        if self._live_sync is not None:
+            self._live_sync.clear_notified(job_id)
 
         QMessageBox.information(
             self,

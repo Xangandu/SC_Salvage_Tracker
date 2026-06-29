@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QProgressBar,
     QPushButton,
+    QRadioButton,
     QSizePolicy,
     QStackedWidget,
     QVBoxLayout,
@@ -38,10 +39,15 @@ from config.version import (
     APP_VERSION,
 )
 from installer.install_engine import (
+    DATA_MODE_FRESH,
+    DATA_MODE_KEEP,
     extract_payload,
     finalize_installation,
+    has_existing_user_data,
     launch_application,
+    prepare_user_data_for_install,
     resolve_payload_zip,
+    user_data_dir,
 )
 
 _INSTALLER_DIR = Path(__file__).resolve().parent
@@ -112,7 +118,15 @@ def _edition_rgb(edition: str) -> tuple[int, int, int]:
 
 
 class _StepIndicator(QWidget):
-    _STEPS = ("Willkommen", "Zielordner", "Optionen", "Bereit", "Installation", "Fertig")
+    _STEPS = (
+        "Willkommen",
+        "Zielordner",
+        "Optionen",
+        "Benutzerdaten",
+        "Bereit",
+        "Installation",
+        "Fertig",
+    )
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -313,9 +327,10 @@ class InstallerWizardDialog(QDialog):
     _PAGE_WELCOME = 0
     _PAGE_DIR = 1
     _PAGE_TASKS = 2
-    _PAGE_READY = 3
-    _PAGE_INSTALL = 4
-    _PAGE_FINISHED = 5
+    _PAGE_DATA = 3
+    _PAGE_READY = 4
+    _PAGE_INSTALL = 5
+    _PAGE_FINISHED = 6
 
     def __init__(self, edition: str = "solo", *, demo_mode: bool = False):
         super().__init__()
@@ -324,6 +339,10 @@ class InstallerWizardDialog(QDialog):
         self._app_name = _edition_app_name(edition)
         self._page_index = 0
         self._install_target: Path | None = None
+        self._has_existing_data = (
+            not demo_mode and has_existing_user_data()
+        )
+        self._backup_path: Path | None = None
 
         title_prefix = "Setup-Demo" if demo_mode else "Setup"
         window_title = f"{title_prefix} — {self._app_name}"
@@ -473,6 +492,41 @@ class InstallerWizardDialog(QDialog):
         tasks.body.addStretch(1)
         self._stack.addWidget(tasks)
 
+        data = _WizardPage(
+            "Benutzerdaten",
+            "Es wurden bestehende Salvage-Tracker-Daten auf diesem PC gefunden.",
+        )
+        data_info = QLabel(
+            f"Speicherort: {user_data_dir()}\n\n"
+            "Bei einer Neuinstallation kannst du die vorhandenen Benutzer, "
+            "Sessions und Lagerbestände behalten oder mit Backup neu beginnen."
+        )
+        data_info.setObjectName("installerDemoBody")
+        data_info.setWordWrap(True)
+        data.body.addWidget(data_info)
+
+        self._data_keep_radio = QRadioButton(
+            "Bestehende Daten behalten (empfohlen bei Update/Neuinstallation)"
+        )
+        self._data_keep_radio.setObjectName("installerDemoRadio")
+        self._data_keep_radio.setChecked(True)
+        self._data_fresh_radio = QRadioButton(
+            "Neu beginnen — Backup erstellen und Benutzerdaten löschen"
+        )
+        self._data_fresh_radio.setObjectName("installerDemoRadio")
+        data.body.addWidget(self._data_keep_radio)
+        data.body.addWidget(self._data_fresh_radio)
+
+        data_warn = QLabel(
+            "Beim Neu beginnen werden Benutzer, Sessions und Lager zurückgesetzt. "
+            "Ein Backup wird unter data\\backups gespeichert."
+        )
+        data_warn.setObjectName("installerDemoMuted")
+        data_warn.setWordWrap(True)
+        data.body.addWidget(data_warn)
+        data.body.addStretch(1)
+        self._stack.addWidget(data)
+
         ready = _WizardPage(
             "Bereit zur Installation",
             "Prüfe die Einstellungen und starte die Installation.",
@@ -534,6 +588,28 @@ class InstallerWizardDialog(QDialog):
         if path:
             self._dir_edit.setText(path)
 
+    def _data_mode(self) -> str:
+        if self._data_fresh_radio.isChecked():
+            return DATA_MODE_FRESH
+        return DATA_MODE_KEEP
+
+    def _step_index_for_page(self, page: int) -> int:
+        if not self._has_existing_data and page > self._PAGE_DATA:
+            return page - 1
+        return page
+
+    def _next_page_after(self, page: int) -> int:
+        next_page = page + 1
+        if next_page == self._PAGE_DATA and not self._has_existing_data:
+            next_page += 1
+        return next_page
+
+    def _prev_page_before(self, page: int) -> int:
+        prev_page = page - 1
+        if prev_page == self._PAGE_DATA and not self._has_existing_data:
+            prev_page -= 1
+        return prev_page
+
     def _update_summary(self):
         tasks: list[str] = []
         if self._desktop_cb.isChecked():
@@ -542,24 +618,47 @@ class InstallerWizardDialog(QDialog):
             tasks.append("App nach Installation starten")
         if not tasks:
             tasks.append("Keine Zusatzoptionen")
-        self._summary.set_rows([
+
+        rows = [
             ("Zielordner", self._dir_edit.text()),
             ("Edition", self._app_name),
             ("Version", f"{APP_VERSION} · Build {APP_BUILD}"),
             ("Optionen", ", ".join(tasks)),
-        ])
+        ]
+        if self._has_existing_data:
+            if self._data_mode() == DATA_MODE_FRESH:
+                rows.append(("Benutzerdaten", "Backup + Neu beginnen"))
+            else:
+                rows.append(("Benutzerdaten", "Bestehende Daten behalten"))
+        self._summary.set_rows(rows)
 
     def _go_back(self):
         if self._page_index <= self._PAGE_WELCOME:
             return
         if self._page_index == self._PAGE_FINISHED:
             return
-        self._page_index -= 1
+        self._page_index = self._prev_page_before(self._page_index)
         self._stack.setCurrentIndex(self._page_index)
         self._sync_buttons()
 
     def _go_next(self):
         if self._page_index == self._PAGE_READY:
+            if (
+                self._has_existing_data
+                and self._data_mode() == DATA_MODE_FRESH
+                and not self._demo_mode
+            ):
+                answer = QMessageBox.warning(
+                    self,
+                    "Benutzerdaten zurücksetzen",
+                    "Es wird ein Backup erstellt und alle Benutzerdaten gelöscht.\n"
+                    "Fortfahren?",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                    QMessageBox.StandardButton.No,
+                )
+                if answer != QMessageBox.StandardButton.Yes:
+                    return
+
             self._page_index = self._PAGE_INSTALL
             self._stack.setCurrentIndex(self._page_index)
             self._sync_buttons()
@@ -576,10 +675,9 @@ class InstallerWizardDialog(QDialog):
             self.accept()
             return
 
-        if self._page_index == self._PAGE_TASKS:
+        self._page_index = self._next_page_after(self._page_index)
+        if self._page_index == self._PAGE_READY:
             self._update_summary()
-
-        self._page_index += 1
         self._stack.setCurrentIndex(self._page_index)
         self._sync_buttons()
 
@@ -642,6 +740,13 @@ class InstallerWizardDialog(QDialog):
             self._status.setText("Entpacke Anwendungsdateien …")
 
         try:
+            if self._has_existing_data and self._data_mode() == DATA_MODE_FRESH:
+                self._status.setText("Sichere Benutzerdaten …")
+                self._progress.setValue(5)
+                self._backup_path = prepare_user_data_for_install(reset=True)
+                if self._backup_path is not None:
+                    self._file_label.setText(self._backup_path.name)
+
             extract_payload(
                 payload,
                 target,
@@ -670,6 +775,20 @@ class InstallerWizardDialog(QDialog):
 
             self._progress.setValue(100)
             self._file_label.setText("")
+            if self._backup_path is not None:
+                self._finish_label.setText(
+                    "Die Installation wurde erfolgreich abgeschlossen.\n\n"
+                    f"Backup der alten Datenbank: {self._backup_path.name}\n"
+                    f"Speicherort: {self._backup_path.parent}\n\n"
+                    "Starte die Anwendung über das Startmenü"
+                    + (
+                        " oder die Desktop-Verknüpfung."
+                        if self._desktop_cb.isChecked()
+                        else "."
+                    )
+                    + "\n\nDeinstallation: Windows „Apps & Features“ oder "
+                    "Startmenü → „deinstallieren“."
+                )
             self._page_index = self._PAGE_FINISHED
             self._stack.setCurrentIndex(self._page_index)
             self._sync_buttons()
@@ -684,7 +803,7 @@ class InstallerWizardDialog(QDialog):
             self._sync_buttons()
 
     def _sync_buttons(self):
-        self._steps.set_current(self._page_index)
+        self._steps.set_current(self._step_index_for_page(self._page_index))
         self._back_btn.setEnabled(
             self._PAGE_WELCOME < self._page_index < self._PAGE_FINISHED
         )
@@ -811,6 +930,17 @@ QCheckBox#installerDemoCheck::indicator {{
     border-radius: 3px; background: #1A2330;
 }}
 QCheckBox#installerDemoCheck::indicator:checked {{
+    background: #E07A2A; border-color: #E07A2A;
+}}
+QRadioButton#installerDemoRadio {{
+    color: #F2F7FB; font-family: "Segoe UI"; font-size: {_fs(11)}px;
+    spacing: 8px; padding: 4px 0;
+}}
+QRadioButton#installerDemoRadio::indicator {{
+    width: 16px; height: 16px; border: 1px solid #3D4F63;
+    border-radius: 8px; background: #1A2330;
+}}
+QRadioButton#installerDemoRadio::indicator:checked {{
     background: #E07A2A; border-color: #E07A2A;
 }}
 QProgressBar#installerDemoProgress {{

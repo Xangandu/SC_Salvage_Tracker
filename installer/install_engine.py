@@ -18,6 +18,9 @@ _EXE_NAME = "SC_Salvage_Tracker.exe"
 _MANIFEST_NAME = ".sst_install.json"
 _UNINSTALL_SCRIPT = "uninstall.ps1"
 _LOGS_DIR_NAME = "SC Salvage Tracker"
+_DB_NAME = "salvage_tracker.db"
+_REMEMBER_ME_NAME = "remember_me.json"
+_BACKUP_PREFIX = "backup_install_"
 
 EDITION_APP_IDS = {
     "solo": "A7C3E9F1-2B4D-4E8A-9F1C-6D5E8A2B4C7F",
@@ -26,6 +29,131 @@ EDITION_APP_IDS = {
 }
 
 PUBLISHER = "Christian · Xan-Gan-Du"
+
+DATA_MODE_KEEP = "keep"
+DATA_MODE_FRESH = "fresh"
+
+
+def user_data_dir() -> Path:
+    """AppData-Datenordner (wie config.paths.data_dir in der frozen App)."""
+    base = os.environ.get(
+        "LOCALAPPDATA",
+        str(Path.home() / "AppData" / "Local"),
+    )
+    return Path(base) / _LOGS_DIR_NAME / "data"
+
+
+def database_path() -> Path:
+    return user_data_dir() / _DB_NAME
+
+
+def backups_dir() -> Path:
+    return user_data_dir() / "backups"
+
+
+def has_existing_user_data() -> bool:
+    return database_path().exists()
+
+
+def _process_base_name() -> str:
+    return Path(_EXE_NAME).stem
+
+
+def is_application_running() -> bool:
+    if sys.platform != "win32":
+        return False
+    process_name = _process_base_name()
+    try:
+        result = subprocess.run(
+            [
+                "powershell",
+                "-NoProfile",
+                "-Command",
+                (
+                    f"$p = Get-Process -Name '{process_name}' "
+                    "-ErrorAction SilentlyContinue; "
+                    "if ($p) { exit 0 } else { exit 1 }"
+                ),
+            ],
+            capture_output=True,
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+        )
+        return result.returncode == 0
+    except Exception:
+        return False
+
+
+def stop_application() -> None:
+    if sys.platform != "win32":
+        return
+    process_name = _process_base_name()
+    try:
+        subprocess.run(
+            [
+                "powershell",
+                "-NoProfile",
+                "-Command",
+                (
+                    f"Stop-Process -Name '{process_name}' "
+                    "-Force -ErrorAction SilentlyContinue"
+                ),
+            ],
+            capture_output=True,
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+        )
+    except OSError:
+        pass
+
+
+def backup_user_database() -> Path:
+    source = database_path()
+    if not source.exists():
+        raise FileNotFoundError(f"Datenbank nicht gefunden: {source}")
+
+    destination_dir = backups_dir()
+    destination_dir.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    destination = destination_dir / f"{_BACKUP_PREFIX}{stamp}.db"
+    suffix = 0
+    while destination.exists():
+        suffix += 1
+        destination = destination_dir / f"{_BACKUP_PREFIX}{stamp}_{suffix}.db"
+
+    shutil.copy2(source, destination)
+    return destination
+
+
+def reset_user_data() -> None:
+    """Benutzerdaten löschen — vorhandene Backups bleiben erhalten."""
+    data_dir = user_data_dir()
+    for name in (_DB_NAME, _REMEMBER_ME_NAME):
+        path = data_dir / name
+        if path.exists():
+            path.unlink()
+
+
+def prepare_user_data_for_install(*, reset: bool) -> Path | None:
+    """
+    Vor Neuinstallation: optional Backup erstellen und Benutzerdaten zurücksetzen.
+    Gibt den Backup-Pfad zurück, wenn ein Backup erstellt wurde.
+    """
+    if not reset or not has_existing_user_data():
+        return None
+
+    if is_application_running():
+        stop_application()
+        import time
+
+        time.sleep(1)
+        if is_application_running():
+            raise RuntimeError(
+                "SC Salvage Tracker läuft noch. "
+                "Bitte die Anwendung beenden und die Installation erneut starten."
+            )
+
+    backup_path = backup_user_database()
+    reset_user_data()
+    return backup_path
 
 
 def resolve_payload_zip(edition: str) -> Path:

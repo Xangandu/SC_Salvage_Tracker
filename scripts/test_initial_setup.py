@@ -75,6 +75,7 @@ def main():
 
     org_user = db.authenticate_user("orgadmin", "secret123")
     assert org_user
+    assert not org_user.get("must_change_password"), org_user
     org_user = db.permissions.attach_permissions_to_user(org_user)
     assert db.can_login_user(org_user)
     assert db.can_use_main_application(org_user)

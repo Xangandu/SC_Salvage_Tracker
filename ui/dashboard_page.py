@@ -27,10 +27,7 @@ from ui.page_layout import (
     primary_button,
     form_label,
 )
-from ui.dashboard_grid_canvas import DashboardGridCanvas
-from ui.dashboard_catalog_panel import DashboardCatalogPanel
-from ui.dashboard_preset_dialog import DashboardPresetDialog
-from ui.dashboard_grid_utils import default_classic_layout
+from ui.context_dashboard.shell import ContextDashboardShell
 from ui.dashboard_number_animation import AnimatedDashboardValue
 from ui.dashboard_status_animation import DashboardStatusAnimator
 from ui.dashboard_fit_label import DashboardFitLabel
@@ -75,7 +72,6 @@ class DashboardPage(QWidget):
         self._layout_autosave_timer.timeout.connect(
             self._autosave_layout
         )
-        self._build_widget_pool()
 
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
@@ -118,16 +114,14 @@ class DashboardPage(QWidget):
         )
         self.cancel_layout_button.hide()
 
-        header_layout.addWidget(self.preset_button)
-        header_layout.addWidget(self.edit_toggle_button)
-        header_layout.addWidget(self.cancel_layout_button)
-        header_layout.addWidget(self.save_layout_button)
+        self.preset_button.hide()
+        self.edit_toggle_button.hide()
+        self.save_layout_button.hide()
+        self.cancel_layout_button.hide()
+
+        header_layout.addStretch()
         root.addWidget(header_host)
         root.addLayout(hud_divider())
-
-        body = QHBoxLayout()
-        body.setContentsMargins(0, 0, 0, 0)
-        body.setSpacing(0)
 
         scroll = QScrollArea()
         scroll.setObjectName("dashboardScroll")
@@ -139,25 +133,17 @@ class DashboardPage(QWidget):
         scroll.viewport().setObjectName("dashboardScrollViewport")
         scroll.viewport().setAutoFillBackground(False)
 
-        self.canvas = DashboardGridCanvas()
-        self.canvas.set_widget_pool(self._widget_pool)
-        scroll.setWidget(self.canvas)
+        self.context_shell = ContextDashboardShell(self.db)
+        self.context_shell.context_change_requested.connect(
+            self._on_alert_context_requested
+        )
+        scroll.setWidget(self.context_shell)
 
-        self.catalog = DashboardCatalogPanel()
-        self.catalog.hide()
-        self.catalog.widget_returned.connect(
-            self.canvas.remove_widget
-        )
-        self.canvas.layout_changed.connect(
-            self._sync_catalog
-        )
-        self.canvas.layout_changed.connect(
-            self._on_layout_changed
-        )
+        self.status_value = self.context_shell.status_kpi_value
+        self.status_info_label = self.context_shell.session_status_label
+        self._widget_pool["status"] = self.context_shell.status_card
 
-        body.addWidget(scroll, 1)
-        body.addWidget(self.catalog)
-        root.addLayout(body, 1)
+        root.addWidget(scroll, 1)
 
         self._refresh_timer = QTimer(self)
         self._refresh_timer.setInterval(3000)
@@ -165,46 +151,16 @@ class DashboardPage(QWidget):
             self.refresh_dashboard
         )
 
-        self._load_initial_layout()
         self.refresh_dashboard()
         ThemeManager.refresh_dashboard_font_scale()
 
+    def refresh_refinery_kpis(self):
+        self.refresh_dashboard()
+
     def reload_user_layout(self):
-        if self._edit_mode:
-            return
-
-        user_id = self._user_id()
-        if user_id is None:
-            return
-
-        saved = self._layout_repo().get_active_layout(user_id)
-        if saved is not None:
-            self.canvas.load_layout_data(saved)
-            self._saved_layout_snapshot = saved
-            self._layout_dirty = False
-        else:
-            layout = default_classic_layout()
-            self.canvas.load_layout_data(layout)
-            self._saved_layout_snapshot = layout
-            self._layout_dirty = False
-
-        self._sync_catalog()
-        self._update_layout_dirty_hint()
-        self.canvas.reflow_content_sizes()
+        return
 
     def persist_layout(self):
-        user_id = self._user_id()
-        if user_id is None:
-            return False
-
-        layout = self.canvas.get_layout_data()
-        self._layout_repo().save_active_layout(
-            user_id,
-            layout,
-        )
-        self._saved_layout_snapshot = layout
-        self._layout_dirty = False
-        self._update_layout_dirty_hint()
         return True
 
     def _autosave_layout(self):
@@ -633,31 +589,16 @@ class DashboardPage(QWidget):
 
     def showEvent(self, event):
         super().showEvent(event)
-        if not self._edit_mode:
-            self.reload_user_layout()
         self.refresh_dashboard()
         self._refresh_timer.start()
 
     def hideEvent(self, event):
         self._refresh_timer.stop()
-        self.persist_layout()
         super().hideEvent(event)
 
     def apply_permissions(self, user, page_name="dashboard"):
         self._current_user = user
         apply_widget_permissions(self, user, page_name)
-
-        can_use = bool(user)
-        for button in (
-            self.preset_button,
-            self.edit_toggle_button,
-            self.save_layout_button,
-            self.cancel_layout_button,
-        ):
-            button.setEnabled(can_use)
-
-        if user and not self._edit_mode:
-            self.reload_user_layout()
 
     def apply_dashboard_layout(self, layout_id=None):
         """Legacy-Hook — Presets über Preset-Dialog."""
@@ -766,119 +707,23 @@ class DashboardPage(QWidget):
 
     def refresh_dashboard(self):
         debug_log("REFRESH_DASHBOARD WIRD AUSGEFÜHRT")
+        self.context_shell.refresh()
 
-        open_refinery_jobs = self.db.get_open_refinery_jobs()
-        sold_sessions = self.db.get_sales_count()
-        active_sessions = self.db.get_active_session_count()
-        total_sessions = self.db.get_total_session_count()
-        storage_scu = self.db.get_sellable_storage_total_scu()
-        total_sales = self.db.get_total_sales_value()
-        total_profit = self.db.get_total_profit()
+    def set_context(self, context_key: str, *, force: bool = False):
+        self.context_shell.set_context(context_key, force=force)
 
-        rmc_storage = self.db.get_storage_balance("RMC")
-        cm_storage = self.db.get_storage_balance("CM")
+    def set_context_from_nav(self, context_key: str):
+        self.context_shell.set_context(context_key)
 
-        lifetime_rubble = self.db.get_global_batch_available(
-            "CM_RUBBLE"
-        )
-        lifetime_scraps = self.db.get_global_batch_available(
-            "CM_SCRAPS"
-        )
-        lifetime_salvage = self.db.get_global_batch_available(
-            "CM_SALVAGE"
-        )
-
-        self.rmc_value.animate_to(rmc_storage, suffix=" SCU")
-        self.cm_value.animate_to(cm_storage, suffix=" SCU")
-        self.rubble_value.animate_to(lifetime_rubble, suffix=" SCU")
-        self.scraps_value.animate_to(lifetime_scraps, suffix=" SCU")
-        self.salvage_value.animate_to(lifetime_salvage, suffix=" SCU")
-        self.sold_sessions_value.animate_to(sold_sessions)
-        self.active_sessions_value.animate_to(active_sessions)
-        self.total_sessions_value.animate_to(total_sessions)
-        self.ready_sessions_value.animate_to(storage_scu)
-        self.refinery_jobs_value.animate_to(open_refinery_jobs)
-        self.total_sales_value.animate_to(
-            total_sales, suffix=" aUEC"
-        )
-        self.total_profit_value.animate_to(
-            total_profit, suffix=" aUEC"
-        )
-
-        self._refresh_refinery_stats()
-
-        session = self.db.get_dashboard_session()
-
-        if not session:
-            if not self._status_cycle_animating:
-                self._update_session_status("IDLE", status_label("IDLE"))
-            self.crew_value.animate_to(0)
-            self._set_session_ship_text(
-                tr("dashboard.session.none"),
-                active=False,
-            )
-            self.crew_info_label.animate_to(0)
-            self.rmc_info_label.animate_to(0, suffix=" SCU")
-            self.cm_info_label.animate_to(0, suffix=" SCU")
-            self.session_rubble_info_label.animate_to(0, suffix=" SCU")
-            self.session_scraps_info_label.animate_to(0, suffix=" SCU")
-            self.session_salvage_info_label.animate_to(0, suffix=" SCU")
-            self.refinery_info_label.animate_to(
-                open_refinery_jobs,
-                suffix=tr("dashboard.refinery.open_suffix"),
-            )
-            self.canvas.reflow_content_sizes()
-            return
-
-        session_id = session[0]
-        ship_name = session[1]
-        status = session[2]
-        status_text = status_label(status)
-
-        session_rmc = self.db.get_session_captured_total(
-            session_id,
-            "RMC",
-        )
-        session_cm = self.db.get_refined_cm_total(session_id)
-        session_rubble = self.db.get_session_batch_available(
-            session_id,
-            "CM_RUBBLE",
-        )
-        session_scraps = self.db.get_session_batch_available(
-            session_id,
-            "CM_SCRAPS",
-        )
-        session_salvage = self.db.get_session_batch_available(
-            session_id,
-            "CM_SALVAGE",
-        )
-        crew = self.db.get_crew_members(session_id)
-
-        if not self._status_cycle_animating:
-            self._update_session_status(status, status_text)
-        self.crew_value.animate_to(len(crew))
-        self._set_session_ship_text(ship_name, active=True)
-        self.crew_info_label.animate_to(len(crew))
-        self.rmc_info_label.animate_to(
-            session_rmc, suffix=" SCU", decimals=1
-        )
-        self.cm_info_label.animate_to(
-            session_cm, suffix=" SCU", decimals=1
-        )
-        self.session_rubble_info_label.animate_to(
-            session_rubble, suffix=" SCU", decimals=1
-        )
-        self.session_scraps_info_label.animate_to(
-            session_scraps, suffix=" SCU", decimals=1
-        )
-        self.session_salvage_info_label.animate_to(
-            session_salvage, suffix=" SCU", decimals=1
-        )
-        self.refinery_info_label.animate_to(
-            open_refinery_jobs,
-            suffix=tr("dashboard.refinery.open_suffix"),
-        )
-        self.canvas.reflow_content_sizes()
+    def _on_alert_context_requested(self, context_key: str):
+        parent = self.parent_window
+        if parent is not None and hasattr(
+            parent,
+            "switch_dashboard_context",
+        ):
+            parent.switch_dashboard_context(context_key)
+        else:
+            self.set_context(context_key, force=True)
 
     def detach_dashboard(self):
         self.dashboard_mode = "DETACHED"

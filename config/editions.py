@@ -142,6 +142,11 @@ def feature_teaser_text(feature_id: str) -> str:
     return tr(f"edition.teaser.{needed}", default=fallback)
 
 
+def requires_forced_password_change_on_login(db=None) -> bool:
+    """CREW/ORGA: Passwortwechsel nach Admin-Anlage. SOLO: nicht erzwingen."""
+    return effective_edition(db) != EDITION_SOLO
+
+
 def enforce_standalone_network(db) -> None:
     """SOLO-Edition: gespeicherten Netzwerkmodus auf Standalone zurücksetzen."""
     if has_feature("network.crew_edition", db):

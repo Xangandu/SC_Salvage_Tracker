@@ -329,7 +329,21 @@ class CorrectionRepository:
             raise ValueError(reason)
 
         self.cursor.execute("""
-        SELECT batch_id, input_quantity
+        SELECT
+            batch_id,
+            input_quantity,
+            COALESCE(
+                input_material,
+                (
+                    SELECT material_types.material_code
+                    FROM material_batches
+                    INNER JOIN material_types
+                        ON material_types.id =
+                            material_batches.material_type_id
+                    WHERE material_batches.id =
+                        refinery_job_items.batch_id
+                )
+            )
         FROM refinery_job_items
         WHERE job_id = ?
         ORDER BY id
@@ -340,12 +354,24 @@ class CorrectionRepository:
         try:
             self.connection.execute("BEGIN IMMEDIATE")
 
-            for batch_id, input_qty in items:
+            for batch_id, input_qty, material_code in items:
                 self.db.materials.release_batch_from_refinery(
                     batch_id,
                     float(input_qty),
                     updated_by=updated_by,
                 )
+
+                if (
+                    material_code
+                    and hasattr(self.db, "stockpiles")
+                    and self.db._table_exists("material_stockpiles")
+                ):
+                    self.db.stockpiles.restore_ship_stockpile_from_refinery_cancel(
+                        material_code=material_code,
+                        quantity_scu=float(input_qty),
+                        batch_id=batch_id,
+                        created_by=updated_by,
+                    )
 
             self._mark_deleted("refinery_jobs", job_id)
 

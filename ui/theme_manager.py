@@ -83,6 +83,8 @@ DASHBOARD_FONT_BASE_PX = 14
 
 DASHBOARD_FONT_LABEL_NAMES = frozenset({
     "pageTitle",
+    "dashboardContextHelp",
+    "dashboardTimelineWhen",
     "sectionAccent",
     "subSectionTitle",
     "formLabel",
@@ -171,136 +173,433 @@ ACCENT_REPLACE_COLORS = (
     "#E8F4FC",
 )
 
+# Star-Citizen-Dunkelfarben → helle Grautöne (vollständige Ableitung)
+_LIGHT_COLOR_MAP = {
+    "#FFFFFF": "#FFFFFF",
+    "#FFF8F2": "#FFFBF7",
+    "#FFE8A3": "#EDE0B8",
+    "#FFD4B0": "#F0D8BC",
+    "#FFC857": "#C99214",
+    "#FFC088": "#E0A868",
+    "#FFB347": "#C97620",
+    "#F4F8FC": "#1C2530",
+    "#F2F7FB": "#1C2530",
+    "#F0A848": "#B85A18",
+    "#F0A060": "#C86218",
+    "#F09848": "#D97828",
+    "#E8F2FA": "#283440",
+    "#E8F0F6": "#2C3844",
+    "#E8893A": "#D06820",
+    "#E6EEF5": "#1C2530",
+    "#E07A2A": "#C45A12",
+    "#D9F4FF": "#1A2838",
+    "#D8E4EF": "#2A3440",
+    "#D46E22": "#B85418",
+    "#C9A227": "#96700A",
+    "#C86218": "#A84E12",
+    "#C5D6E6": "#4A5561",
+    "#C42B1C": "#B52820",
+    "#B89AFF": "#7C5AC8",
+    "#A84E12": "#8F4210",
+    "#9FB4C8": "#5C6773",
+    "#9A2218": "#8A1E18",
+    "#93A8BC": "#566170",
+    "#8FA8BC": "#5A6573",
+    "#8FA3B8": "#4A5561",
+    "#7C92A8": "#526070",
+    "#708696": "#5C6773",
+    "#6F8599": "#4A5864",
+    "#55E8FF": "#0E7490",
+    "#506070": "#5A6573",
+    "#4D6B78": "#5C6773",
+    "#4AD4A0": "#20996A",
+    "#4A6070": "#556070",
+    "#42D4F5": "#0E7490",
+    "#41D17A": "#1E8A52",
+    "#3D2A00": "#FFF4E8",
+    "#3A5168": "#98A8B8",
+    "#33485C": "#A8B4C0",
+    "#324558": "#B0BAC4",
+    "#2A3848": "#B8C2CC",
+    "#29414D": "#B0BCC8",
+    "#263545": "#C0C8D0",
+    "#243040": "#C4CAD2",
+    "#1E5A72": "#0C5468",
+    "#1E2A38": "#CED4DC",
+    "#1B2A38": "#D8DEE6",
+    "#1B2430": "#EEF1F5",
+    "#1A3348": "#E0E8F0",
+    "#1A2838": "#E8ECF0",
+    "#1A2430": "#F5F6F8",
+    "#171E28": "#FFFFFF",
+    "#162433": "#E8EDF2",
+    "#161C26": "#F5F7FA",
+    "#151D28": "#F5F6F8",
+    "#151D27": "#FAFBFC",
+    "#141C26": "#FFFFFF",
+    "#123042": "#D6E8F2",
+    "#121E29": "#D8DCE2",
+    "#121820": "#DCE1E7",
+    "#111820": "#DEE2E8",
+    "#101820": "#E0E4EA",
+    "#101620": "#E2E6EB",
+    "#10161E": "#E8EBEF",
+    "#0F161E": "#EAECEF",
+    "#0E1A25": "#EDF0F4",
+    "#0E141C": "#FFFFFF",
+    "#0E131A": "#E4E8ED",
+    "#0D1218": "#E6E9EE",
+    "#0C131A": "#E4E8ED",
+    "#0C1016": "#E8EBF0",
+    "#0A9CC0": "#0C6880",
+    "#0A131C": "#F0F2F5",
+    "#0A1016": "#E8EBF0",
+    "#0A0D12": "#ECEEF2",
+    "#08131C": "#F8F9FA",
+    "#07090D": "#DDE1E6",
+    "#030608": "#D0D4DA",
+    "#030507": "#D4D8DE",
+    "#00D9FF": "#0E7490",
+}
+
+_LIGHT_RGBA_REPLACEMENTS = (
+    ("rgba(255, 255, 255, 0.08)", "rgba(0, 0, 0, 0.05)"),
+    ("rgba(255, 255, 255, 0.04)", "rgba(0, 0, 0, 0.03)"),
+    ("rgba(224, 122, 42, 0.22)", "rgba(196, 90, 18, 0.18)"),
+    ("rgba(224, 122, 42, 0.15)", "rgba(196, 90, 18, 0.12)"),
+    ("rgba(201, 162, 39, 0.28)", "rgba(150, 112, 10, 0.35)"),
+    ("rgba(201, 162, 39, 0.06)", "rgba(150, 112, 10, 0.10)"),
+    ("rgba(20, 28, 38, 0.85)", "rgba(255, 255, 255, 0.98)"),
+    ("rgba(14, 20, 28, 0.95)", "rgba(255, 255, 255, 0.98)"),
+    ("rgba(14, 20, 28, 0.85)", "rgba(255, 255, 255, 0.96)"),
+    ("rgba(10, 24, 36, 0.55)", "rgba(255, 255, 255, 0.92)"),
+    ("rgba(85, 232, 255, 0.62)", "rgba(14, 116, 144, 0.75)"),
+    ("rgba(10, 156, 192, 0.55)", "rgba(14, 116, 144, 0.22)"),
+    ("rgba(0, 217, 255, 0.16)", "rgba(14, 116, 144, 0.14)"),
+    ("rgba(0, 217, 255, 0.12)", "rgba(14, 116, 144, 0.10)"),
+    ("rgba(0, 217, 255, 35)", "rgba(14, 116, 144, 0.35)"),
+    ("rgba(0, 217, 255, 8)", "rgba(14, 116, 144, 0.10)"),
+    ("rgba(66, 212, 245, 35)", "rgba(14, 116, 144, 0.30)"),
+    ("rgba(66, 212, 245, 12)", "rgba(14, 116, 144, 0.10)"),
+    ("rgba(255, 179, 71, 70)", "rgba(196, 90, 18, 0.45)"),
+    ("rgba(255, 179, 71, 45)", "rgba(196, 90, 18, 0.30)"),
+    ("rgba(255, 179, 71, 30)", "rgba(196, 90, 18, 0.22)"),
+    ("rgba(255, 179, 71, 22)", "rgba(196, 90, 18, 0.18)"),
+    ("rgba(255, 179, 71, 12)", "rgba(196, 90, 18, 0.12)"),
+    ("rgba(224, 122, 42, 0.45)", "rgba(196, 90, 18, 0.35)"),
+    ("rgba(0, 217, 255, 0.35)", "rgba(14, 116, 144, 0.30)"),
+)
+
+
+def _build_light_replacements() -> list[tuple[str, str]]:
+    items = sorted(
+        _LIGHT_COLOR_MAP.items(),
+        key=lambda pair: len(pair[0]),
+        reverse=True,
+    )
+    items.extend([
+        ('"Rajdhani"', '"Segoe UI"'),
+        ('"Orbitron"', '"Segoe UI"'),
+    ])
+    return items
+
+
+# Star-Citizen-Farben → sehr dunkles Grau (vollständige Ableitung)
+_DARK_COLOR_MAP = {
+    "#FFFFFF": "#FFFFFF",
+    "#FFF8F2": "#F0F0F0",
+    "#FFE8A3": "#D8C888",
+    "#FFD4B0": "#C8A890",
+    "#FFC857": "#D4B048",
+    "#FFC088": "#E0A868",
+    "#FFB347": "#D89048",
+    "#F4F8FC": "#EDEDED",
+    "#F2F7FB": "#EDEDED",
+    "#F0A848": "#D49040",
+    "#F0A060": "#DC9848",
+    "#F09848": "#E89450",
+    "#E8F2FA": "#D0D0D0",
+    "#E8F0F6": "#D0D0D0",
+    "#E8893A": "#E08840",
+    "#E6EEF5": "#E4E4E4",
+    "#E07A2A": "#D97732",
+    "#D9F4FF": "#E0E0E0",
+    "#D8E4EF": "#C8C8C8",
+    "#D46E22": "#C87028",
+    "#C9A227": "#C4A035",
+    "#C86218": "#C06820",
+    "#C5D6E6": "#A8A8A8",
+    "#C42B1C": "#D04038",
+    "#B89AFF": "#A888E0",
+    "#A84E12": "#A04810",
+    "#9FB4C8": "#909090",
+    "#9A2218": "#B83830",
+    "#93A8BC": "#888888",
+    "#8FA8BC": "#868686",
+    "#8FA3B8": "#848484",
+    "#7C92A8": "#808080",
+    "#708696": "#787878",
+    "#6F8599": "#787878",
+    "#55E8FF": "#8FC4E0",
+    "#506070": "#909090",
+    "#4D6B78": "#989898",
+    "#4AD4A0": "#50C090",
+    "#4A6070": "#888888",
+    "#42D4F5": "#7EB8DA",
+    "#41D17A": "#4CB878",
+    "#3D2A00": "#3A2E18",
+    "#3A5168": "#484848",
+    "#33485C": "#424242",
+    "#324558": "#404040",
+    "#2A3848": "#3C3C3C",
+    "#29414D": "#3A3A3A",
+    "#263545": "#383838",
+    "#243040": "#363636",
+    "#1E5A72": "#4A7888",
+    "#1E2A38": "#323232",
+    "#1B2A38": "#2E2E2E",
+    "#1B2430": "#282828",
+    "#1A3348": "#303030",
+    "#1A2838": "#2C2C2C",
+    "#1A2430": "#2A2A2A",
+    "#171E28": "#282828",
+    "#162433": "#262626",
+    "#161C26": "#242424",
+    "#151D28": "#262626",
+    "#151D27": "#262626",
+    "#141C26": "#242424",
+    "#123042": "#2A3238",
+    "#121E29": "#222222",
+    "#121820": "#202020",
+    "#111820": "#1E1E1E",
+    "#101820": "#1E1E1E",
+    "#101620": "#1C1C1C",
+    "#10161E": "#1A1A1A",
+    "#0F161E": "#1A1A1A",
+    "#0E1A25": "#1C1C1C",
+    "#0E141C": "#1A1A1A",
+    "#0E131A": "#181818",
+    "#0D1218": "#181818",
+    "#0C131A": "#181818",
+    "#0C1016": "#161616",
+    "#0A9CC0": "#5A98B8",
+    "#0A131C": "#181818",
+    "#0A1016": "#161616",
+    "#0A0D12": "#141414",
+    "#08131C": "#161616",
+    "#07090D": "#101010",
+    "#030608": "#0E0E0E",
+    "#030507": "#0C0C0C",
+    "#00D9FF": "#7EB8DA",
+}
+
+_DARK_RGBA_REPLACEMENTS = (
+    ("rgba(255, 255, 255, 0.08)", "rgba(255, 255, 255, 0.06)"),
+    ("rgba(255, 255, 255, 0.04)", "rgba(255, 255, 255, 0.03)"),
+    ("rgba(224, 122, 42, 0.22)", "rgba(217, 119, 50, 0.20)"),
+    ("rgba(224, 122, 42, 0.15)", "rgba(217, 119, 50, 0.14)"),
+    ("rgba(201, 162, 39, 0.28)", "rgba(196, 160, 53, 0.35)"),
+    ("rgba(201, 162, 39, 0.06)", "rgba(196, 160, 53, 0.10)"),
+    ("rgba(23, 30, 40, 0.85)", "rgba(36, 36, 36, 0.92)"),
+    ("rgba(20, 28, 38, 0.85)", "rgba(36, 36, 36, 0.95)"),
+    ("rgba(14, 20, 28, 0.95)", "rgba(30, 30, 30, 0.98)"),
+    ("rgba(14, 20, 28, 0.85)", "rgba(36, 36, 36, 0.92)"),
+    ("rgba(10, 24, 36, 0.55)", "rgba(30, 30, 30, 0.85)"),
+    ("rgba(85, 232, 255, 0.62)", "rgba(142, 184, 218, 0.75)"),
+    ("rgba(10, 156, 192, 0.55)", "rgba(126, 184, 218, 0.22)"),
+    ("rgba(0, 217, 255, 0.16)", "rgba(126, 184, 218, 0.14)"),
+    ("rgba(0, 217, 255, 0.12)", "rgba(126, 184, 218, 0.10)"),
+    ("rgba(0, 217, 255, 35)", "rgba(126, 184, 218, 0.30)"),
+    ("rgba(0, 217, 255, 8)", "rgba(126, 184, 218, 0.10)"),
+    ("rgba(66, 212, 245, 35)", "rgba(126, 184, 218, 0.28)"),
+    ("rgba(66, 212, 245, 12)", "rgba(126, 184, 218, 0.10)"),
+    ("rgba(255, 179, 71, 70)", "rgba(217, 119, 50, 0.40)"),
+    ("rgba(255, 179, 71, 45)", "rgba(217, 119, 50, 0.28)"),
+    ("rgba(255, 179, 71, 30)", "rgba(217, 119, 50, 0.20)"),
+    ("rgba(255, 179, 71, 22)", "rgba(217, 119, 50, 0.16)"),
+    ("rgba(255, 179, 71, 12)", "rgba(217, 119, 50, 0.12)"),
+    ("rgba(224, 122, 42, 0.45)", "rgba(217, 119, 50, 0.32)"),
+    ("rgba(0, 217, 255, 0.35)", "rgba(126, 184, 218, 0.28)"),
+)
+
+
+def _build_dark_replacements() -> list[tuple[str, str]]:
+    items = sorted(
+        _DARK_COLOR_MAP.items(),
+        key=lambda pair: len(pair[0]),
+        reverse=True,
+    )
+    items.extend([
+        ('"Rajdhani"', '"Segoe UI"'),
+        ('"Orbitron"', '"Segoe UI"'),
+    ])
+    return items
+
+
 # Star-Citizen-Basis → abgeleitete Themes (Reihenfolge beachten)
 _DERIVED_REPLACEMENTS = {
-    "dark": [
-        ("#00D9FF", "#4A90E2"),
-        ("#55E8FF", "#6BA3E8"),
-        ("#0A9CC0", "#3A7BC8"),
-        ("#D9F4FF", "#FFFFFF"),
-        ("#08131C", "#1E1E1E"),
-        ("#0D1A24", "#2D2D2D"),
-        ("#152532", "#2D2D2D"),
-        ("#0A121A", "#252525"),
-        ("#1B2A38", "#1E1E1E"),
-        ("#121E29", "#1E1E1E"),
-        ("#0A131C", "#1E1E1E"),
-        ("#030608", "#181818"),
-        ("#162433", "#252525"),
-        ("#0E1822", "#222222"),
-        ("#060B10", "#1A1A1A"),
-        ("#0B1721", "#2D2D2D"),
-        ("#123042", "#3A3A3A"),
-        ("#1E5167", "#4A4A4A"),
-        ("#4D6B78", "#AAAAAA"),
-        ('"Rajdhani"', '"Segoe UI"'),
-        ('"Orbitron"', '"Segoe UI"'),
-    ],
-    "light": [
-        ("#00D9FF", "#0078D7"),
-        ("#55E8FF", "#0078D7"),
-        ("#0A9CC0", "#005A9E"),
-        ("#D9F4FF", "#222222"),
-        ("#08131C", "#FFFFFF"),
-        ("#0D1A24", "#F5F5F5"),
-        ("#152532", "#FFFFFF"),
-        ("#0A121A", "#F0F0F0"),
-        ("#1B2A38", "#F0F0F0"),
-        ("#121E29", "#F0F0F0"),
-        ("#0A131C", "#F0F0F0"),
-        ("#030608", "#E0E0E0"),
-        ("#162433", "#E8E8E8"),
-        ("#0E1822", "#F0F0F0"),
-        ("#060B10", "#E0E0E0"),
-        ("#0B1721", "#FFFFFF"),
-        ("#123042", "#E8F4FC"),
-        ("#1E5167", "#CCE4F7"),
-        ("#1A4A61", "#B3D7F2"),
-        ("#4D6B78", "#666666"),
-        ("#29414D", "#CCCCCC"),
-        ("#C9A227", "#B8860B"),
-        ('"Rajdhani"', '"Segoe UI"'),
-        ('"Orbitron"', '"Segoe UI"'),
-    ],
+    "dark": _build_dark_replacements(),
+    "light": _build_light_replacements(),
 }
 
 _LIGHT_THEME_PATCH = """
 /* ==========================================================
-   LIGHT THEME — Feinjustierung
+   LIGHT THEME — Feinjustierung (Star-Citizen-Struktur, helle Töne)
    ========================================================== */
+
+QMainWindow {
+    background: qlineargradient(
+        x1: 0, y1: 0, x2: 1, y2: 1,
+        stop: 0 #F4F5F7,
+        stop: 0.45 #ECEEF2,
+        stop: 1 #E2E5EA
+    );
+}
+
+QWidget {
+    color: #1C2530;
+    font-family: "Segoe UI";
+}
+
+#navPanel {
+    background: qlineargradient(
+        x1: 0, y1: 0, x2: 1, y2: 0,
+        stop: 0 #E4E7EC,
+        stop: 1 #ECEEF2
+    );
+    border-right: 1px solid #C4CAD2;
+}
+
+QFrame#navBrandCard {
+    background: qlineargradient(
+        x1: 0, y1: 0, x2: 0, y2: 1,
+        stop: 0 #FFFFFF,
+        stop: 1 #F5F6F8
+    );
+    border: 1px solid #C4CAD2;
+    border-left: 3px solid #C45A12;
+}
+
+QLabel#navTitlePrimary {
+    color: #1C2530;
+}
+
+QLabel#navTitleSecondary {
+    color: #0E7490;
+}
+
+QLabel#navEditionBadge {
+    color: #0E7490;
+}
+
+QFrame#navEditionBadgeHost,
+QFrame#navEditionBadgeHost[edition="solo"],
+QFrame#navEditionBadgeHost[edition="crew"],
+QFrame#navEditionBadgeHost[edition="orga"] {
+    background-color: #F0F2F5;
+}
 
 #navButton {
     background-color: #FFFFFF;
-    color: #222222;
-    border: 1px solid #0078D7;
-    font-family: "Rajdhani";
-    font-size: 17px;
-    font-weight: bold;
+    color: #1C2530;
+    border: 1px solid #C4CAD2;
+    font-family: "Segoe UI";
+    font-size: 15px;
+    font-weight: 600;
     letter-spacing: 0.5px;
     min-height: 44px;
 }
 
 #navButton:hover {
-    background-color: #E8F4FC;
-    color: #222222;
+    background-color: #F0F4F8;
+    color: #1C2530;
+    border-color: #0E7490;
 }
 
 #navButton:pressed {
-    background-color: #CCE4F7;
-    color: #222222;
+    background-color: #E4EBF2;
+    color: #1C2530;
 }
 
 #navButton[active=true] {
-    background-color: #0078D7;
+    background-color: #C45A12;
     color: #FFFFFF;
-    border: 2px solid #005A9E;
+    border: 2px solid #A84E12;
 }
 
-QLabel#subSectionTitle {
-    color: #B85A18;
+QLabel#pageTitle {
+    color: #1C2530;
 }
 
 QLabel#sectionAccent {
-    color: #B85A18;
+    color: #C45A12;
+}
+
+QLabel#subSectionTitle {
+    color: #C45A12;
 }
 
 QLabel#formLabel {
-    color: #B85A18;
+    color: #5C6773;
 }
 
 QLabel#sectionTitle {
-    color: #222222;
+    color: #1C2530;
+}
+
+QLabel#displayValue {
+    color: #1C2530;
+}
+
+QLabel#mutedLabel {
+    color: #5C6773;
+}
+
+QLabel#hintLabel {
+    color: #5C6773;
+}
+
+QLabel#statLabel {
+    color: #5C6773;
+}
+
+QLabel#statValue {
+    color: #1C2530;
+}
+
+QLabel#profitLabel {
+    color: #C45A12;
+}
+
+QLabel#cardTitle {
+    color: #5C6773;
+}
+
+QLabel#cardValue {
+    color: #1C2530;
 }
 
 QPushButton#primaryAction {
-    background-color: #0078D7;
+    background-color: #C45A12;
     color: #FFFFFF;
-    border: 2px solid #005A9E;
+    border: 2px solid #A84E12;
 }
 
 QPushButton#primaryAction:hover {
-    background-color: #005A9E;
+    background-color: #A84E12;
     color: #FFFFFF;
 }
 
 QPushButton#secondaryAction {
     background-color: #FFFFFF;
-    color: #222222;
-    border: 1px solid #0078D7;
+    color: #1C2530;
+    border: 1px solid #C4CAD2;
 }
 
 QPushButton#secondaryAction:hover {
-    background-color: #E8F4FC;
-    color: #222222;
-}
-
-QDialog#mobiglasDialog {
-    background: qlineargradient(
-        x1: 0, y1: 0, x2: 0, y2: 1,
-        stop: 0 #FFFFFF,
-        stop: 0.35 #F5F5F5,
-        stop: 1 #E8E8E8
-    );
+    background-color: #F0F4F8;
+    color: #1C2530;
+    border-color: #0E7490;
 }
 
 QFrame#pagePanel,
@@ -308,90 +607,610 @@ QFrame#infoPanel {
     background: qlineargradient(
         x1: 0, y1: 0, x2: 0, y2: 1,
         stop: 0 #FFFFFF,
-        stop: 1 #F5F5F5
+        stop: 1 #F5F6F8
     );
-    border: 1px solid #0078D7;
+    border: 1px solid #C4CAD2;
+}
+
+QFrame#financeSummaryPanel,
+QFrame#storageTotalsPanel {
+    background: qlineargradient(
+        x1: 0, y1: 0, x2: 0, y2: 1,
+        stop: 0 #FFFFFF,
+        stop: 1 #F5F6F8
+    );
+    border: 1px solid #C4CAD2;
+    border-top: 2px solid #C45A12;
+}
+
+QFrame#financeSummaryPanel QLabel#statValue,
+QFrame#financeSummaryPanel QLabel#profitLabel,
+QFrame#storageTotalsPanel QLabel#statValue {
+    color: #1C2530;
+}
+
+QFrame#storageTotalChip {
+    background: #FFFFFF;
+    border: 1px solid #C4CAD2;
+}
+
+QFrame#storageTotalsPanel QLabel#statLabel {
+    color: #5C6773;
 }
 
 QLineEdit,
 QComboBox,
-QTextEdit {
+QTextEdit,
+QSpinBox,
+QDoubleSpinBox {
     background-color: #FFFFFF;
-    color: #222222;
-    border: 1px solid #0078D7;
+    color: #1C2530;
+    border: 1px solid #B8C0CA;
+    selection-background-color: #0E7490;
+    selection-color: #FFFFFF;
 }
 
-QLineEdit:disabled {
-    background-color: #F0F0F0;
-    color: #888888;
-    border: 1px solid #CCCCCC;
+QLineEdit:disabled,
+QComboBox:disabled {
+    background-color: #ECEEF2;
+    color: #8A939E;
+    border: 1px solid #D0D5DC;
+}
+
+QComboBox QAbstractItemView {
+    background-color: #FFFFFF;
+    color: #1C2530;
+    border: 1px solid #C4CAD2;
+    selection-background-color: #0E7490;
+    selection-color: #FFFFFF;
 }
 
 QTableWidget#dataTable,
 QTableWidget#historyTable,
 QTableWidget#editableTable {
     background-color: #FFFFFF;
-    color: #222222;
-    border: 1px solid #0078D7;
-    gridline-color: #DDDDDD;
-    selection-background-color: #0078D7;
+    color: #1C2530;
+    border: 1px solid #C4CAD2;
+    gridline-color: #D8DCE2;
+    selection-background-color: #0E7490;
     selection-color: #FFFFFF;
-    alternate-background-color: #F5F5F5;
+    alternate-background-color: #F5F6F8;
 }
 
 QTableWidget#dataTable QHeaderView::section,
 QTableWidget#historyTable QHeaderView::section,
 QTableWidget#editableTable QHeaderView::section {
-    background-color: #E8E8E8;
-    color: #222222;
-    border: 1px solid #CCCCCC;
-}
-
-QMessageBox {
-    background-color: #FFFFFF;
-    color: #222222;
-}
-
-QLabel#warningBanner {
-    background-color: #FFF8E1;
-    color: #222222;
-    border: 2px solid #B8860B;
-}
-
-QLabel#warningBannerTitle {
-    color: #B8860B;
-}
-
-QLabel#mutedLabel {
-    color: #666666;
+    background-color: #E4E7EC;
+    color: #1C2530;
+    border: 1px solid #C4CAD2;
 }
 
 QTabWidget#settingsTabs::pane {
     background-color: #FFFFFF;
-    border: 1px solid #33485C;
+    border: 1px solid #C4CAD2;
 }
 
 QTabWidget#settingsTabs QTabBar::tab {
-    background-color: #F0F2F5;
-    color: #506070;
+    background-color: #ECEEF2;
+    color: #5C6773;
+    border: 1px solid #C4CAD2;
+    border-bottom: none;
 }
 
 QTabWidget#settingsTabs QTabBar::tab:selected {
-    background-color: #141C26;
-    color: #F4F8FC;
-    border-top: 2px solid #E07A2A;
+    background-color: #FFFFFF;
+    color: #1C2530;
+    border-top: 2px solid #C45A12;
+}
+
+QTabWidget#settingsTabs QTabBar::tab:hover {
+    background-color: #F5F6F8;
+    color: #1C2530;
 }
 
 QScrollBar:vertical {
-    background: #E0E0E0;
+    background: #E4E7EC;
 }
 
 QScrollBar::handle:vertical {
-    background: #0078D7;
+    background: #0E7490;
+}
+
+QScrollBar:horizontal {
+    background: #E4E7EC;
+}
+
+QScrollBar::handle:horizontal {
+    background: #0E7490;
+}
+
+QDialog#mobiglasDialog {
+    background: qlineargradient(
+        x1: 0, y1: 0, x2: 1, y2: 1,
+        stop: 0 #F8F9FA,
+        stop: 0.45 #ECEEF2,
+        stop: 1 #E2E5EA
+    );
+    border: 1px solid #C4CAD2;
+    color: #1C2530;
+}
+
+QDialog#mobiglasDialog QWidget {
+    color: #1C2530;
+}
+
+QDialog#mobiglasDialog QLabel {
+    color: #1C2530;
+}
+
+QDialog#mobiglasDialog QLabel#pageTitle {
+    color: #1C2530;
+}
+
+QDialog#mobiglasDialog QLabel#subSectionTitle {
+    color: #C45A12;
+}
+
+QDialog#mobiglasDialog QLabel#mutedLabel {
+    color: #5C6773;
+}
+
+QDialog#mobiglasDialog QFrame#rolePermissionGroup QCheckBox,
+QDialog#mobiglasDialog QFrame#pagePanel QCheckBox {
+    color: #1C2530;
+}
+
+QDialog#mobiglasDialog QFrame#rolePermissionGroup QLabel#subSectionTitle,
+QDialog#mobiglasDialog QFrame#pagePanel QLabel#subSectionTitle {
+    color: #0E7490;
+}
+
+QDialog#mobiglasDialog QFrame#pagePanel QLineEdit,
+QDialog#mobiglasDialog QFrame#pagePanel QComboBox {
+    background-color: #FFFFFF;
+    color: #1C2530;
+    border: 1px solid #B8C0CA;
+}
+
+QWidget#mobiglasDialogContent {
+    color: #1C2530;
+}
+
+QMessageBox {
+    background-color: #FFFFFF;
+    color: #1C2530;
+}
+
+QMessageBox QLabel {
+    color: #1C2530;
+}
+
+QLabel#warningBanner {
+    background-color: #FFF8E8;
+    color: #1C2530;
+    border: 2px solid #96700A;
+}
+
+QLabel#warningBannerTitle {
+    color: #96700A;
 }
 
 #versionLabel {
-    color: #666666;
+    color: #5C6773;
+}
+
+QCheckBox {
+    color: #1C2530;
+}
+
+QCheckBox::indicator {
+    border: 1px solid #B8C0CA;
+    background: #FFFFFF;
+}
+
+QCheckBox::indicator:checked {
+    background: #0E7490;
+    border-color: #0C6880;
+}
+"""
+
+_DARK_THEME_PATCH = """
+/* ==========================================================
+   DARK THEME — Feinjustierung (Star-Citizen-Struktur, dunkles Grau)
+   ========================================================== */
+
+QMainWindow {
+    background: qlineargradient(
+        x1: 0, y1: 0, x2: 1, y2: 1,
+        stop: 0 #141414,
+        stop: 0.45 #1A1A1A,
+        stop: 1 #101010
+    );
+}
+
+QWidget {
+    color: #E4E4E4;
+    font-family: "Segoe UI";
+}
+
+#navPanel {
+    background: qlineargradient(
+        x1: 0, y1: 0, x2: 1, y2: 0,
+        stop: 0 #181818,
+        stop: 1 #1E1E1E
+    );
+    border-right: 1px solid #3A3A3A;
+}
+
+QFrame#navBrandCard {
+    background: qlineargradient(
+        x1: 0, y1: 0, x2: 0, y2: 1,
+        stop: 0 #262626,
+        stop: 1 #1E1E1E
+    );
+    border: 1px solid #3A3A3A;
+    border-left: 3px solid #D97732;
+}
+
+QLabel#navTitlePrimary {
+    color: #EDEDED;
+}
+
+QLabel#navTitleSecondary {
+    color: #7EB8DA;
+}
+
+QLabel#navEditionBadge {
+    color: #7EB8DA;
+}
+
+QFrame#navEditionBadgeHost,
+QFrame#navEditionBadgeHost[edition="solo"],
+QFrame#navEditionBadgeHost[edition="crew"],
+QFrame#navEditionBadgeHost[edition="orga"] {
+    background-color: #242424;
+}
+
+#navButton {
+    background-color: #242424;
+    color: #E4E4E4;
+    border: 1px solid #3A3A3A;
+    font-family: "Segoe UI";
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    min-height: 44px;
+}
+
+#navButton:hover {
+    background-color: #2A2A2A;
+    color: #EDEDED;
+    border-color: #7EB8DA;
+}
+
+#navButton:pressed {
+    background-color: #323232;
+    color: #EDEDED;
+}
+
+#navButton[active=true] {
+    background-color: #D97732;
+    color: #FFFFFF;
+    border: 2px solid #C06820;
+}
+
+QLabel#pageTitle {
+    color: #EDEDED;
+}
+
+QLabel#sectionAccent {
+    color: #D97732;
+}
+
+QLabel#subSectionTitle {
+    color: #D97732;
+}
+
+QLabel#formLabel {
+    color: #A0A0A0;
+}
+
+QLabel#sectionTitle {
+    color: #E4E4E4;
+}
+
+QLabel#displayValue {
+    color: #E0E0E0;
+}
+
+QLabel#mutedLabel {
+    color: #909090;
+}
+
+QLabel#hintLabel {
+    color: #888888;
+}
+
+QLabel#statLabel {
+    color: #A0A0A0;
+}
+
+QLabel#statValue {
+    color: #EDEDED;
+}
+
+QLabel#profitLabel {
+    color: #D97732;
+}
+
+QLabel#cardTitle {
+    color: #A0A0A0;
+}
+
+QLabel#cardValue {
+    color: #E4E4E4;
+}
+
+QLabel#emptyInfo {
+    color: #909090;
+}
+
+QWidget#emptyInfoPanel {
+    background-color: #242424;
+    border: 1px solid #3A3A3A;
+    border-radius: 6px;
+}
+
+QLabel#warningBanner {
+    color: #D8C888;
+    background-color: #3A2E18;
+    border: 2px solid #C4A035;
+}
+
+QLabel#warningBannerTitle {
+    color: #D4B048;
+}
+
+QPushButton#primaryAction {
+    background-color: #D97732;
+    color: #FFFFFF;
+    border: 2px solid #C06820;
+}
+
+QPushButton#primaryAction:hover {
+    background-color: #C06820;
+    color: #FFFFFF;
+}
+
+QPushButton#secondaryAction {
+    background-color: #242424;
+    color: #E4E4E4;
+    border: 1px solid #3A3A3A;
+}
+
+QPushButton#secondaryAction:hover {
+    background-color: #2A2A2A;
+    color: #EDEDED;
+    border-color: #7EB8DA;
+}
+
+QFrame#pagePanel,
+QFrame#infoPanel {
+    background: qlineargradient(
+        x1: 0, y1: 0, x2: 0, y2: 1,
+        stop: 0 #242424,
+        stop: 1 #1E1E1E
+    );
+    border: 1px solid #3A3A3A;
+}
+
+QFrame#financeSummaryPanel,
+QFrame#storageTotalsPanel {
+    background: qlineargradient(
+        x1: 0, y1: 0, x2: 0, y2: 1,
+        stop: 0 #282828,
+        stop: 1 #1E1E1E
+    );
+    border: 1px solid #3A3A3A;
+    border-top: 2px solid #D97732;
+}
+
+QFrame#financeSummaryPanel QLabel#statValue,
+QFrame#financeSummaryPanel QLabel#profitLabel,
+QFrame#storageTotalsPanel QLabel#statValue {
+    color: #EDEDED;
+}
+
+QFrame#storageTotalChip {
+    background: #2A2A2A;
+    border: 1px solid #404040;
+}
+
+QFrame#storageTotalsPanel QLabel#statLabel {
+    color: #A0A0A0;
+}
+
+QFrame#dashboardAlertStrip {
+    background: rgba(36, 36, 36, 0.95);
+    border: 1px solid #424242;
+}
+
+QFrame#dashboardAlertStrip QLabel,
+QFrame#dashboardAlertStrip QLabel#warningBannerTitle {
+    color: #E4E4E4;
+}
+
+QToolButton#dashboardAlertBell {
+    border: 1px solid #424242;
+}
+
+QToolButton#dashboardAlertBell:hover,
+QToolButton#dashboardAlertBell:checked {
+    border-color: #D97732;
+}
+
+QLineEdit,
+QComboBox,
+QTextEdit,
+QSpinBox,
+QDoubleSpinBox {
+    background-color: #2A2A2A;
+    color: #E4E4E4;
+    border: 1px solid #404040;
+    selection-background-color: #7EB8DA;
+    selection-color: #101010;
+}
+
+QLineEdit:disabled,
+QComboBox:disabled {
+    background-color: #1E1E1E;
+    color: #707070;
+    border: 1px solid #323232;
+}
+
+QComboBox QAbstractItemView {
+    background-color: #2A2A2A;
+    color: #E4E4E4;
+    border: 1px solid #404040;
+    selection-background-color: #7EB8DA;
+    selection-color: #101010;
+}
+
+QTableWidget#dataTable,
+QTableWidget#historyTable,
+QTableWidget#editableTable {
+    background-color: #1A1A1A;
+    color: #E4E4E4;
+    border: 1px solid #3A3A3A;
+    gridline-color: #323232;
+    selection-background-color: #7EB8DA;
+    selection-color: #101010;
+    alternate-background-color: #222222;
+}
+
+QTableWidget#dataTable QHeaderView::section,
+QTableWidget#historyTable QHeaderView::section,
+QTableWidget#editableTable QHeaderView::section {
+    background-color: #2A2A2A;
+    color: #E4E4E4;
+    border: 1px solid #3A3A3A;
+}
+
+QTabWidget#settingsTabs::pane {
+    background-color: #242424;
+    border: 1px solid #3A3A3A;
+}
+
+QTabWidget#settingsTabs QTabBar::tab {
+    background-color: #1E1E1E;
+    color: #909090;
+    border: 1px solid #3A3A3A;
+    border-bottom: none;
+}
+
+QTabWidget#settingsTabs QTabBar::tab:selected {
+    background-color: #2A2A2A;
+    color: #E4E4E4;
+    border-top: 2px solid #D97732;
+}
+
+QTabWidget#settingsTabs QTabBar::tab:hover {
+    background-color: #262626;
+    color: #E4E4E4;
+}
+
+QScrollBar:vertical,
+QScrollBar:horizontal {
+    background: #1E1E1E;
+}
+
+QScrollBar::handle:vertical,
+QScrollBar::handle:horizontal {
+    background: #505050;
+}
+
+QScrollBar::handle:vertical:hover,
+QScrollBar::handle:horizontal:hover {
+    background: #7EB8DA;
+}
+
+QDialog#mobiglasDialog {
+    background: qlineargradient(
+        x1: 0, y1: 0, x2: 1, y2: 1,
+        stop: 0 #1A1A1A,
+        stop: 0.45 #161616,
+        stop: 1 #101010
+    );
+    border: 1px solid #3A3A3A;
+    color: #E4E4E4;
+}
+
+QDialog#mobiglasDialog QWidget {
+    color: #E4E4E4;
+}
+
+QDialog#mobiglasDialog QLabel {
+    color: #E4E4E4;
+}
+
+QDialog#mobiglasDialog QLabel#pageTitle {
+    color: #EDEDED;
+}
+
+QDialog#mobiglasDialog QLabel#subSectionTitle {
+    color: #D97732;
+}
+
+QDialog#mobiglasDialog QLabel#mutedLabel {
+    color: #909090;
+}
+
+QDialog#mobiglasDialog QFrame#rolePermissionGroup QCheckBox,
+QDialog#mobiglasDialog QFrame#pagePanel QCheckBox {
+    color: #E4E4E4;
+}
+
+QDialog#mobiglasDialog QFrame#rolePermissionGroup QLabel#subSectionTitle,
+QDialog#mobiglasDialog QFrame#pagePanel QLabel#subSectionTitle {
+    color: #7EB8DA;
+}
+
+QDialog#mobiglasDialog QFrame#pagePanel QLineEdit,
+QDialog#mobiglasDialog QFrame#pagePanel QComboBox {
+    background-color: #2A2A2A;
+    color: #E4E4E4;
+    border: 1px solid #404040;
+}
+
+QWidget#mobiglasDialogContent {
+    color: #E4E4E4;
+}
+
+QMessageBox {
+    background-color: #242424;
+    color: #E4E4E4;
+}
+
+QMessageBox QLabel {
+    color: #E4E4E4;
+}
+
+#versionLabel {
+    color: #888888;
+}
+
+QCheckBox {
+    color: #E4E4E4;
+}
+
+QCheckBox::indicator {
+    border: 1px solid #505050;
+    background: #2A2A2A;
+}
+
+QCheckBox::indicator:checked {
+    background: #7EB8DA;
+    border-color: #5A98B8;
 }
 """
 
@@ -474,7 +1293,14 @@ class ThemeManager:
             qss = qss.replace(old, new)
 
         if theme_id == "light":
+            for old, new in _LIGHT_RGBA_REPLACEMENTS:
+                qss = qss.replace(old, new)
             qss += _LIGHT_THEME_PATCH
+
+        if theme_id == "dark":
+            for old, new in _DARK_RGBA_REPLACEMENTS:
+                qss = qss.replace(old, new)
+            qss += _DARK_THEME_PATCH
 
         qss_path.write_text(qss, encoding="utf-8")
         debug_log(f"Theme-QSS erzeugt: {qss_path.name}")

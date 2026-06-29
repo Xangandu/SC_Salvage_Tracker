@@ -2,7 +2,7 @@
 #
 # Ergebnis (Beispiel SOLO):
 #   ..\..\..\Release\app\SC_Salvage_Tracker_SOLO\
-#   ..\..\..\Release\installer\SC_Salvage_Tracker_Setup_SOLO_0.15.2.exe
+#   ..\..\..\Release\installer\SC_Salvage_Tracker_Setup_SOLO_0.16.0.exe
 #
 # Nutzung:
 #   powershell -ExecutionPolicy Bypass -File installer\build_installer.ps1
@@ -58,10 +58,10 @@ function Get-VersionMeta {
     param([string]$VersionFile)
     $content = Get-Content $VersionFile -Raw
     $meta = @{
-        FileVersion = "0.15.2"
-        DisplayVersion = "0.15.2 Beta"
-        Build = "2026.10"
-        Codename = "GLOBAL INTERFACE"
+        FileVersion = "0.16.0"
+        DisplayVersion = "0.16.0 Beta"
+        Build = "2026.11"
+        Codename = "LOCATION FLOW"
     }
 
     if ($content -match 'APP_VERSION\s*=\s*"([^"]+)"') {

@@ -518,8 +518,19 @@ class UserAuthMixin:
         password,
         role_id,
         display_name=None,
+        *,
+        must_change_password=None,
     ):
         self.permissions.assert_can_assign_role(role_id)
+
+        if must_change_password is None:
+            from config.editions import (
+                requires_forced_password_change_on_login,
+            )
+
+            must_change_password = (
+                requires_forced_password_change_on_login(self)
+            )
 
         password_hash = hash_password(password)
 
@@ -533,12 +544,13 @@ class UserAuthMixin:
             must_change_password,
             created_at
         )
-        VALUES (?, ?, ?, ?, 1, 1, datetime('now', 'localtime'))
+        VALUES (?, ?, ?, ?, 1, ?, datetime('now', 'localtime'))
         """, (
             username.strip(),
             display_name or username.strip(),
             password_hash,
             role_id,
+            int(bool(must_change_password)),
         ))
 
         self.connection.commit()

@@ -1,7 +1,7 @@
 SC SALVAGE TRACKER – VERSIONSHISTORIE
 ======================================
 
-Aktuelle Version: 0.15.2 Beta | Build 2026.10 | Codename: GLOBAL INTERFACE
+Aktuelle Version: 0.16.0 Beta | Build 2026.11 | Codename: LOCATION FLOW
 
 Detaillierte Patchnotes:  Changelogs/PATCHNOTES.txt
 Roadmap:                  Changelogs/ROADMAP.txt
@@ -14,6 +14,7 @@ Im Programm: Navigation → Link „Patchnotes & Roadmap“
 KURZÜBERSICHT DER ENTWICKLUNG
 -------------------------------
 
+0.16.0 Location Flow: Lager/Standorte, Schiff→Station-Materialfluss, Kontext-Dashboard, Hinweisleiste
 0.15.2 Global Interface: Vollständige UI-Internationalisierung EN/DE; DB-Fehler, Netzwerk, Admin
 0.15.1 SOLO Bugfix: Dashboard-Persistenz, Payout-Rückmeldung, i18n-Grundlage, Setup-Fixes
 0.15.0 Edition Foundation: Beta-Start; SOLO/CREW/ORGA-Editionen; Vernetzung in SOLO gesperrt+Teaser

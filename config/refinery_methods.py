@@ -1,16 +1,35 @@
-"""Raffinerie-Verfahren (Star Citizen) — keine festen Ausbeute-Faktoren."""
+"""Raffinerie-Verfahren (Star Citizen) — Reihenfolge wie ingame / UEX."""
 
 REFINERY_METHODS = (
-    "Ferron",
-    "Dinyx",
-    "Pyrometric",
-    "So-Hon",
-    "Koben",
-    "Lyon",
-    "Timberline",
-    "Thermite",
-    "Crown",
+    "Cormack",
+    "Dinyx Solventation",
+    "Electrostarolysis",
+    "Ferron Exchange",
+    "Gaskin Process",
+    "Kazen Winnowing",
+    "Pyrometric Chromalysis",
+    "Thermonatic Deposition",
+    "XCR Reaction",
 )
+
+# Alte Tracker-Einträge (Kurznamen vor 0.16)
+LEGACY_REFINERY_METHOD_ALIASES = {
+    "Ferron": "Ferron Exchange",
+    "Dinyx": "Dinyx Solventation",
+    "Pyrometric": "Pyrometric Chromalysis",
+    "So-Hon": "Thermonatic Deposition",
+    "Koben": "Kazen Winnowing",
+    "Lyon": "Electrostarolysis",
+    "Timberline": "Ferron Exchange",
+    "Thermite": "Pyrometric Chromalysis",
+    "Crown": "Cormack",
+}
+
+
+def display_refinery_method(method: str) -> str:
+    if not method:
+        return ""
+    return LEGACY_REFINERY_METHOD_ALIASES.get(method, method)
 
 
 def calc_refinery_efficiency(

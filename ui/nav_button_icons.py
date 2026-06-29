@@ -13,6 +13,7 @@ NAV_BUTTON_ICON_SIZE = QSize(100, 100)
 _NAV_ICON_FILES = {
     "dashboard": "overviewlink-Photoroom.png",
     "session": "sessionlink-Photoroom.png",
+    "storage": "warehouselink.png",
     "refinery": "refinerylink-Photoroom.png",
     "sales": "salelink-Photoroom.png",
     "payout": "payoutlink-Photoroom.png",

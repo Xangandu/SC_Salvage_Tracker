@@ -101,17 +101,27 @@ SHIP_MATERIAL_CODES = {
     "Aegis Reclaimer": ("RMC", "CM_SALVAGE"),
     "Drake Vulture": ("RMC", "CM_RUBBLE"),
     "MISC Fortune": ("CM_RUBBLE",),
-    "ARGO MOTH": ("RMC", "CM_SCRAPS"),
+    "Argo Moth": ("RMC", "CM_SCRAPS"),
 }
+
+# Anzeigereihenfolge: Solo → kleine Crew → Reclaimer
+SALVAGE_SHIP_SORT_ORDER = (
+    "RSI Salvation",
+    "MISC Fortune",
+    "Drake Vulture",
+    "Argo Moth",
+    "Aegis Reclaimer",
+)
 
 # Kurzname → voller Sitzungsname (Legacy / Tests)
 SHIP_NAME_ALIASES = {
     "Vulture": "Drake Vulture",
     "Salvation": "RSI Salvation",
     "Fortune": "MISC Fortune",
-    "MOTH": "ARGO MOTH",
-    "Argo Moth": "ARGO MOTH",
-    "ARGO Moth": "ARGO MOTH",
+    "MOTH": "Argo Moth",
+    "ARGO MOTH": "Argo Moth",
+    "ARGO Moth": "Argo Moth",
+    "Argo MOTH": "Argo Moth",
     "Reclaimer": "Aegis Reclaimer",
 }
 
@@ -119,6 +129,17 @@ SHIP_NAME_ALIASES = {
 def normalize_ship_name(ship_name: str) -> str:
     name = (ship_name or "").strip()
     return SHIP_NAME_ALIASES.get(name, name)
+
+
+def ship_sort_key(ship_name: str) -> tuple[int, str]:
+    normalized = normalize_ship_name(ship_name)
+    try:
+        return (
+            SALVAGE_SHIP_SORT_ORDER.index(normalized),
+            normalized.casefold(),
+        )
+    except ValueError:
+        return (len(SALVAGE_SHIP_SORT_ORDER), normalized.casefold())
 
 
 def material_codes_for_ship(ship_name: str) -> tuple[str, ...]:

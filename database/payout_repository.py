@@ -748,15 +748,10 @@ class PayoutRepository:
         if status in ("ACTIVE", "WAITING_FOR_REFINERY"):
             return
 
-        if self.session_has_unsold_sellable_inventory(
-            session_id
-        ):
-            if status == "WAITING_FOR_PAYOUT":
-                new_status = "WAITING_FOR_SALE"
-            else:
-                return
-        elif self.session_has_unpaid_sales(session_id):
+        if self.session_has_unpaid_sales(session_id):
             new_status = "WAITING_FOR_PAYOUT"
+        elif self.session_has_unsold_sellable_inventory(session_id):
+            new_status = "WAITING_FOR_SALE"
         elif status in (
             "WAITING_FOR_SALE",
             "WAITING_FOR_PAYOUT",

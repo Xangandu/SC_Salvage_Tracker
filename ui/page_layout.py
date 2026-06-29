@@ -164,6 +164,52 @@ def hud_divider():
     return row
 
 
+def hud_divider_vertical(*, compact: bool = False):
+    col = QVBoxLayout()
+    col.setSpacing(2 if compact else 8)
+    col.setContentsMargins(0, 0, 0, 0)
+
+    top = QFrame()
+    top.setObjectName("hudLineVertical")
+    top.setFrameShape(QFrame.Shape.VLine)
+    if compact:
+        top.setFixedHeight(6)
+
+    center = QLabel("▪")
+    center.setObjectName("hudMarkerCompact" if compact else "hudMarker")
+    center.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+    bottom = QFrame()
+    bottom.setObjectName("hudLineVertical")
+    bottom.setFrameShape(QFrame.Shape.VLine)
+    if compact:
+        bottom.setFixedHeight(6)
+
+    if compact:
+        col.addWidget(top, 0, Qt.AlignmentFlag.AlignHCenter)
+        col.addWidget(center, 0, Qt.AlignmentFlag.AlignHCenter)
+        col.addWidget(bottom, 0, Qt.AlignmentFlag.AlignHCenter)
+    else:
+        col.addWidget(top, 1)
+        col.addWidget(center, 0)
+        col.addWidget(bottom, 1)
+
+    return col
+
+
+def hud_divider_vertical_widget(*, width: int = 10) -> QWidget:
+    host = QWidget()
+    host.setObjectName("hudDividerVerticalHost")
+    host.setAutoFillBackground(False)
+    host.setFixedWidth(width)
+    host.setSizePolicy(
+        QSizePolicy.Policy.Fixed,
+        QSizePolicy.Policy.Expanding,
+    )
+    host.setLayout(hud_divider_vertical(compact=False))
+    return host
+
+
 def nav_edition_divider(edition_label):
     """HUD-Linie mit Edition-Badge mittig (ersetzt den Trennpunkt)."""
     row = QHBoxLayout()

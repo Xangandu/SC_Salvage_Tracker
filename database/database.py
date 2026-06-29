@@ -11,6 +11,7 @@ from database.initial_setup import InitialSetupMixin
 from database.migration_v080 import MigrationV080
 from database.material_repository import MaterialRepository
 from database.refinery_repository import RefineryRepository
+from database.stockpile_repository import StockpileRepository
 from database.payout_repository import PayoutRepository
 from database.correction_repository import CorrectionRepository
 from database.migration_manager import (
@@ -235,6 +236,9 @@ class Database(UserAuthMixin, InitialSetupMixin):
         self._upgrade_refinery_model()
         self._upgrade_refinery_output_fields()
         self._upgrade_costs_model()
+        self._upgrade_ship_catalog()
+        self._upgrade_stockpile_idle()
+        self._upgrade_solo_user_login()
         self.migrate_auth_schema()
         self.seed_system_accounts()
 
@@ -259,6 +263,7 @@ class Database(UserAuthMixin, InitialSetupMixin):
 
         self.materials = MaterialRepository(self)
         self.refinery = RefineryRepository(self)
+        self.stockpiles = StockpileRepository(self)
         self.payouts = PayoutRepository(self)
         self.corrections = CorrectionRepository(self)
         self.backups = BackupRepository(self)
@@ -415,6 +420,244 @@ class Database(UserAuthMixin, InitialSetupMixin):
 
         self.connection.commit()
 
+    def _upgrade_stockpile_idle(self):
+        if not self._table_exists("material_stockpiles"):
+            return
+
+        columns = self._table_columns("material_stockpiles")
+        if "idle_reminded_at" not in columns:
+            self.cursor.execute("""
+            ALTER TABLE material_stockpiles
+            ADD COLUMN idle_reminded_at TEXT
+            """)
+
+        self.connection.commit()
+
+    def _upgrade_solo_user_login(self):
+        from config.editions import EDITION_SOLO, build_edition
+
+        if build_edition() != EDITION_SOLO:
+            return
+
+        if not self._table_exists("users"):
+            return
+
+        columns = self._table_columns("users")
+        if "must_change_password" not in columns:
+            return
+
+        system_filter = ""
+        if "is_system" in columns:
+            system_filter = "AND users.is_system = 0"
+
+        self.cursor.execute(f"""
+        UPDATE users
+        SET must_change_password = 0
+        WHERE is_deleted = 0
+        AND must_change_password = 1
+        {system_filter}
+        """)
+
+        self.connection.commit()
+
+    def _ship_id_by_name(self, ship_name, *, include_deleted=False):
+        if include_deleted:
+            self.cursor.execute("""
+            SELECT id
+            FROM ships
+            WHERE ship_name = ?
+            LIMIT 1
+            """, (ship_name,))
+        else:
+            self.cursor.execute("""
+            SELECT id
+            FROM ships
+            WHERE ship_name = ?
+            AND is_deleted = 0
+            LIMIT 1
+            """, (ship_name,))
+
+        row = self.cursor.fetchone()
+        return row[0] if row else None
+
+    def get_session_ship(self, session_id: int) -> dict | None:
+        """Schiff der Sitzung (session_name = Schiffsname)."""
+        if not session_id:
+            return None
+
+        name_column = self._session_name_column()
+        session_columns = self._table_columns("sessions")
+        deleted_filter = ""
+        if "is_deleted" in session_columns:
+            deleted_filter = "AND is_deleted = 0"
+
+        self.cursor.execute(f"""
+        SELECT {name_column}
+        FROM sessions
+        WHERE id = ?
+        {deleted_filter}
+        """, (session_id,))
+
+        row = self.cursor.fetchone()
+        if not row or not row[0]:
+            return None
+
+        from config.materials import normalize_ship_name
+
+        ship_name = normalize_ship_name(str(row[0]).strip())
+        if not ship_name:
+            return None
+
+        ship_id = self._ship_id_by_name(ship_name)
+        if ship_id is None and self._table_exists("ships"):
+            self.cursor.execute("""
+            INSERT INTO ships (
+                ship_name,
+                ship_type,
+                created_at
+            )
+            VALUES (?, 'Salvage', datetime('now', 'localtime'))
+            """, (ship_name,))
+            ship_id = self.cursor.lastrowid
+
+        if ship_id is None:
+            return None
+
+        return {
+            "ship_id": ship_id,
+            "ship_name": ship_name,
+        }
+
+    def _merge_ship_records(self, from_id, to_id):
+        if from_id == to_id:
+            return
+
+        for table, column in (
+            ("material_stockpiles", "ship_id"),
+            ("session_ships", "ship_id"),
+        ):
+            if not self._table_exists(table):
+                continue
+            if column not in self._table_columns(table):
+                continue
+
+            self.cursor.execute(f"""
+            UPDATE {table}
+            SET {column} = ?
+            WHERE {column} = ?
+            """, (to_id, from_id))
+
+        self.cursor.execute("""
+        UPDATE ships
+        SET
+            is_deleted = 1,
+            deleted_at = datetime('now', 'localtime'),
+            updated_at = datetime('now', 'localtime')
+        WHERE id = ?
+        """, (from_id,))
+
+    def _soft_delete_ship_by_id(self, ship_id):
+        self.cursor.execute("""
+        UPDATE ships
+        SET
+            is_deleted = 1,
+            deleted_at = datetime('now', 'localtime'),
+            updated_at = datetime('now', 'localtime')
+        WHERE id = ?
+        AND is_deleted = 0
+        """, (ship_id,))
+
+    def _upgrade_ship_catalog(self):
+        if not self._table_exists("ships"):
+            return
+
+        for old_name, new_name in (
+            ("ARGO MOTH", "Argo Moth"),
+        ):
+            old_id = self._ship_id_by_name(old_name)
+            new_id = self._ship_id_by_name(new_name)
+
+            if old_id and new_id:
+                self._merge_ship_records(old_id, new_id)
+            elif old_id:
+                self.cursor.execute("""
+                UPDATE ships
+                SET
+                    ship_name = ?,
+                    updated_at = datetime('now', 'localtime')
+                WHERE id = ?
+                """, (new_name, old_id))
+
+        mole_id = self._ship_id_by_name("Mole")
+        argo_mole_id = self._ship_id_by_name("Argo Mole")
+        if mole_id and argo_mole_id:
+            self._merge_ship_records(mole_id, argo_mole_id)
+        elif mole_id:
+            self._soft_delete_ship_by_id(mole_id)
+
+        argo_mole_id = self._ship_id_by_name("Argo Mole")
+        if argo_mole_id:
+            self._soft_delete_ship_by_id(argo_mole_id)
+
+        for duplicate_name, canonical_name in (
+            ("Vulture", "Drake Vulture"),
+            ("Reclaimer", "Aegis Reclaimer"),
+        ):
+            dup_id = self._ship_id_by_name(duplicate_name)
+            canonical_id = self._ship_id_by_name(canonical_name)
+
+            if dup_id and canonical_id:
+                self._merge_ship_records(dup_id, canonical_id)
+            elif dup_id:
+                self.cursor.execute("""
+                UPDATE ships
+                SET
+                    ship_name = ?,
+                    updated_at = datetime('now', 'localtime')
+                WHERE id = ?
+                """, (canonical_name, dup_id))
+
+        prospector_id = self._ship_id_by_name("Prospector")
+        if prospector_id:
+            self._soft_delete_ship_by_id(prospector_id)
+
+        for ship_name, ship_type in (
+            ("Argo Moth", "Salvage"),
+            ("Drake Vulture", "Salvage"),
+            ("Aegis Reclaimer", "Salvage"),
+            ("RSI Salvation", "Salvage"),
+            ("MISC Fortune", "Salvage"),
+        ):
+            self.cursor.execute("""
+            INSERT OR IGNORE INTO ships (
+                ship_name,
+                ship_type,
+                created_at
+            )
+            VALUES (?, ?, datetime('now', 'localtime'))
+            """, (ship_name, ship_type))
+
+        name_column = self._session_name_column()
+        session_columns = self._table_columns("sessions")
+        if name_column in session_columns:
+            for old_name, new_name in (
+                ("Vulture", "Drake Vulture"),
+                ("Reclaimer", "Aegis Reclaimer"),
+                ("ARGO MOTH", "Argo Moth"),
+            ):
+                deleted_filter = ""
+                if "is_deleted" in session_columns:
+                    deleted_filter = "AND is_deleted = 0"
+
+                self.cursor.execute(f"""
+                UPDATE sessions
+                SET {name_column} = ?
+                WHERE {name_column} = ?
+                {deleted_filter}
+                """, (new_name, old_name))
+
+        self.connection.commit()
+
     def get_available_refinery_batches(self):
         return self.refinery.get_available_batches()
 
@@ -440,6 +683,11 @@ class Database(UserAuthMixin, InitialSetupMixin):
             cost_paid_by=cost_paid_by,
         )
 
+    def sync_expired_refinery_jobs(self):
+        if hasattr(self, "refinery"):
+            return self.refinery.sync_expired_jobs()
+        return []
+
     def get_active_refinery_jobs(self):
         return self.refinery.get_active_jobs()
 
@@ -464,6 +712,45 @@ class Database(UserAuthMixin, InitialSetupMixin):
     def get_refinery_efficiency_hint(self, material_code: str):
         return self.refinery.get_efficiency_hint(material_code)
 
+    def list_stockpile_ships(self):
+        return self.stockpiles.list_ships()
+
+    def list_material_stockpiles(self, **kwargs):
+        return self.stockpiles.list_stockpiles(**kwargs)
+
+    def create_material_stockpile(self, **kwargs):
+        return self.stockpiles.create_stockpile(**kwargs)
+
+    def update_material_stockpile(self, stockpile_id, **kwargs):
+        return self.stockpiles.update_stockpile(
+            stockpile_id,
+            **kwargs,
+        )
+
+    def delete_material_stockpile(self, stockpile_id):
+        return self.stockpiles.delete_stockpile(stockpile_id)
+
+    def list_stockpile_events(self, **kwargs):
+        return self.stockpiles.list_events(**kwargs)
+
+    def delete_stockpile_event(self, event_id):
+        return self.stockpiles.delete_event(event_id)
+
+    def get_stockpile_totals(self):
+        return self.stockpiles.totals_by_material()
+
+    def count_stockpile_idle_warnings(self):
+        return self.stockpiles.count_idle_warnings()
+
+    def acknowledge_stockpile_idle(self, stockpile_id):
+        return self.stockpiles.acknowledge_idle_reminder(stockpile_id)
+
+    def set_stockpile_reserve(self, stockpile_id, reserve_tag=None):
+        return self.stockpiles.set_reserve_tag(stockpile_id, reserve_tag)
+
+    def mark_stockpile_moved(self, stockpile_id):
+        return self.stockpiles.mark_moved_or_withdrawn(stockpile_id)
+
     def get_schema_status(self):
         return self.migrations.get_status()
 
@@ -475,8 +762,10 @@ class Database(UserAuthMixin, InitialSetupMixin):
         self._upgrade_refinery_model()
         self._upgrade_refinery_output_fields()
         self._upgrade_costs_model()
+        self._upgrade_ship_catalog()
+        self._upgrade_stockpile_idle()
+        self._upgrade_solo_user_login()
         self.migrate_auth_schema()
-        self.permissions.migrate_permissions()
         self.settings.migrate_settings_schema()
         self.migrations.ensure_backup_defaults()
         return self.migrations.finalize_version_metadata()
@@ -1361,6 +1650,15 @@ class Database(UserAuthMixin, InitialSetupMixin):
 
     def get_available_storage_inventory(self):
         return self.materials.get_available_inventory()
+
+    def get_dashboard_storage_inventory(self):
+        exclude_refinery = self._table_exists(
+            "material_stockpiles"
+        )
+        return self.materials.get_available_inventory(
+            exclude_refinery_source=exclude_refinery,
+            global_pool_only=True,
+        )
 
     def get_sales_count(self):
         if not self._table_exists("sales"):

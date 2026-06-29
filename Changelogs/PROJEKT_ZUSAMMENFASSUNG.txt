@@ -1,7 +1,7 @@
 SC SALVAGE TRACKER – PROJEKT-ZUSAMMENFASSUNG
 ==============================================
 
-Stand: Version 0.15.2 Beta | Build 2026.10 | Codename: GLOBAL INTERFACE
+Stand: Version 0.16.0 Beta | Build 2026.11 | Codename: LOCATION FLOW
 
 
 1. PROJEKTZIEL
@@ -20,18 +20,19 @@ Crew-Auszahlungen.
     • Material direkt an Session gebunden
     • Keine zentrale Nachverfolgung einzelner Materialmengen
 
-2.2 Aktuelles Modell (ab v0.8.5 vollständig in der UI)
-    Session → Material Batch → Storage
+2.2 Aktuelles Modell (ab v0.8.5, erweitert v0.16.0)
+    Session → Material Batch → Schiff-Lager (IN_SHIP) → Station-Stockpile (STORED)
               ↓
-         Refinery Job → Refinery Job Items → Storage (CM)
+         Refinery Job → Refinery Job Items → Stockpile an Station (CM)
               ↓
-            Sale → Sale Items
+            Sale → Sale Items (FIFO aus storage_items)
               ↓
            Payout → Payout Items
 
-    • Jede Materialerfassung erzeugt einen Batch + Lager-Eintrag
-    • Raffinerie verarbeitet Batches (remaining_quantity), nicht Sessions
-    • Verkäufe entnehmen aus storage_items (FIFO)
+    • Jede Materialerfassung erzeugt einen Batch + Lager-Eintrag auf dem Schiff
+    • Standort-Seite (material_stockpiles): WO liegt wie viel — Station/Stadt/Schiff
+    • Raffinerie verarbeitet Batches; Rohmaterial vom Schiff, CM als Stockpile
+    • Verkäufe entnehmen aus storage_items (FIFO); Dashboard ohne Doppelzählung
     • Auszahlungen verknüpfen Verkäufe mit Sessions über Lager-Trace
     • Verkaufbare Materialien: RMC, CM (raffiniert)
     • Rohmaterial (CM Rubble/Scraps/Salvage): nur Raffinerie-Input
@@ -51,6 +52,12 @@ Crew-Auszahlungen.
 
 3. WICHTIGE ÄNDERUNGEN NACH VERSION
 ------------------------------------
+
+v0.16.0 – Location Flow (Standorte & Lager)
+• Seite Lager / Standorte: Bestand nach Ort, Historie, Idle-Warnungen, Reserve-Tags
+• Materialfluss Session → Schiff → Station; Raffinerie-Integration ohne Doppelbuchung
+• Kontext-Dashboard mit Hinweisleiste (Ort + Zeit der nächsten Aktion)
+• Standort-Katalog Stanton/Pyro/Nyx; cSCU-Hilfe in Raffinerie-Dialog
 
 v0.15.2 – Global Interface (i18n)
 • Vollständige UI-Internationalisierung: Englisch (Standard) und Deutsch
@@ -144,10 +151,12 @@ ui/
   session_page.py         – Sitzung starten, Material erfassen
   salvage_page.py         – Kosten & Crew
   refinery_page.py        – Raffinerie (Batch-Modell)
+  storage_page.py         – Lager / Standorte (Stockpiles, ab 0.16.0)
   sales_page.py           – Verkäufe (Lager)
   statistics_page.py      – Auszahlung / Gewinnverteilung
   history_page.py         – Verkaufshistorie
-  dashboard_page.py       – Übersicht
+  dashboard_page.py       – Übersicht (öffnet Kontext-Dashboard)
+  context_dashboard/      – Kontext-Ansichten + Hinweisleiste (ab 0.16.0)
   admin_page.py           – Benutzerverwaltung
   page_layout.py          – Gemeinsames MobiGlas-Layout
   table_utils.py          – Tabellen-Styling

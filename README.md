@@ -7,16 +7,13 @@ Salvage**\
 Sitzungen, Materialfluss, Raffinerie, Verkäufe, Kosten und
 Crew-Auszahlungen.
 
-![SC Salvage Tracker](grafik.png)
-![SC Salvage Tracker](grafik2.png)
-![SC Salvage Tracker](grafik3.png)
-![SC Salvage Tracker](grafik4.png)
-![SC Salvage Tracker](grafik5.png)
+## Highlights (Beta)
 
-> **Download (kostenlos):** [Latest Release --- SOLO
-> Version](https://github.com/Xangandu/SC_Salvage_Tracker/releases/latest)
-
-------------------------------------------------------------------------
+- **Lager / Standorte** — Neue Seite zur Verwaltung von Materialbeständen nach Standort, inklusive Historie und sortierbaren Einträgen.
+- **Materialfluss** — Erfassung des Materialflusses zwischen Schiff und Station, mit automatischen Abzügen und verbesserter Lagerverwaltung.
+- **Raffinerie-Integration** — Nahtlose Einbindung von Raffinerie-Prozessen, die den Materialfluss optimiert und Doppelzählungen vermeidet.
+- **Kontext-Dashboard** — Neues modulares Dashboard für eine bessere Übersicht über verschiedene Aktionen und Status in Echtzeit.
+- **Idle-Warnungen** — Einführung von Warnungen für inaktiven Bestand mit der Möglichkeit, Reserven zu setzen und Warnungen zu unterdrücken.
 
 ## Editionen
 

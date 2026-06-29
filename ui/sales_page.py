@@ -22,6 +22,7 @@ from config.materials import material_label
 from config.i18n import tr, format_number
 from config.strings_de import parse_number_de
 from config.permissions import apply_widget_permissions
+from ui.system_location_picker import SystemLocationPicker
 from ui.table_utils import (
     configure_mobiglas_table,
     finalize_table_columns,
@@ -94,10 +95,8 @@ class SalesPage(QWidget):
             subsection_title(tr("sales.section.new"))
         )
 
-        self.location_input = QLineEdit()
-        self.location_input.setPlaceholderText(
-            tr("sales.placeholder.location")
-        )
+        self.location_picker = SystemLocationPicker()
+        form_layout.addWidget(self.location_picker)
 
         self.sale_date_input = QLineEdit()
         self.sale_date_input.setPlaceholderText(
@@ -132,7 +131,6 @@ class SalesPage(QWidget):
         )
 
         for label_text, widget in [
-            (tr("sales.label.location"), self.location_input),
             (tr("sales.label.date"), self.sale_date_input),
             (tr("sales.label.material"), self.material_combo),
             (tr("sales.label.quantity"), self.quantity_input),
@@ -298,14 +296,14 @@ class SalesPage(QWidget):
                     row,
                     1,
                     QTableWidgetItem(
-                        format_number(quantity, 1)
+                        format_number(quantity, 0)
                     ),
                 )
 
                 combo_label = tr(
                     "sales.material.combo",
                     material=label,
-                    quantity=format_number(quantity, 1),
+                    quantity=format_number(quantity, 0),
                 )
                 self.material_combo.addItem(
                     combo_label,
@@ -328,7 +326,7 @@ class SalesPage(QWidget):
             items_text = ", ".join(
                 tr(
                     "sales.history.item_line",
-                    quantity=f"{item['quantity']:g}",
+                    quantity=format_number(item["quantity"], 0),
                     material=material_label(item["material_code"]),
                 )
                 for item in sale["items"]
@@ -416,13 +414,13 @@ class SalesPage(QWidget):
         )
 
     def save_sale(self):
-        location = self.location_input.text().strip()
+        location = self.location_picker.location_label()
 
-        if not location:
+        if not self.location_picker.is_selected():
             QMessageBox.warning(
                 self,
                 tr("common.error"),
-                tr("sales.msg.no_location"),
+                tr("error.location.not_selected"),
             )
             return
 

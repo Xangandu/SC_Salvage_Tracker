@@ -61,6 +61,8 @@ class PermissionRepository:
 
         self._grant_administrator_all_permissions()
 
+        self._grant_storage_to_operational_roles()
+
         self._backfill_legacy_role_permissions()
 
 
@@ -140,6 +142,44 @@ class PermissionRepository:
                     role_id,
 
                     permission_name,
+
+                )
+
+
+
+    def _grant_storage_to_operational_roles(self):
+
+        source_permissions = (
+            "sessions.manage",
+            "sessions.manage_own",
+            "sales.manage",
+            "refinery.manage",
+        )
+
+        for permission_name in source_permissions:
+
+            self.cursor.execute("""
+
+            SELECT DISTINCT role_permissions.role_id
+
+            FROM role_permissions
+
+            INNER JOIN permissions
+
+                ON permissions.id =
+                    role_permissions.permission_id
+
+            WHERE permissions.permission_name = ?
+
+            """, (permission_name,))
+
+            for (role_id,) in self.cursor.fetchall():
+
+                self._grant_permission_to_role(
+
+                    role_id,
+
+                    "storage.manage",
 
                 )
 

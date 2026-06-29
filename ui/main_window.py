@@ -5,6 +5,8 @@ from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import QGraphicsDropShadowEffect
 from ui.refinery_page import RefineryPage
+from ui.storage_page import StoragePage
+from ui.refinery_live_sync import RefineryLiveSync
 from ui.sales_page import SalesPage
 from ui.admin_page import AdminPage
 from ui.changelog_dialog import (
@@ -211,6 +213,9 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
         self.btn_refinery = QPushButton(tr("nav.refinery"))
         configure_nav_button(self.btn_refinery, "refinery")
 
+        self.btn_storage = QPushButton(tr("nav.storage"))
+        configure_nav_button(self.btn_storage, "storage")
+
         self.btn_sales = QPushButton(tr("nav.sales"))
         configure_nav_button(self.btn_sales, "sales")
 
@@ -246,10 +251,23 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
             is_network_client=self.is_network_client,
         )
         self.refinery_page = RefineryPage()
+        self.storage_page = StoragePage()
+        self.storage_page.idle_warnings_changed.connect(
+            self._refresh_storage_idle_badge
+        )
         self.sales_page = SalesPage()
         self.statistics_page = StatisticsPage()
         self.history_page = HistoryPage()
         self.admin_page = AdminPage()
+
+        self.refinery_live_sync = RefineryLiveSync(self)
+        self.refinery_page.attach_live_sync(
+            self.refinery_live_sync
+        )
+        self.refinery_live_sync.jobs_updated.connect(
+            self.dashboard_page.refresh_refinery_kpis
+        )
+        self.refinery_live_sync.start()
 
         self.pages.addWidget(
             QWidget()
@@ -260,6 +278,7 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
         )
 
         self.pages.addWidget(self.refinery_page)
+        self.pages.addWidget(self.storage_page)
         self.pages.addWidget(self.sales_page)
         self.pages.addWidget(self.statistics_page)
         self.pages.addWidget(self.history_page)
@@ -280,6 +299,13 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
             lambda: self.switch_page(
                 self.refinery_page,
                 self.btn_refinery
+            )
+        )
+
+        self.btn_storage.clicked.connect(
+            lambda: self.switch_page(
+                self.storage_page,
+                self.btn_storage
             )
         )
 
@@ -324,6 +350,7 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
             "dashboard": self.btn_dashboard,
             "session": self.btn_session,
             "refinery": self.btn_refinery,
+            "storage": self.btn_storage,
             "sales": self.btn_sales,
             "statistics": self.btn_stats,
             "history": self.btn_history,
@@ -336,6 +363,18 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
         self._refresh_nav_visibility()
 
         nav_layout.addStretch(1)
+
+        self.storage_idle_badge = QPushButton()
+        self.storage_idle_badge.setObjectName("navStorageBadge")
+        self.storage_idle_badge.setCursor(Qt.PointingHandCursor)
+        self.storage_idle_badge.setVisible(False)
+        self.storage_idle_badge.clicked.connect(
+            lambda: self.switch_page(
+                self.storage_page,
+                self.btn_storage,
+            )
+        )
+        nav_layout.addWidget(self.storage_idle_badge)
 
         self.update_badge = QPushButton(
             tr("nav.badge.update_available")
@@ -660,9 +699,26 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
 
         self.network_label.setVisible(False)
 
+    def _refresh_storage_idle_badge(self, count=None):
+        if count is None:
+            from database.access import get_database
+
+            count = get_database().count_stockpile_idle_warnings()
+
+        if count <= 0:
+            self.storage_idle_badge.setVisible(False)
+            return
+
+        self.storage_idle_badge.setText(
+            tr("nav.badge.storage_idle", count=count)
+        )
+        self.storage_idle_badge.setVisible(True)
+
     def _on_network_data_changed(self):
         self.session_page.refresh_session()
         self.refinery_page.load_data()
+        self.storage_page.load_data()
+        self._refresh_storage_idle_badge()
         self.sales_page.load_data()
         self.statistics_page.refresh_data()
         self.history_page.refresh_history()
@@ -692,6 +748,7 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
         mapping = {
             self.session_page: self.btn_session,
             self.refinery_page: self.btn_refinery,
+            self.storage_page: self.btn_storage,
             self.sales_page: self.btn_sales,
             self.statistics_page: self.btn_stats,
             self.history_page: self.btn_history,
@@ -707,6 +764,7 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
         pages = [
             (self.session_page, "session"),
             (self.refinery_page, "refinery"),
+            (self.storage_page, "storage"),
             (self.sales_page, "sales"),
             (self.statistics_page, "statistics"),
             (self.history_page, "history"),
@@ -805,10 +863,6 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
         button
     ):
 
-        if page == self.dashboard_page:
-            self.dashboard_page.apply_dashboard_layout()
-            self.dashboard_page.refresh_dashboard()
-
         if page == self.sales_page:
             self.sales_page.load_data()
 
@@ -817,6 +871,9 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
 
         if page == self.refinery_page:
             self.refinery_page.load_data()
+
+        if page == self.storage_page:
+            self.storage_page.load_data()
 
         if page == self.statistics_page:
             self.statistics_page.refresh_data()
@@ -830,7 +887,41 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
 
         self.pages.setCurrentWidget(page)
 
+        context_key = self._page_context_key(page)
+        if context_key is not None:
+            self.dashboard_page.set_context_from_nav(context_key)
+
         self.set_active_button(button)
+
+    def _page_context_key(self, page) -> str | None:
+        mapping = {
+            self.session_page: "session",
+            self.refinery_page: "refinery",
+            self.storage_page: "storage",
+            self.sales_page: "sales",
+            self.statistics_page: "payout",
+            self.history_page: "history",
+        }
+        return mapping.get(page)
+
+    def switch_dashboard_context(self, context_key: str):
+        page_map = {
+            "session": (self.session_page, self.btn_session),
+            "refinery": (self.refinery_page, self.btn_refinery),
+            "storage": (self.storage_page, self.btn_storage),
+            "sales": (self.sales_page, self.btn_sales),
+            "payout": (self.statistics_page, self.btn_stats),
+            "history": (self.history_page, self.btn_history),
+        }
+        target = page_map.get(context_key)
+        if target is not None:
+            page, button = target
+            self.switch_page(page, button)
+            return
+
+        self.dashboard_page.set_context(context_key, force=True)
+        if self.dashboard_window.isVisible():
+            self.dashboard_page.refresh_dashboard()
 
     def set_active_button(
         self,
@@ -903,6 +994,12 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
         ):
 
             self.dashboard_page.mark_as_detached()
+
+        context_key = self._page_context_key(
+            self.pages.currentWidget()
+        )
+        if context_key is not None:
+            self.dashboard_page.set_context_from_nav(context_key)
 
         set_dashboard_open_on_startup(self.db, True)
         self.dashboard_window.show_dashboard()

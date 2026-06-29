@@ -1,0 +1,117 @@
+{
+  "version": 1,
+  "updated": "2026-06-28",
+  "source": "https://starcitizen.tools/Category:Space_stations",
+  "refinery_source": "https://starcitizen.tools/Refinery_Deck",
+  "systems": {
+    "Stanton": {
+      "with_refinery": [
+        { "id": "ARC-L1", "name": "ARC-L1 Wide Forest Station", "category": "rest_stop" },
+        { "id": "ARC-L2", "name": "ARC-L2 Lively Pathway Station", "category": "rest_stop" },
+        { "id": "ARC-L4", "name": "ARC-L4 Faint Glen Station", "category": "rest_stop" },
+        { "id": "CRU-L1", "name": "CRU-L1 Ambitious Dream Station", "category": "rest_stop" },
+        { "id": "HUR-L1", "name": "HUR-L1 Green Glade Station", "category": "rest_stop" },
+        { "id": "HUR-L2", "name": "HUR-L2 Faithful Dream Station", "category": "rest_stop" },
+        { "id": "MIC-L1", "name": "MIC-L1 Shallow Frontier Station", "category": "rest_stop" },
+        { "id": "MIC-L2", "name": "MIC-L2 Long Forest Station", "category": "rest_stop" },
+        { "id": "MIC-L5", "name": "MIC-L5 Modern Icarus Station", "category": "rest_stop" },
+        { "id": "MAGNUS-GW", "name": "Magnus Gateway", "category": "gateway" },
+        { "id": "PYRO-GW-STANTON", "name": "Pyro Gateway (Stanton)", "category": "gateway" },
+        { "id": "TERRA-GW", "name": "Terra Gateway", "category": "gateway" },
+        { "id": "EVERUS-HARBOR", "name": "Everus Harbor", "category": "orbital_station" }
+      ],
+      "without_refinery": [
+        { "id": "ARC-L3", "name": "ARC-L3 Modern Express Station", "category": "rest_stop" },
+        { "id": "ARC-L5", "name": "ARC-L5 Yellow Core Station", "category": "rest_stop" },
+        { "id": "ARCHANGEL", "name": "Archangel Station", "category": "station" },
+        { "id": "COMM-ST1-02", "name": "Comm Array ST1-02", "category": "comm_array" },
+        { "id": "COMM-ST1-13", "name": "Comm Array ST1-13", "category": "comm_array" },
+        { "id": "COMM-ST1-48", "name": "Comm Array ST1-48", "category": "comm_array" },
+        { "id": "COMM-ST1-61", "name": "Comm Array ST1-61", "category": "comm_array" },
+        { "id": "COMM-ST1-92", "name": "Comm Array ST1-92", "category": "comm_array" },
+        { "id": "COMM-ST2-28", "name": "Comm Array ST2-28", "category": "comm_array" },
+        { "id": "COMM-ST2-47", "name": "Comm Array ST2-47", "category": "comm_array" },
+        { "id": "COMM-ST2-55", "name": "Comm Array ST2-55", "category": "comm_array" },
+        { "id": "COMM-ST2-76", "name": "Comm Array ST2-76", "category": "comm_array" },
+        { "id": "COMM-ST3-18", "name": "Comm Array ST3-18", "category": "comm_array" },
+        { "id": "COMM-ST3-35", "name": "Comm Array ST3-35", "category": "comm_array" },
+        { "id": "COMM-ST3-90", "name": "Comm Array ST3-90", "category": "comm_array" },
+        { "id": "COMM-ST4-22", "name": "Comm Array ST4-22", "category": "comm_array" },
+        { "id": "COMM-ST4-31", "name": "Comm Array ST4-31", "category": "comm_array" },
+        { "id": "COMM-ST4-59", "name": "Comm Array ST4-59", "category": "comm_array" },
+        { "id": "COMM-ST4-64", "name": "Comm Array ST4-64", "category": "comm_array" },
+        { "id": "COVALEX-GUNDO", "name": "Covalex Hub Gundo", "category": "hub" },
+        { "id": "CRU-L4", "name": "CRU-L4 Shallow Fields Station", "category": "rest_stop" },
+        { "id": "CRU-L5", "name": "CRU-L5 Beautiful Glen Station", "category": "rest_stop" },
+        { "id": "DUDLEY-DAUGHTERS", "name": "Dudley & Daughters", "category": "station" },
+        { "id": "GRIM-HEX", "name": "Grim HEX", "category": "outpost" },
+        { "id": "HUR-L3", "name": "HUR-L3 Thundering Express Station", "category": "rest_stop" },
+        { "id": "HUR-L4", "name": "HUR-L4 Melodic Fields Station", "category": "rest_stop" },
+        { "id": "HUR-L5", "name": "HUR-L5 High Course Station", "category": "rest_stop" },
+        { "id": "ICC-SCANHUB", "name": "ICC ScanHub Stanton", "category": "hub" },
+        { "id": "MIC-L3", "name": "MIC-L3 Endless Odyssey Station", "category": "rest_stop" },
+        { "id": "MIC-L4", "name": "MIC-L4 Red Crossroads Station", "category": "rest_stop" },
+        { "id": "PATCH-CITY", "name": "Patch City", "category": "station" },
+        { "id": "PORT-OLISAR", "name": "Port Olisar", "category": "orbital_station" },
+        { "id": "PORT-TRESSLER", "name": "Port Tressler", "category": "orbital_station" },
+        { "id": "KAREAH", "name": "Security Post Kareah", "category": "security" },
+        { "id": "TDD-KESNER", "name": "TDD Kesner", "category": "station" }
+      ]
+    },
+    "Pyro": {
+      "with_refinery": [
+        { "id": "CHECKMATE", "name": "Checkmate Station", "category": "station" },
+        { "id": "NYX-GW-PYRO", "name": "Nyx Gateway (Pyro)", "category": "gateway" },
+        { "id": "STANTON-GW-PYRO", "name": "Stanton Gateway (Pyro)", "category": "gateway" }
+      ],
+      "without_refinery": [
+        { "id": "ATTRITUS-OLP", "name": "Attritus OLP", "category": "olp" },
+        { "id": "GASLIGHT", "name": "Gaslight", "category": "station" },
+        { "id": "LAMINA-OLP", "name": "Lamina OLP", "category": "olp" },
+        { "id": "OB-HELLER", "name": "OB Heller", "category": "outpost" },
+        { "id": "OB-KOBOLD", "name": "OB Kobold", "category": "outpost" },
+        { "id": "OB-GRYPHON", "name": "OB Station Gryphon", "category": "outpost" },
+        { "id": "OB-PEGASUS", "name": "OB Station Pegasus", "category": "outpost" },
+        { "id": "OP-DEMIEN", "name": "OP Station Demien", "category": "outpost" },
+        { "id": "PSS-ALPHA", "name": "People's Service Station Alpha", "category": "pss" },
+        { "id": "PSS-DELTA", "name": "People's Service Station Delta", "category": "pss" },
+        { "id": "PSS-LAMBDA", "name": "People's Service Station Lambda", "category": "pss" },
+        { "id": "PSS-THETA", "name": "People's Service Station Theta", "category": "pss" },
+        { "id": "PYAM-EXHANG-0-1", "name": "PYAM-EXHANG-0-1", "category": "pyam" },
+        { "id": "PYAM-SUPVISR-3-4", "name": "PYAM-SUPVISR-3-4", "category": "pyam" },
+        { "id": "PYAM-SUPVISR-3-5", "name": "PYAM-SUPVISR-3-5", "category": "pyam" },
+        { "id": "RAB-ALPHA", "name": "RAB-Alpha", "category": "station" },
+        { "id": "RATS-NEST", "name": "Rat's Nest", "category": "outpost" },
+        { "id": "RODS-FUEL", "name": "Rod's Fuel 'N Supplies", "category": "outpost" },
+        { "id": "RUIN-STATION", "name": "Ruin Station", "category": "station" },
+        { "id": "RUPTURA-OLP", "name": "Ruptura OLP", "category": "olp" },
+        { "id": "SPIDER", "name": "Spider", "category": "station" },
+        { "id": "STARLIGHT", "name": "Starlight Service Station", "category": "station" },
+        { "id": "VIVERE-OLP", "name": "Vivere OLP", "category": "olp" },
+        { "id": "WIKELO-DASI", "name": "Wikelo Emporium Dasi Station", "category": "wikelo" },
+        { "id": "WIKELO-KINGA", "name": "Wikelo Emporium Kinga Station", "category": "wikelo" },
+        { "id": "WIKELO-SELO", "name": "Wikelo Emporium Selo Station", "category": "wikelo" },
+        { "id": "YOGI", "name": "Yogi Station", "category": "station" }
+      ]
+    },
+    "Nyx": {
+      "with_refinery": [
+        { "id": "PYRO-GW-NYX", "name": "Pyro Gateway (Nyx)", "category": "gateway" }
+      ],
+      "without_refinery": [
+        { "id": "BAIJINI-POINT", "name": "Baijini Point", "category": "station" },
+        { "id": "ECHO-ELEVEN", "name": "Echo Eleven", "category": "station" },
+        { "id": "ENCOLE", "name": "Encole Station", "category": "station" },
+        { "id": "ENDGAME", "name": "Endgame", "category": "station" },
+        { "id": "JUSTICESTAR", "name": "JusticeStar Satellite", "category": "station" },
+        { "id": "KEDSU-REEF", "name": "Kedsu Reef", "category": "station" },
+        { "id": "XENIA", "name": "Xenia", "category": "station" }
+      ]
+    }
+  },
+  "notes": [
+    "Raffinerie-Flag basiert auf Refinery Deck Wiki + Starmap-Amenities (Stand 3.24+).",
+    "Nicht aufgenommen: Kapital-Schiffe (INS *), Flotillas, reine Lore-Einträge ohne Lager.",
+    "Freitext weiterhin möglich fuer Stationen ausserhalb der Liste."
+  ]
+}

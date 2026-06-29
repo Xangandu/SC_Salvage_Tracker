@@ -4,23 +4,23 @@
 ;        powershell -ExecutionPolicy Bypass -File installer\build_installer.ps1 -Edition all
 
 #ifndef MyAppVersion
-  #define MyAppVersion "0.15.2 Beta"
+  #define MyAppVersion "0.16.0 Beta"
 #endif
 
 #ifndef MyAppVersionFile
-  #define MyAppVersionFile "0.15.2"
+  #define MyAppVersionFile "0.16.0"
 #endif
 
 #ifndef MyAppVersionInfo
-  #define MyAppVersionInfo "0.15.2.0"
+  #define MyAppVersionInfo "0.16.0.0"
 #endif
 
 #ifndef MyAppBuild
-  #define MyAppBuild "2026.10"
+  #define MyAppBuild "2026.11"
 #endif
 
 #ifndef MyAppCodename
-  #define MyAppCodename "GLOBAL INTERFACE"
+  #define MyAppCodename "LOCATION FLOW"
 #endif
 
 #ifndef MyAppEdition

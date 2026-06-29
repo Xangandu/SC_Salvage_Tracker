@@ -11,14 +11,10 @@ INSERT OR IGNORE INTO missions (mission_name, mission_type, created_at) VALUES
 
 -- Schiffe
 INSERT OR IGNORE INTO ships (ship_name, ship_type, created_at) VALUES
-    ('Vulture', 'Salvage', datetime('now', 'localtime')),
-    ('Reclaimer', 'Salvage', datetime('now', 'localtime')),
-    ('Prospector', 'Mining', datetime('now', 'localtime')),
-    ('Mole', 'Mining', datetime('now', 'localtime')),
     ('RSI Salvation', 'Salvage', datetime('now', 'localtime')),
     ('MISC Fortune', 'Salvage', datetime('now', 'localtime')),
     ('Drake Vulture', 'Salvage', datetime('now', 'localtime')),
-    ('ARGO MOTH', 'Salvage', datetime('now', 'localtime')),
+    ('Argo Moth', 'Salvage', datetime('now', 'localtime')),
     ('Aegis Reclaimer', 'Salvage', datetime('now', 'localtime'));
 
 -- Materialtypen

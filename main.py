@@ -16,6 +16,7 @@ from ui.super_admin_recovery_dialog import (
     SuperAdminRecoveryDialog,
 )
 from config.permissions import is_super_administrator
+from config.editions import requires_forced_password_change_on_login
 from config.font_families import existing_font_paths
 from database.database import Database
 from database.access import (
@@ -307,7 +308,12 @@ class SalvageTrackerApp:
                 user_session.clear_session()
                 continue
 
-            if user["must_change_password"]:
+            if (
+                user["must_change_password"]
+                and requires_forced_password_change_on_login(
+                    self.db
+                )
+            ):
                 if not self._force_password_change(user):
                     user_session.clear_session()
                     continue

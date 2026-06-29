@@ -24,7 +24,7 @@
     {
         "manufacturer": "ARGO",
         "name": "MOTH",
-        "session_name": "ARGO MOTH",
+        "session_name": "Argo Moth",
         "class": "Medium Salvage",
         "materials": ["RMC", "CM_SCRAPS"]
     },

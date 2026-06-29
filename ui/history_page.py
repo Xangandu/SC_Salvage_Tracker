@@ -91,7 +91,7 @@ class HistoryPage(QWidget):
             items_text = ", ".join(
                 tr(
                     "sales.history.item_line",
-                    quantity=f"{item['quantity']:g}",
+                    quantity=format_number(item["quantity"], 0),
                     material=material_label(item["material_code"]),
                 )
                 for item in sale["items"]

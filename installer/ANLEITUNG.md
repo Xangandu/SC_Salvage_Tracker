@@ -1,10 +1,10 @@
-# SC Salvage Tracker — Custom Setup (Global Interface · 0.15.2 Beta)
+# SC Salvage Tracker — Custom Setup (Location Flow · 0.16.0 Beta)
 #
 # Standard-Build: SC Salvage Tracker - SOLO Version
 #
 # Ergebnis (SOLO):
 #   Release\app\SC_Salvage_Tracker_SOLO\
-#   Release\installer\SC_Salvage_Tracker_Setup_SOLO_0.15.2.exe
+#   Release\installer\SC_Salvage_Tracker_Setup_SOLO_0.16.0.exe
 #   Release\installer\update-manifest.json
 #
 # Voraussetzung: Inno Setup 6.7+ (https://jrsoftware.org/isinfo.php)
@@ -31,9 +31,9 @@ powershell -ExecutionPolicy Bypass -File installer\build_installer.ps1 -Edition 
 Ergebnis in `Release\installer\`:
 | Datei | Edition |
 |-------|---------|
-| `SC_Salvage_Tracker_Setup_SOLO_0.15.2.exe` | SOLO (kostenlos) |
-| `SC_Salvage_Tracker_Setup_CREW_0.15.2.exe` | CREW (Vernetzung) |
-| `SC_Salvage_Tracker_Setup_ORGA_0.15.2.exe` | ORGA (Roadmap) |
+| `SC_Salvage_Tracker_Setup_SOLO_0.16.0.exe` | SOLO (kostenlos) |
+| `SC_Salvage_Tracker_Setup_CREW_0.16.0.exe` | CREW (Vernetzung) |
+| `SC_Salvage_Tracker_Setup_ORGA_0.16.0.exe` | ORGA (Roadmap) |
 | `update-manifest.json` | In-App-Updates (SOLO) |
 | `update-manifest-crew.json` / `-orga.json` | optional pro Edition |
 

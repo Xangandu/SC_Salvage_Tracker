@@ -68,6 +68,42 @@ function Get-PythonExecutable {
     return "py"
 }
 
+function Invoke-AiReadme {
+    param([hashtable]$VersionMeta)
+
+    $python = Get-PythonExecutable
+    $script = Join-Path $ProjectRoot "scripts\generate_readme_ai.py"
+
+    if (-not (Test-Path $script)) {
+        Write-Host "   Hinweis - README-KI-Skript fehlt"
+        return $false
+    }
+
+    $hasKey = [bool]$env:OPENAI_API_KEY
+    $localConfig = Join-Path $ProjectRoot "config\patchnotes_ai.local.json"
+    if (-not $hasKey -and -not (Test-Path $localConfig)) {
+        Write-Host "   Hinweis - kein API-Key, README manuell belassen"
+        return $false
+    }
+
+    Write-Host "   ChatGPT schreibt README-Highlights fuer $($VersionMeta.DisplayVersion)..."
+
+    if ($python -eq "py") {
+        & py -3 $script --force
+    }
+    else {
+        & $python $script --force
+    }
+
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "   OK - README per ChatGPT aktualisiert"
+        return $true
+    }
+
+    Write-Host "   Hinweis - README-KI uebersprungen (Exit $LASTEXITCODE)"
+    return $false
+}
+
 function Invoke-AiPatchnotes {
     param([hashtable]$VersionMeta)
 
@@ -176,13 +212,16 @@ Write-Host "   Build:    $($version.Build)"
 Write-Host "   Codename: $($version.Codename)"
 Write-Host "   Git-Tag:  v$($version.FileVersion)"
 
-Write-Step "Schritt 2/5 - PATCHNOTES (ChatGPT)"
+Write-Step "Schritt 2/6 - PATCHNOTES (ChatGPT)"
 $aiPatchnotesOk = Invoke-AiPatchnotes -VersionMeta $version
 if (-not $aiPatchnotesOk) {
     Ensure-PatchnotesSection -Path $PatchnotesFile -VersionMeta $version
 }
 
-Write-Step "Schritt 3/5 - Voraussetzungen"
+Write-Step "Schritt 3/6 - README (ChatGPT)"
+Invoke-AiReadme -VersionMeta $version | Out-Null
+
+Write-Step "Schritt 4/6 - Voraussetzungen"
 if (-not (Test-CommandExists "git")) {
     throw "Git nicht gefunden - bitte Git installieren."
 }
@@ -204,7 +243,7 @@ Write-Host "   OK - Python"
 
 $commitMessage = "Release $($version.DisplayVersion)"
 
-Write-Step "Schritt 4/5 - Build, Commit, Push"
+Write-Step "Schritt 5/6 - Build, Commit, Push"
 Write-Host "   Commit-Nachricht: $commitMessage"
 
 & powershell -NoProfile -ExecutionPolicy Bypass -File $PublishScript `
@@ -214,7 +253,7 @@ if ($LASTEXITCODE -ne 0) {
     throw "Release fehlgeschlagen (Exit-Code $LASTEXITCODE)."
 }
 
-Write-Step "Schritt 5/5 - Fertig"
+Write-Step "Schritt 6/6 - Fertig"
 Write-Host ""
 Write-Host "========================================================"
 Write-Host " Release $($version.DisplayVersion) erfolgreich veroeffentlicht"

@@ -28,6 +28,7 @@ PERM_SESSIONS_MANAGE = "sessions.manage"
 PERM_SESSIONS_MANAGE_OWN = "sessions.manage_own"
 PERM_CREW_MANAGE = "crew.manage"
 PERM_REFINERY_MANAGE = "refinery.manage"
+PERM_STORAGE_MANAGE = "storage.manage"
 PERM_SALES_MANAGE = "sales.manage"
 PERM_PAYOUTS_MANAGE = "payouts.manage"
 PERM_PAYOUTS_APPROVE = "payouts.approve"
@@ -45,6 +46,7 @@ PERMISSION_LABELS = {
     PERM_SESSIONS_MANAGE_OWN: "Eigene Sitzungen verwalten",
     PERM_CREW_MANAGE: "Crew verwalten",
     PERM_REFINERY_MANAGE: "Raffinerie verwalten",
+    PERM_STORAGE_MANAGE: "Lager und Standorte verwalten",
     PERM_SALES_MANAGE: "Verkäufe durchführen",
     PERM_PAYOUTS_MANAGE: "Auszahlungen erstellen",
     PERM_PAYOUTS_APPROVE: "Auszahlungen freigeben",
@@ -68,6 +70,7 @@ PERMISSION_GROUPS = (
     )),
     ("operations", (
         PERM_REFINERY_MANAGE,
+        PERM_STORAGE_MANAGE,
         PERM_SALES_MANAGE,
     )),
     ("payouts", (
@@ -91,6 +94,7 @@ ALL_PERMISSION_NAMES = (
     PERM_SESSIONS_MANAGE_OWN,
     PERM_CREW_MANAGE,
     PERM_REFINERY_MANAGE,
+    PERM_STORAGE_MANAGE,
     PERM_SALES_MANAGE,
     PERM_PAYOUTS_MANAGE,
     PERM_PAYOUTS_APPROVE,
@@ -105,6 +109,7 @@ LEGACY_ROLE_PERMISSIONS = {
         PERM_SESSIONS_MANAGE,
         PERM_CREW_MANAGE,
         PERM_REFINERY_MANAGE,
+        PERM_STORAGE_MANAGE,
         PERM_SALES_MANAGE,
         PERM_PAYOUTS_MANAGE,
         PERM_PAYOUTS_APPROVE,
@@ -114,6 +119,7 @@ LEGACY_ROLE_PERMISSIONS = {
     ),
     ROLE_LEGACY_MEMBER: (
         PERM_SESSIONS_MANAGE_OWN,
+        PERM_STORAGE_MANAGE,
         PERM_PAYOUTS_VIEW_OWN,
         PERM_STATISTICS_VIEW,
         PERM_DASHBOARD_VIEW,
@@ -153,6 +159,10 @@ PAGE_PERMISSIONS = {
     "refinery": {
         "read": (PERM_REFINERY_MANAGE,),
         "write": (PERM_REFINERY_MANAGE,),
+    },
+    "storage": {
+        "read": (PERM_STORAGE_MANAGE,),
+        "write": (PERM_STORAGE_MANAGE,),
     },
     "sales": {
         "read": (PERM_SALES_MANAGE,),

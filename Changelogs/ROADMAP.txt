@@ -1,7 +1,7 @@
 SC SALVAGE TRACKER – ROADMAP
 =============================
 
-Stand: Version 0.15.2 Beta | Build 2026.10 | Codename: GLOBAL INTERFACE
+Stand: Version 0.16.0 Beta | Build 2026.11 | Codename: LOCATION FLOW
 
 
 PHASE 1 – UI AN NEUES DATENMODELL ANBINDEN (ABGESCHLOSSEN)
@@ -116,6 +116,24 @@ PHASE 6 – BETA & PRODUKT-EDITIONEN (0.15.0 — GESTARTET)
 [x] Öffentlicher GitHub-Release mit Manifest (Beta-Publikation)
 [x] Vollständige Internationalisierung (i18n) EN/DE — UI, Dialoge, DB-Fehler, Netzwerk
     (0.15.2: config/i18n.py, Sprachwahl, Restart-Hinweis)
+
+
+PHASE 7 – STANDORTE & LAGER (0.16.0 — GESTARTET)
+-------------------------------------------------
+[x] DB-Tabellen material_stockpiles + material_stockpile_events (Schema 028)
+[x] Seite „Lager / Standorte“ — Bestand nach Ort, Historie, manuelle Einträge
+[x] Standort-Katalog (Stanton/Pyro/Nyx, Stationen + Landeplätze, Raffinerie-Gruppen)
+[x] Material auf Schiff (IN_SHIP) bei Session-Erfassung
+[x] Stationseinlagerung: Transfer Schiff → Station (Stockpile + storage_item)
+[x] Raffinerie: Rohmaterial vom Schiff, CM-Abholung als Stockpile an Station
+[x] 10-Tage-Idle-Warnung + Reserve-Tags + Banner auf Lager-Seite
+[x] Kontext-Dashboard (separates Fenster) mit Hinweisleiste und Operations-Kontexten
+[x] Dashboard-Lager ohne Doppelzählung (get_dashboard_storage_inventory)
+[x] cSCU ↔ SCU Live-Hilfe im Raffinerie-Abschluss-Dialog
+[ ] Solo-Auto-Auszahlung nach vollständigem Verkauf
+[ ] CREW/ORGA: Multi-Session + geteilte Standort-Übersicht
+[ ] Basenbau / eigenes Heim-Lager (Zukunft)
+[ ] Mining-Rohstoffe im Standort-Workflow (Zukunft)
 
 
 LANGFRISTIG

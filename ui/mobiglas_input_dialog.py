@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QMessageBox,
     QLabel,
+    QWidget,
 )
 
 from ui.page_layout import (
@@ -22,7 +23,8 @@ from ui.mobiglas_window_frame import (
     MobiglasFramelessMixin,
     apply_mobiglas_window_frame,
 )
-from config.i18n import tr
+from config.i18n import tr, format_number
+from config.locations.cscu import cscu_to_scu
 from config.strings_de import parse_number_de
 
 
@@ -240,6 +242,7 @@ class MobiglasDoubleInputDialog(MobiglasFramelessMixin, QDialog):
         decimals=1,
         hint_text="",
         field_tooltip="",
+        live_scu_from_cscu=False,
     ):
         super().__init__(parent)
 
@@ -247,11 +250,12 @@ class MobiglasDoubleInputDialog(MobiglasFramelessMixin, QDialog):
         self._maximum = float(maximum)
         self._decimals = int(decimals)
         self._value = float(value)
+        self._live_scu_from_cscu = live_scu_from_cscu
 
         self.setObjectName("mobiglasDialog")
         self.setWindowTitle(title)
         self.setModal(True)
-        self.resize(480, 260)
+        self.resize(480, 300 if live_scu_from_cscu else 260)
         self.setMinimumWidth(420)
 
         layout = QVBoxLayout()
@@ -281,7 +285,21 @@ class MobiglasDoubleInputDialog(MobiglasFramelessMixin, QDialog):
         self.input.setText(formatted or "0")
         if field_tooltip:
             self.input.setToolTip(field_tooltip)
-        add_form_field(panel_layout, label, self.input)
+
+        if live_scu_from_cscu:
+            input_col = QWidget()
+            input_col_layout = QVBoxLayout(input_col)
+            input_col_layout.setContentsMargins(0, 0, 0, 0)
+            input_col_layout.setSpacing(6)
+            input_col_layout.addWidget(self.input)
+            self.live_scu_hint = QLabel()
+            self.live_scu_hint.setObjectName("refineryScuConversion")
+            self.live_scu_hint.hide()
+            input_col_layout.addWidget(self.live_scu_hint)
+            self.input.textChanged.connect(self._update_live_scu_hint)
+            add_form_field(panel_layout, label, input_col)
+        else:
+            add_form_field(panel_layout, label, self.input)
 
         button_row = QHBoxLayout()
         button_row.setSpacing(12)
@@ -314,6 +332,25 @@ class MobiglasDoubleInputDialog(MobiglasFramelessMixin, QDialog):
 
     def value(self):
         return self._value
+
+    def _update_live_scu_hint(self):
+        if not self._live_scu_from_cscu:
+            return
+
+        cscu = parse_number_de(self.input.text())
+        if cscu is None or cscu <= 0:
+            self.live_scu_hint.hide()
+            return
+
+        scu = cscu_to_scu(cscu)
+        self.live_scu_hint.setText(
+            tr(
+                "refinery.hint.scu_from_cscu",
+                scu=format_number(scu, 0),
+                cscu=format_number(cscu),
+            )
+        )
+        self.live_scu_hint.show()
 
     def _accept_value(self):
         text = self.input.text().strip()
@@ -364,6 +401,7 @@ class MobiglasDoubleInputDialog(MobiglasFramelessMixin, QDialog):
         decimals=1,
         hint_text="",
         field_tooltip="",
+        live_scu_from_cscu=False,
     ):
         dialog = cls(
             parent,
@@ -375,6 +413,7 @@ class MobiglasDoubleInputDialog(MobiglasFramelessMixin, QDialog):
             decimals=decimals,
             hint_text=hint_text,
             field_tooltip=field_tooltip,
+            live_scu_from_cscu=live_scu_from_cscu,
         )
 
         if dialog.exec() == QDialog.DialogCode.Accepted:

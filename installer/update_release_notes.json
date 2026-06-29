@@ -1,4 +1,30 @@
 {
+  "0.16.0": {
+    "de": {
+      "title": "SC Salvage Tracker 0.16.0 Beta — Location Flow",
+      "summary": "Standorte & Lager: Material liegt jetzt an echten Orten (Schiff, Station, Stadt). Neues Kontext-Dashboard mit Hinweisleiste für die nächste Aktion.",
+      "highlights": [
+        "Neue Seite Lager / Standorte — Bestand nach Ort, Historie, Summen",
+        "Session-Material zuerst auf dem Schiff, Einlagerung an Station mit Transfer",
+        "Raffinerie: Rohmaterial vom Schiff, CM-Abholung als Stockpile an der Station",
+        "Kontext-Dashboard (Zweitmonitor) mit Hinweisleiste: Ort + Zeit",
+        "10-Tage-Idle-Warnung und Reserve-Tags für bewusst gelagertes Material",
+        "cSCU ↔ SCU Live-Umrechnung im Raffinerie-Abschluss-Dialog"
+      ]
+    },
+    "en": {
+      "title": "SC Salvage Tracker 0.16.0 Beta — Location Flow",
+      "summary": "Locations & storage: material now lives at real places (ship, station, city). New context dashboard with alert strip for the next action.",
+      "highlights": [
+        "New Storage / Locations page — stock by place, history, totals",
+        "Session material on ship first; station deposit transfers from ship",
+        "Refinery: raw material from ship, CM pickup as stockpile at station",
+        "Context dashboard (second monitor) with alert strip: place + time",
+        "10-day idle warning and reserve tags for intentionally stored stock",
+        "cSCU ↔ SCU live conversion in refinery completion dialog"
+      ]
+    }
+  },
   "0.15.2": {
     "de": {
       "title": "SC Salvage Tracker 0.15.2 Beta — Global Interface",

@@ -13,13 +13,14 @@ from PySide6.QtWidgets import (
 )
 
 from database.access import get_database
-from config.i18n import tr, format_number, status_label
+from config.i18n import tr, format_number, format_scu, status_label
 from config.strings_de import parse_int_de, parse_number_de
 from config.materials import (
     material_label,
     material_codes_for_ship,
     materials_summary_for_ship,
     ship_supports_material,
+    SALVAGE_SHIP_SORT_ORDER,
 )
 from config.permissions import apply_widget_permissions
 import auth.session as user_session
@@ -62,13 +63,7 @@ class SessionPage(QWidget):
         self._material_ship_name = ""
 
         self.ship_combo = QComboBox()
-        self.ship_combo.addItems([
-            "RSI Salvation",
-            "MISC Fortune",
-            "Drake Vulture",
-            "ARGO MOTH",
-            "Aegis Reclaimer",
-        ])
+        self.ship_combo.addItems(list(SALVAGE_SHIP_SORT_ORDER))
         self.ship_combo.currentTextChanged.connect(
             self._on_host_ship_changed
         )
@@ -422,7 +417,7 @@ class SessionPage(QWidget):
                 label = (
                     f"#{session['id']} · {session['name']} · "
                     f"{status_label(session['status'])} · "
-                    f"{format_number(session['total_scu'])} SCU"
+                    f"{format_scu(session['total_scu'])}"
                 )
                 self.client_session_combo.addItem(
                     label,

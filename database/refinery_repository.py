@@ -322,6 +322,18 @@ class RefineryRepository:
                 )
 
                 if (
+                    hasattr(self.db, "stockpiles")
+                    and self.db._table_exists("material_stockpiles")
+                ):
+                    self.db.stockpiles.reserve_ship_stockpile_for_refinery(
+                        material_code=line["input_material"],
+                        quantity_scu=line["input_quantity"],
+                        refinery_job_id=job_id,
+                        station_label=refinery_name,
+                        created_by=created_by,
+                    )
+
+                if (
                     "input_material" in item_columns
                     and "output_material" in item_columns
                 ):
@@ -367,6 +379,41 @@ class RefineryRepository:
         except Exception:
             self.connection.rollback()
             raise
+
+    def sync_expired_jobs(self):
+        """RUNNING → READY wenn end_time erreicht. Gibt neu abholbereite Job-IDs zurück."""
+        deleted_filter = ""
+
+        if "is_deleted" in self.db._table_columns(
+            "refinery_jobs"
+        ):
+            deleted_filter = "AND is_deleted = 0"
+
+        self.cursor.execute(f"""
+        SELECT id
+        FROM refinery_jobs
+        WHERE status = 'RUNNING'
+        AND end_time IS NOT NULL
+        AND end_time <= datetime('now', 'localtime')
+        {deleted_filter}
+        """)
+
+        job_ids = [row[0] for row in self.cursor.fetchall()]
+
+        if not job_ids:
+            return []
+
+        placeholders = ",".join("?" for _ in job_ids)
+        self.cursor.execute(f"""
+        UPDATE refinery_jobs
+        SET
+            status = 'READY',
+            updated_at = datetime('now', 'localtime')
+        WHERE id IN ({placeholders})
+        AND status = 'RUNNING'
+        """, job_ids)
+        self.connection.commit()
+        return job_ids
 
     def get_active_jobs(self):
         deleted_filter = ""
@@ -480,7 +527,7 @@ class RefineryRepository:
             )
 
         self.cursor.execute("""
-        SELECT status
+        SELECT status, station
         FROM refinery_jobs
         WHERE id = ?
         """, (job_id,))
@@ -489,6 +536,8 @@ class RefineryRepository:
 
         if not job_row:
             raise ValueError(tr("error.refinery.not_found"))
+
+        station_label = (job_row[1] or "").strip() or "—"
 
         if job_row[0] == "COMPLETED":
             raise ValueError(tr("error.refinery.already_completed"))
@@ -594,21 +643,36 @@ class RefineryRepository:
                 job_params,
             )
 
-            material_type_id = (
-                self.materials.get_material_type_id(
-                    REFINERY_OUTPUT_CODE
+            session_ids = self._session_ids_for_job(job_id)
+            session_id = (
+                session_ids[0] if session_ids else None
+            )
+            if (
+                hasattr(self.db, "stockpiles")
+                and self.db._table_exists("material_stockpiles")
+            ):
+                self.db.stockpiles.deposit_refinery_pickup(
+                    material_code=REFINERY_OUTPUT_CODE,
+                    quantity_scu=output_quantity,
+                    station_label=station_label,
+                    refinery_job_id=job_id,
+                    session_id=session_id,
                 )
-            )
+            else:
+                material_type_id = (
+                    self.materials.get_material_type_id(
+                        REFINERY_OUTPUT_CODE
+                    )
+                )
+                self.materials.add_to_storage(
+                    material_type_id,
+                    output_quantity,
+                    source_type="REFINERY",
+                    source_id=job_id,
+                    created_by=updated_by,
+                )
 
-            self.materials.add_to_storage(
-                material_type_id,
-                output_quantity,
-                source_type="REFINERY",
-                source_id=job_id,
-                created_by=updated_by,
-            )
-
-            for session_id in self._session_ids_for_job(job_id):
+            for session_id in session_ids:
                 self._refresh_session_status_after_refinery(
                     session_id
                 )

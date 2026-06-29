@@ -1,6 +1,72 @@
 SC SALVAGE TRACKER – PATCHNOTES
 ================================
 
+VERSION 0.16.0 Beta | Build 2026.11 | Codename: LOCATION FLOW
+--------------------------------------------------------------------
+
+NEU — LAGER / STANDORTE (KERNFEATURE)
+• Eigene Seite „Lager / Standorte“ in der Navigation
+• Bestand nach Ort: Station, Stadt oder Schiff — sortierbar (Standort, Material, Alter)
+• Manuell: Material an Station/Stadt eintragen oder pro Schiff erfassen
+• Historie aller Lagerbewegungen (Einlagerung, Entnahme, Verschiebung) — Einträge löschbar
+• Summen-Panel: Material-Chips mit SCU-Mengen (gut sichtbar, orangefarbener Akzent)
+• Standort-Katalog: Stanton / Pyro / Nyx (Stationen + Landeplätze, mit/ohne Raffinerie)
+• SystemLocationPicker und gruppierte Standort-Dropdowns (Raffinerie, Verkauf)
+
+NEU — MATERIALFLUSS SESSION → SCHIFF → STATION
+• Session-Erfassung: Material landet auf dem Schiff (Status IN_SHIP), nicht mehr im globalen Pool
+• Schiff wird aus dem Sitzungsnamen aufgelöst (get_session_ship)
+• Stationseinlagerung: Abzug vom Schiff-Lager zuerst, Legacy-Fallback danach
+• Globales Lager (storage_items ohne Ort) wird schrittweise ersetzt — Dashboard filtert
+  stockpile-verknüpfte Einträge aus der Anzeige
+• Manuelle Einlagerung an Station: Abzug aus globalem Pool + neuer Stockpile + verknüpftes
+  storage_item (Verschiebung statt Kopie)
+
+NEU — RAFFINERIE & LAGER-INTEGRATION
+• Raffinerie-Start: Rohmaterial (CM Rubble etc.) wird vom Schiff-Lager abgezogen
+• Raffinerie-Abbruch: Rohmaterial wird auf das Schiff zurückgebucht
+• Raffinerie-Abholung: CM nur noch als Stockpile an der Station (kein doppelter
+  globaler REFINERY-Eintrag)
+• Abschluss-Dialog: Live-Umrechnung cSCU → SCU (Faktor 100) bei Terminal-Eingaben
+• Raffinerie- und Verkaufsseiten nutzen Standort-Dropdowns aus dem Katalog
+
+NEU — KONTEXT-DASHBOARD (ZWEITMONITOR)
+• Neues modulares Kontext-Dashboard (ui/context_dashboard/) im separaten Dashboard-Fenster
+• Kontexte: Übersicht, Session, Raffinerie, Lager, Verkauf, Auszahlung, Historie
+• Hinweisleiste (GlobalAlertStrip): volle Breite, ein-/ausklappbar über Glocken-Icon
+• Nächste Aktion mit echtem Ort und Zeitstempel (z. B. „Verkaufsbereit — CM · Station · Heute“)
+• Kein irreführendes „Globales Lager“ mehr in der Hinweisleiste bei stockpile-geführtem Bestand
+• DashboardOperationsRepository: Kontext-Builder, Alert-Logik, Operations-Zeilen
+
+NEU — IDLE-WARNUNGEN & RESERVE (PHASE C)
+• 10-Tage-Hinweis bei inaktivem Bestand (dezent, wiederholbar)
+• Reserve-Tag setzen → unterdrückt Idle-Warnung für bewusst gelagertes Material
+• Banner auf der Lager-Seite mit „Erinnert“-Bestätigung
+• Filter „Nur Warnungen“ in der Bestandsliste
+
+SESSION-DASHBOARD & UX
+• SITZUNGEN-Zähler (Lifetime) aus Session-Ansicht entfernt (bleibt in Historie)
+• CREW → CREW (Sitzung) zur Klarstellung
+• Integrationstest scripts/integration_test_flow.py an neuen Materialfluss angepasst
+
+DATENBANK
+• Schema 028: material_stockpiles + material_stockpile_events
+• StockpileRepository: CRUD, Events, Schiff-Transfer, Raffinerie-Reservierung
+• get_dashboard_storage_inventory(): ohne Stockpile-Doppelzählung und ohne Schiff-on-Session
+• MaterialRepository: deposit_session_capture, transfer_global_to_stockpile
+
+DOKUMENTATION
+• docs/SPEC_STANDORTE_UND_LAGER.md — Implementierungsstand aktualisiert
+• docs/SESSION_NOTES_2026-06-28_WORKFLOWS_UND_STANDORTE.md — erledigte Phasen markiert
+• docs/RELEASE_0.16.0_LOCATION_FLOW.md — Release-Zusammenfassung (neu)
+• Changelogs, ROADMAP, VERSION_HISTORY, GitHub-Release-Vorlage, In-App-Update-Notizen
+
+BEKANNT / OFFEN
+• Solo-Auto-Auszahlung nach Verkauf noch nicht implementiert (Punkt 8 Testliste)
+• Alte DB-Einträge (Legacy-Ghost-Bestände) ggf. manuell bereinigen nach Upgrade
+• CREW/ORGA: Multi-Session und geteilte Standort-Übersicht folgen separat
+
+
 VERSION 0.15.2 Beta | Build 2026.10 | Codename: GLOBAL INTERFACE
 --------------------------------------------------------------------
 
