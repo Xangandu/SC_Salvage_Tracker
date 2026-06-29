@@ -70,8 +70,7 @@ def replace_highlights_section(readme: str, bullets: str) -> str:
         )
 
     section = f"{HIGHLIGHTS_HEADER}\n\n{bullets}\n"
-    pattern = rf"(?ms)^{re.escape(HIGHLIGHTS_HEADER)}.*?(?=^## |\Z)"
-
+    pattern = rf"(?ms)^{re.escape(HIGHLIGHTS_HEADER)}.*?(?=^!\[|^> \*\*Download|^## )"
     if re.search(pattern, readme):
         return re.sub(pattern, section + "\n", readme, count=1)
 

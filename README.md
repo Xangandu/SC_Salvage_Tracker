@@ -15,6 +15,17 @@ Crew-Auszahlungen.
 - **Kontext-Dashboard** — Neues modulares Dashboard für eine bessere Übersicht über verschiedene Aktionen und Status in Echtzeit.
 - **Idle-Warnungen** — Einführung von Warnungen für inaktiven Bestand mit der Möglichkeit, Reserven zu setzen und Warnungen zu unterdrücken.
 
+![SC Salvage Tracker](grafik.png)
+![SC Salvage Tracker](grafik2.png)
+![SC Salvage Tracker](grafik3.png)
+![SC Salvage Tracker](grafik4.png)
+![SC Salvage Tracker](grafik5.png)
+
+> **Download (kostenlos):** [Latest Release — SOLO
+> Version](https://github.com/Xangandu/SC_Salvage_Tracker/releases/latest)
+
+------------------------------------------------------------------------
+
 ## Editionen
 
   -----------------------------------------------------------------------
