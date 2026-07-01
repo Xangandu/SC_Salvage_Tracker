@@ -3841,4 +3841,27 @@ class AdminPage(QWidget):
             + tr("admin.system.reinitialize.msg.login_hint"),
         )
 
-        self.refresh_datensicherung()
+        self._restart_application_after_database_reset()
+
+    def _restart_application_after_database_reset(self):
+        import auth.session as user_session
+        from PySide6.QtCore import QTimer
+        from PySide6.QtWidgets import QApplication
+
+        from auth.app_restart import (
+            restart_application,
+            shutdown_before_restart,
+        )
+        from auth.remember_me import clear_remember_data
+
+        user_session.clear_session()
+        clear_remember_data()
+
+        def _do_restart():
+            shutdown_before_restart()
+            restart_application()
+            app = QApplication.instance()
+            if app is not None:
+                app.quit()
+
+        QTimer.singleShot(150, _do_restart)

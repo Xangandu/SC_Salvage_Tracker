@@ -24,6 +24,7 @@ from config.font_families import (
     resolve_body_font,
     resolve_heading_font,
 )
+from ui.nav_metrics import NAV_WIDTH_PX
 
 THEMES_DIR = Path(__file__).parent / "themes"
 PALETTES_DIR = THEMES_DIR / "palettes"
@@ -52,12 +53,6 @@ NAV_WIDTH_LABELS = {
     "narrow": "Schmal",
     "normal": "Normal",
     "wide": "Breit",
-}
-
-NAV_WIDTH_PX = {
-    "narrow": (188, 208),
-    "normal": (248, 268),
-    "wide": (288, 308),
 }
 
 LAUNCHER_FONT_NAMES = ('"Rajdhani"', '"Orbitron"')
@@ -506,8 +501,26 @@ QFrame#navEditionBadgeHost[edition="orga"] {
     font-family: "Segoe UI";
     font-size: 15px;
     font-weight: 600;
-    letter-spacing: 0.5px;
-    min-height: 44px;
+    letter-spacing: 0.4px;
+    border-left: 3px solid transparent;
+    border-radius: 0;
+    padding: 5px 12px 5px 8px;
+    min-height: 100px;
+    icon-size: 100px 100px;
+}
+
+#navPanel[navWidth="narrow"] #navButton {
+    padding: 4px 8px 4px 6px;
+    min-height: 82px;
+    font-size: 14px;
+    icon-size: 76px 76px;
+}
+
+#navPanel[navWidth="wide"] #navButton {
+    padding: 6px 14px 6px 10px;
+    min-height: 112px;
+    font-size: 16px;
+    icon-size: 112px 112px;
 }
 
 #navButton:hover {
@@ -525,6 +538,22 @@ QFrame#navEditionBadgeHost[edition="orga"] {
     background-color: #C45A12;
     color: #FFFFFF;
     border: 2px solid #A84E12;
+}
+
+#navButton[dashboardWindowVisible="true"] {
+    background-color: rgba(34, 180, 98, 0.10);
+}
+
+#navButton[dashboardWindowVisible="false"] {
+    background-color: rgba(230, 72, 72, 0.09);
+}
+
+#navButton[dashboardWindowVisible="true"]:hover {
+    background-color: rgba(34, 180, 98, 0.15);
+}
+
+#navButton[dashboardWindowVisible="false"]:hover {
+    background-color: rgba(230, 72, 72, 0.13);
 }
 
 QLabel#pageTitle {
@@ -878,8 +907,26 @@ QFrame#navEditionBadgeHost[edition="orga"] {
     font-family: "Segoe UI";
     font-size: 15px;
     font-weight: 600;
-    letter-spacing: 0.5px;
-    min-height: 44px;
+    letter-spacing: 0.4px;
+    border-left: 3px solid transparent;
+    border-radius: 0;
+    padding: 5px 12px 5px 8px;
+    min-height: 100px;
+    icon-size: 100px 100px;
+}
+
+#navPanel[navWidth="narrow"] #navButton {
+    padding: 4px 8px 4px 6px;
+    min-height: 82px;
+    font-size: 14px;
+    icon-size: 76px 76px;
+}
+
+#navPanel[navWidth="wide"] #navButton {
+    padding: 6px 14px 6px 10px;
+    min-height: 112px;
+    font-size: 16px;
+    icon-size: 112px 112px;
 }
 
 #navButton:hover {
@@ -897,6 +944,22 @@ QFrame#navEditionBadgeHost[edition="orga"] {
     background-color: #D97732;
     color: #FFFFFF;
     border: 2px solid #C06820;
+}
+
+#navButton[dashboardWindowVisible="true"] {
+    background-color: rgba(61, 220, 132, 0.11);
+}
+
+#navButton[dashboardWindowVisible="false"] {
+    background-color: rgba(255, 96, 96, 0.10);
+}
+
+#navButton[dashboardWindowVisible="true"]:hover {
+    background-color: rgba(61, 220, 132, 0.17);
+}
+
+#navButton[dashboardWindowVisible="false"]:hover {
+    background-color: rgba(255, 96, 96, 0.15);
 }
 
 QLabel#pageTitle {

@@ -745,31 +745,60 @@ class PayoutRepository:
 
         status = row[0]
 
-        if status in ("ACTIVE", "WAITING_FOR_REFINERY"):
+        if status in ("SOLD", "CLOSED"):
             return
 
         if self.session_has_unpaid_sales(session_id):
             new_status = "WAITING_FOR_PAYOUT"
-        elif self.session_has_unsold_sellable_inventory(session_id):
-            new_status = "WAITING_FOR_SALE"
-        elif status in (
-            "WAITING_FOR_SALE",
-            "WAITING_FOR_PAYOUT",
+        elif self.session_has_unsold_sellable_inventory(
+            session_id
         ):
-            new_status = "SOLD"
+            new_status = (
+                "ACTIVE"
+                if status == "ACTIVE"
+                else "WAITING_FOR_SALE"
+            )
+        elif (
+            hasattr(self.db, "refinery")
+            and self.db.refinery.session_has_pending_refinery(
+                session_id
+            )
+        ):
+            new_status = (
+                "ACTIVE"
+                if status == "ACTIVE"
+                else "WAITING_FOR_REFINERY"
+            )
         else:
-            return
+            new_status = "SOLD"
 
         if new_status == status:
             return
 
-        self.cursor.execute("""
+        session_columns = self.db._table_columns("sessions")
+        set_parts = [
+            "status = ?",
+            "updated_at = datetime('now', 'localtime')",
+        ]
+        params = [new_status]
+
+        if (
+            new_status == "SOLD"
+            and "end_time" in session_columns
+        ):
+            set_parts.insert(
+                1,
+                "end_time = COALESCE("
+                "end_time, datetime('now', 'localtime'))",
+            )
+
+        params.append(session_id)
+
+        self.cursor.execute(f"""
         UPDATE sessions
-        SET
-            status = ?,
-            updated_at = datetime('now', 'localtime')
+        SET {", ".join(set_parts)}
         WHERE id = ?
-        """, (new_status, session_id))
+        """, params)
 
         self.connection.commit()
 

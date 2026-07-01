@@ -707,6 +707,8 @@ class DashboardPage(QWidget):
 
     def refresh_dashboard(self):
         debug_log("REFRESH_DASHBOARD WIRD AUSGEFÜHRT")
+        self.db = get_database()
+        self.context_shell.ensure_db(self.db)
         self.context_shell.refresh()
 
     def set_context(self, context_key: str, *, force: bool = False):

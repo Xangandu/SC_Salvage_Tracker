@@ -20,12 +20,10 @@ from ui.nav_edition_badge import (
 from config.editions import (
     EDITION_GLOW_RGB,
     edition_short_label,
-    edition_title,
     effective_edition,
     resolve_app_name,
 )
 from config.i18n import tr
-from config.version import format_version_nav_html
 from config.permissions import can_access
 
 from PySide6.QtWidgets import (
@@ -49,15 +47,28 @@ from ui.mobiglas_window_frame import (
     MobiglasFramelessMixin,
     apply_mobiglas_window_frame,
 )
-from ui.page_layout import hud_divider, nav_version_divider, nav_edition_divider
+from ui.page_layout import (
+    build_nav_divider,
+    build_nav_scroll,
+    hud_divider,
+    nav_edition_divider,
+)
 from ui.update_manager import UpdateManager
 from ui.window_geometry import (
+    MAIN_WINDOW_MIN_SIZE,
     restore_window_geometry,
     save_window_geometry,
     dashboard_open_on_startup,
     set_dashboard_open_on_startup,
+    save_last_nav_page,
+    load_last_nav_page,
 )
-from ui.theme_manager import NAV_WIDTH_PX
+from ui.nav_metrics import (
+    NAV_DIVIDER_PADDING,
+    NAV_MIDDLE_KEYS,
+    NAV_SETTINGS_DIVIDER_AFTER,
+    apply_nav_panel_metrics,
+)
 
 
 class MainWindow(MobiglasFramelessMixin, QMainWindow):
@@ -88,6 +99,7 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
         app_name = resolve_app_name(db)
         self.setObjectName("mainWindow")
         self.setWindowTitle(app_name)
+        self.setMinimumSize(MAIN_WINDOW_MIN_SIZE)
 
         central_widget = QWidget()
         central_widget.setObjectName("mainCentral")
@@ -102,16 +114,12 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
 
         nav_layout = QVBoxLayout()
         nav_widget.setLayout(nav_layout)
-        nav_layout.setSpacing(4)
-        nav_layout.setContentsMargins(
-            0,
-            20,
-            0,
-            20
-        )
+        nav_layout.setSpacing(6)
+        self._nav_layout = nav_layout
 
         brand_block = QWidget()
         brand_block.setObjectName("navBrandBlock")
+        self._nav_brand_block = brand_block
         brand_outer = QVBoxLayout(brand_block)
         brand_outer.setContentsMargins(12, 0, 12, 4)
         brand_outer.setSpacing(0)
@@ -190,11 +198,11 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
         self._update_network_label()
 
         brand_layout.addLayout(title_stack)
-        brand_layout.addSpacing(8)
+        brand_layout.addSpacing(6)
         brand_layout.addLayout(
             nav_edition_divider(self.edition_badge_host)
         )
-        brand_layout.addSpacing(10)
+        brand_layout.addSpacing(8)
 
         user_panel_layout.addWidget(user_heading)
         user_panel_layout.addWidget(self.user_label)
@@ -206,6 +214,7 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
 
         self.btn_dashboard = QPushButton(tr("nav.dashboard"))
         configure_nav_button(self.btn_dashboard, "dashboard")
+        self.btn_dashboard.setProperty("dashboardWindowVisible", "false")
 
         self.btn_session = QPushButton(tr("nav.session"))
         configure_nav_button(self.btn_session, "session")
@@ -339,12 +348,16 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
 
         nav_layout.addWidget(brand_block)
 
-        nav_divider = QFrame()
-        nav_divider.setObjectName("navDivider")
-        nav_divider.setFixedHeight(1)
-        nav_layout.addSpacing(8)
-        nav_layout.addWidget(nav_divider)
-        nav_layout.addSpacing(8)
+        nav_layout.addSpacing(6)
+        nav_layout.addWidget(build_nav_divider())
+        nav_layout.addSpacing(6)
+
+        nav_scroll_content = QWidget()
+        nav_scroll_content.setObjectName("navScrollContent")
+        nav_scroll_layout = QVBoxLayout(nav_scroll_content)
+        nav_scroll_layout.setContentsMargins(0, 0, 0, 0)
+        nav_scroll_layout.setSpacing(4)
+        self._nav_scroll_layout = nav_scroll_layout
 
         self.nav_buttons = {
             "dashboard": self.btn_dashboard,
@@ -357,12 +370,27 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
             "settings": self.btn_admin,
         }
 
-        for page_name, button in self.nav_buttons.items():
-            nav_layout.addWidget(button)
+        nav_scroll_layout.addWidget(self.btn_dashboard)
+        nav_scroll_layout.addSpacing(NAV_DIVIDER_PADDING)
+        nav_scroll_layout.addWidget(build_nav_divider())
+        nav_scroll_layout.addSpacing(NAV_DIVIDER_PADDING)
+
+        self._nav_middle_section = QWidget()
+        self._nav_middle_section.setObjectName("navMiddleSection")
+        self._nav_middle_layout = QVBoxLayout(self._nav_middle_section)
+        self._nav_middle_layout.setContentsMargins(0, 0, 0, 0)
+        self._nav_middle_layout.setSpacing(4)
+        self._nav_middle_layout.addStretch(1)
+        for key in NAV_MIDDLE_KEYS:
+            self._nav_middle_layout.addWidget(self.nav_buttons[key])
+        self._nav_middle_layout.addStretch(1)
+        nav_scroll_layout.addWidget(self._nav_middle_section, 1)
+
+        nav_scroll_layout.addWidget(build_nav_divider())
+        nav_scroll_layout.addSpacing(NAV_SETTINGS_DIVIDER_AFTER)
+        nav_scroll_layout.addWidget(self.btn_admin)
 
         self._refresh_nav_visibility()
-
-        nav_layout.addStretch(1)
 
         self.storage_idle_badge = QPushButton()
         self.storage_idle_badge.setObjectName("navStorageBadge")
@@ -374,7 +402,7 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
                 self.btn_storage,
             )
         )
-        nav_layout.addWidget(self.storage_idle_badge)
+        nav_scroll_layout.addWidget(self.storage_idle_badge)
 
         self.update_badge = QPushButton(
             tr("nav.badge.update_available")
@@ -385,54 +413,34 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
         self.update_badge.clicked.connect(
             self._show_pending_update
         )
-        nav_layout.addWidget(self.update_badge)
+        nav_scroll_layout.addWidget(self.update_badge)
 
-        nav_layout.addWidget(nav_version_divider())
-
-        version_label = QLabel(
-            format_version_nav_html(
-                edition_title(effective_edition(db))
-            )
-        )
-        version_label.setObjectName("versionLabel")
-        self.version_label = version_label
-
-        version_label.setAlignment(
-            Qt.AlignCenter
-        )
-
-        version_label.setTextFormat(
-            Qt.RichText
-        )
-
-        version_label.setOpenExternalLinks(
-            False
-        )
-
-        version_label.linkActivated.connect(
-            self.show_changelog
-        )
-
-        nav_layout.addWidget(
-            version_label
-        )
+        nav_layout.addWidget(build_nav_scroll(nav_scroll_content), 1)
 
         main_layout.addWidget(nav_widget, 1)
         main_layout.addWidget(self.pages, 5)
 
         self.apply_permissions()
 
-        start_page = self._default_page()
-        start_button = self._button_for_page(
-            start_page
+        self._geometry_timer = QTimer(self)
+        self._geometry_timer.setSingleShot(True)
+        self._geometry_timer.setInterval(400)
+        self._geometry_timer.timeout.connect(
+            self._persist_window_geometry
         )
 
+        start_page, start_button = self._startup_page()
         self.set_active_button(start_button)
         self.pages.setCurrentWidget(start_page)
+        self._load_page_data(start_page)
 
         title_bar = apply_mobiglas_window_frame(
             self,
             title=resolve_app_name(self.db),
+        )
+        title_bar.add_action_button(
+            tr("nav.version_info"),
+            self.show_changelog,
         )
         title_bar.add_action_button(
             tr("nav.logout"),
@@ -468,13 +476,35 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
 
         if dashboard_open_on_startup(db):
             QTimer.singleShot(0, self.show_dashboard_window)
+        else:
+            QTimer.singleShot(0, self._sync_dashboard_nav_background)
+
+    def _sync_dashboard_nav_background(self) -> None:
+        visible = self.dashboard_window.isVisible()
+        self.btn_dashboard.setProperty(
+            "dashboardWindowVisible",
+            "true" if visible else "false",
+        )
+        style = self.btn_dashboard.style()
+        if style is not None:
+            style.unpolish(self.btn_dashboard)
+            style.polish(self.btn_dashboard)
+        self.btn_dashboard.update()
 
     def apply_nav_width(self, nav_width: str = "normal"):
-        if nav_width not in NAV_WIDTH_PX:
-            nav_width = "normal"
-        min_w, max_w = NAV_WIDTH_PX[nav_width]
-        self.nav_widget.setMinimumWidth(min_w)
-        self.nav_widget.setMaximumWidth(max_w)
+        apply_nav_panel_metrics(
+            self.nav_widget,
+            self._nav_layout,
+            self._nav_scroll_layout,
+            self.nav_buttons,
+            badge_buttons=[
+                self.storage_idle_badge,
+                self.update_badge,
+            ],
+            brand_block=self._nav_brand_block,
+            nav_middle_layout=self._nav_middle_layout,
+            nav_width=nav_width,
+        )
 
     def refresh_network_display(self):
         """Navigations-Anzeige und Client-/Host-UI aktualisieren."""
@@ -604,11 +634,6 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
         self.edition_badge.setProperty("edition", edition_key)
         self.edition_badge_host.setProperty("edition", edition_key)
         self._apply_edition_badge_glow(edition_key)
-
-        if hasattr(self, "version_label"):
-            self.version_label.setText(
-                format_version_nav_html(edition_title(edition_key))
-            )
 
         if hasattr(self, "admin_page"):
             self.admin_page.refresh_support_tab()
@@ -744,6 +769,57 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
 
         return self.history_page
 
+    _NAV_PAGE_MAP = {
+        "session": ("session", "session_page", "btn_session"),
+        "refinery": ("refinery", "refinery_page", "btn_refinery"),
+        "storage": ("storage", "storage_page", "btn_storage"),
+        "sales": ("sales", "sales_page", "btn_sales"),
+        "statistics": ("statistics", "statistics_page", "btn_stats"),
+        "history": ("history", "history_page", "btn_history"),
+        "settings": ("settings", "admin_page", "btn_admin"),
+    }
+
+    def _page_nav_key(self, page) -> str | None:
+        for key, (_perm, attr, _btn) in self._NAV_PAGE_MAP.items():
+            if page is getattr(self, attr, None):
+                return key
+        return None
+
+    def _startup_page(self):
+        user_id = self.current_user.get("id")
+        saved_key = (
+            load_last_nav_page(self.db, user_id)
+            if user_id is not None
+            else None
+        )
+        if saved_key and saved_key in self._NAV_PAGE_MAP:
+            perm, page_attr, btn_attr = self._NAV_PAGE_MAP[saved_key]
+            if can_access(self.current_user, perm):
+                return (
+                    getattr(self, page_attr),
+                    getattr(self, btn_attr),
+                )
+        page = self._default_page()
+        return page, self._button_for_page(page)
+
+    def _persist_window_geometry(self):
+        save_window_geometry(self, self.db)
+
+    def moveEvent(self, event):
+        super().moveEvent(event)
+        self._geometry_timer.start()
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self._geometry_timer.start()
+
+    def changeEvent(self, event):
+        super().changeEvent(event)
+        from PySide6.QtCore import QEvent
+
+        if event.type() == QEvent.Type.WindowStateChange:
+            self._geometry_timer.start()
+
     def _button_for_page(self, page):
         mapping = {
             self.session_page: self.btn_session,
@@ -862,7 +938,22 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
         page,
         button
     ):
+        self._load_page_data(page)
 
+        self.pages.setCurrentWidget(page)
+
+        context_key = self._page_context_key(page)
+        if context_key is not None:
+            self.dashboard_page.set_context_from_nav(context_key)
+
+        self.set_active_button(button)
+
+        page_key = self._page_nav_key(page)
+        user_id = self.current_user.get("id")
+        if page_key and user_id is not None:
+            save_last_nav_page(self.db, user_id, page_key)
+
+    def _load_page_data(self, page):
         if page == self.sales_page:
             self.sales_page.load_data()
 
@@ -884,14 +975,6 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
         if page == self.admin_page:
             self.admin_page.refresh_data()
             self.admin_page.refresh_language_settings()
-
-        self.pages.setCurrentWidget(page)
-
-        context_key = self._page_context_key(page)
-        if context_key is not None:
-            self.dashboard_page.set_context_from_nav(context_key)
-
-        self.set_active_button(button)
 
     def _page_context_key(self, page) -> str | None:
         mapping = {
@@ -1007,6 +1090,7 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
         self.btn_dashboard.setText(
             tr("dashboard.nav.detached")
         )
+        self._sync_dashboard_nav_background()
 
     def hide_dashboard_window(self):
 
@@ -1023,6 +1107,7 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
         self.btn_dashboard.setText(
             tr("dashboard.nav.embedded")
         )
+        self._sync_dashboard_nav_background()
 
     def toggle_dashboard_window(self):
 

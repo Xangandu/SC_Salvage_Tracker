@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from config.dates import format_month_year
 from config.i18n import tr, format_number, format_scu, status_label
 from config.materials import (
     RAW_CM_MATERIAL_CODES,
@@ -245,12 +246,6 @@ class SessionView(_BaseContextView):
         proc_layout.addWidget(self.process_host)
         self._layout.addWidget(proc_card)
 
-        self._process_job_rows: dict[int, SessionRefineryProcessRow] = {}
-        self._process_timer = QTimer(self)
-        self._process_timer.setInterval(1000)
-        self._process_timer.timeout.connect(self._tick_process_rows)
-        self._process_timer.start()
-
         detail_card, detail_layout = dashboard_card()
         detail_layout.addWidget(subsection_title(tr("dashboard.session.active")))
         self.session_label = QLabel(tr("dashboard.session.none"))
@@ -361,40 +356,22 @@ class SessionView(_BaseContextView):
             item = self.process_layout.takeAt(0)
             if item.widget():
                 item.widget().deleteLater()
-        self._process_job_rows.clear()
 
         processes = data.get("processes") or []
         for proc in processes:
-            if proc.get("kind") == "refinery" and proc.get("job"):
-                row = SessionRefineryProcessRow(
-                    proc["job"],
+            self.process_layout.addWidget(
+                TimelineRow(
+                    "◆",
                     proc.get("title") or "—",
                     proc.get("detail") or "",
+                    compact=True,
                 )
-                job_id = proc.get("job_id")
-                if job_id is not None:
-                    self._process_job_rows[job_id] = row
-                self.process_layout.addWidget(row)
-            else:
-                self.process_layout.addWidget(
-                    TimelineRow(
-                        "◆",
-                        proc.get("title") or "—",
-                        proc.get("detail") or "",
-                        compact=True,
-                    )
-                )
+            )
         if not processes:
             empty = QLabel(tr("dashboard.context.no_processes"))
             empty.setObjectName("mutedLabel")
             empty.setWordWrap(True)
             self.process_layout.addWidget(empty)
-        else:
-            self._tick_process_rows()
-
-    def _tick_process_rows(self) -> None:
-        for row in self._process_job_rows.values():
-            row.tick()
 
 
 class RefineryView(_BaseContextView):
@@ -427,6 +404,12 @@ class RefineryView(_BaseContextView):
         jobs_layout.addWidget(self.jobs_host)
         self._layout.addWidget(jobs_card)
 
+        self._job_rows: dict[int, SessionRefineryProcessRow] = {}
+        self._jobs_timer = QTimer(self)
+        self._jobs_timer.setInterval(1000)
+        self._jobs_timer.timeout.connect(self._tick_job_rows)
+        self._jobs_timer.start()
+
         mat_card, mat_layout = dashboard_card()
         mat_layout.addWidget(subsection_title(tr("dashboard.refinery_stats.by_material")))
         self.mat_host = QWidget()
@@ -448,6 +431,8 @@ class RefineryView(_BaseContextView):
             item = self.jobs_layout.takeAt(0)
             if item.widget():
                 item.widget().deleteLater()
+        self._job_rows.clear()
+
         for job in data.get("jobs") or []:
             title = (
                 f"#{job.get('id')} · {job.get('status_label')} · "
@@ -457,9 +442,23 @@ class RefineryView(_BaseContextView):
                 f"{job.get('material')} · "
                 f"{format_scu(job.get('input_scu', 0))}"
             )
-            self.jobs_layout.addWidget(
-                TimelineRow("◆", title, detail, compact=True)
-            )
+            full_job = job.get("job") or job
+            if full_job.get("start_time") and full_job.get("end_time"):
+                row = SessionRefineryProcessRow(
+                    full_job,
+                    title,
+                    detail,
+                )
+                job_id = full_job.get("id")
+                if job_id is not None:
+                    self._job_rows[job_id] = row
+                self.jobs_layout.addWidget(row)
+            else:
+                self.jobs_layout.addWidget(
+                    TimelineRow("◆", title, detail, compact=True)
+                )
+        if self._job_rows:
+            self._tick_job_rows()
 
         while self.mat_layout.count():
             item = self.mat_layout.takeAt(0)
@@ -473,6 +472,11 @@ class RefineryView(_BaseContextView):
                     int(eff),
                 )
             )
+
+
+    def _tick_job_rows(self) -> None:
+        for row in self._job_rows.values():
+            row.tick()
 
 
 class StorageView(_BaseContextView):
@@ -655,6 +659,10 @@ class HistoryView(_BaseContextView):
 
         rev_card, rev_layout = dashboard_card()
         rev_layout.addWidget(subsection_title(tr("dashboard.context.revenue_trend")))
+        self.revenue_trend_hint = QLabel(tr("dashboard.context.revenue_trend_hint"))
+        self.revenue_trend_hint.setObjectName("mutedLabel")
+        self.revenue_trend_hint.setWordWrap(True)
+        rev_layout.addWidget(self.revenue_trend_hint)
         self.rev_host = QWidget()
         self.rev_layout = QVBoxLayout(self.rev_host)
         self.rev_layout.setContentsMargins(0, 0, 0, 0)
@@ -681,16 +689,38 @@ class HistoryView(_BaseContextView):
             if item.widget():
                 item.widget().deleteLater()
         monthly = data.get("monthly_revenue") or []
-        max_val = max((v for _, v in monthly), default=0)
-        for month, value in monthly:
-            pct = int(100 * value / max_val) if max_val else 0
-            self.rev_layout.addWidget(
-                ProgressBarRow(
-                    month,
-                    f"{format_number(value, 0)} aUEC",
-                    pct,
+        if not monthly:
+            empty = QLabel(tr("dashboard.context.revenue_trend_empty"))
+            empty.setObjectName("mutedLabel")
+            empty.setWordWrap(True)
+            self.rev_layout.addWidget(empty)
+        else:
+            max_val = max((v for _, v in monthly), default=0)
+            multi_month = len(monthly) > 1
+            for month_key, value in monthly:
+                month_label = format_month_year(month_key)
+                amount_text = f"{format_number(value, 0)} aUEC"
+                if multi_month and max_val:
+                    pct = int(round(100 * value / max_val))
+                    badge = (
+                        tr("dashboard.context.revenue_peak_month")
+                        if pct >= 100
+                        else tr(
+                            "dashboard.context.revenue_vs_peak",
+                            pct=pct,
+                        )
+                    )
+                else:
+                    pct = 100 if value else 0
+                    badge = None
+                self.rev_layout.addWidget(
+                    ProgressBarRow(
+                        month_label,
+                        amount_text,
+                        pct,
+                        badge_text=badge,
+                    )
                 )
-            )
 
         while self.evt_layout.count():
             item = self.evt_layout.takeAt(0)

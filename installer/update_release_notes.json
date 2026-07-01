@@ -1,4 +1,28 @@
 {
+  "0.16.4": {
+    "de": {
+      "title": "SC Salvage Tracker 0.16.4 Beta — Logistik-Pooling",
+      "summary": "Material-Pools nach Standort und Typ, sichtbares In-App-Update mit Pfadanzeige, granulare Korrekturen und Raffinerie-Fixes.",
+      "highlights": [
+        "Logistik-Pooling: gleiches Material wird im Hintergrund zusammengeführt",
+        "Raffinerie & Lager arbeiten mit Pool-Summen (FIFO)",
+        "In-App-Update: sichtbarer Setup-Assistent, Pfad wird angezeigt",
+        "App startet nach dem Update automatisch neu",
+        "Granulare Korrekturen und Missionskosten-Historie"
+      ]
+    },
+    "en": {
+      "title": "SC Salvage Tracker 0.16.4 Beta — Logistics Pooling",
+      "summary": "Material pools by location and type, visible in-app update with install path, granular corrections and refinery fixes.",
+      "highlights": [
+        "Logistics pooling: same material merged in the background",
+        "Refinery & storage use pool totals (FIFO)",
+        "In-app update: visible setup wizard, install path shown",
+        "App restarts automatically after update",
+        "Granular corrections and mission cost history"
+      ]
+    }
+  },
   "0.16.3": {
     "de": {
       "title": "SC Salvage Tracker 0.16.3 Beta — Update-Fix",

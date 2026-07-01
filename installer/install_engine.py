@@ -430,6 +430,19 @@ def create_desktop_shortcut(app_name: str, exe_path: Path) -> None:
 
 
 def launch_application(exe_path: Path) -> None:
+    """Startet die GUI-Anwendung ohne Konsolen-/CMD-Fenster."""
+    exe_path = exe_path.resolve()
+    if sys.platform == "win32":
+        subprocess.Popen(
+            [str(exe_path)],
+            cwd=str(exe_path.parent),
+            close_fds=True,
+            creationflags=(
+                getattr(subprocess, "DETACHED_PROCESS", 0)
+                | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+            ),
+        )
+        return
     os.startfile(str(exe_path))  # noqa: S606
 
 
@@ -660,11 +673,65 @@ def find_install_dir_from_registry(edition: str) -> Path | None:
     return path if path.exists() else None
 
 
-def resolve_install_dir(argv: list[str], edition: str) -> Path | None:
+INSTALL_SOURCE_EXPLICIT = "explicit"
+INSTALL_SOURCE_REGISTRY = "registry"
+INSTALL_SOURCE_MANIFEST = "manifest"
+INSTALL_SOURCE_RUNNING = "running_exe"
+INSTALL_SOURCE_DEFAULT = "default"
+
+
+def is_valid_install_dir(install_dir: Path, edition: str) -> bool:
+    if not install_dir.is_dir():
+        return False
+    if (install_dir / _EXE_NAME).exists():
+        return True
+    manifest = read_install_manifest(install_dir)
+    return manifest is not None and manifest.get("edition", "solo") == edition
+
+
+def resolve_installed_dir(
+    edition: str,
+    *,
+    argv: list[str] | None = None,
+) -> tuple[Path, str]:
+    """Installationsordner ermitteln (Registry, Manifest, laufende EXE)."""
+    from config.editions import edition_title
+    from config.paths import install_root
+    from config.version import APP_PRODUCT_NAME
+
+    argv = list(argv or [])
     explicit = _parse_install_dir_arg(argv)
     if explicit is not None:
-        return explicit
-    return find_install_dir_from_registry(edition)
+        return explicit, INSTALL_SOURCE_EXPLICIT
+
+    registry_dir = find_install_dir_from_registry(edition)
+    if registry_dir is not None and is_valid_install_dir(registry_dir, edition):
+        return registry_dir, INSTALL_SOURCE_REGISTRY
+
+    running_root = install_root()
+    manifest = read_install_manifest(running_root)
+    if manifest is not None:
+        manifest_edition = manifest.get("edition", "solo")
+        manifest_dir = Path(manifest.get("install_dir", str(running_root)))
+        if (
+            manifest_edition == edition
+            and manifest_dir.is_dir()
+            and is_valid_install_dir(manifest_dir, edition)
+        ):
+            return manifest_dir, INSTALL_SOURCE_MANIFEST
+
+    if is_valid_install_dir(running_root, edition):
+        return running_root, INSTALL_SOURCE_RUNNING
+
+    app_name = f"{APP_PRODUCT_NAME} - {edition_title(edition)}"
+    return default_install_dir(app_name), INSTALL_SOURCE_DEFAULT
+
+
+def resolve_install_dir(argv: list[str], edition: str) -> Path | None:
+    install_dir, source = resolve_installed_dir(edition, argv=argv)
+    if source == INSTALL_SOURCE_DEFAULT:
+        return None
+    return install_dir
 
 
 def default_install_dir(app_name: str) -> Path:
@@ -687,6 +754,14 @@ def is_silent_install_argv(argv: list[str]) -> bool:
     for arg in argv:
         token = arg.strip().lower()
         if token in ("--quiet", "-quiet", "/quiet"):
+            return True
+    return False
+
+
+def is_update_mode_argv(argv: list[str]) -> bool:
+    for arg in argv:
+        token = arg.strip().lower()
+        if token in ("--update-mode", "-update-mode"):
             return True
     return False
 
@@ -746,6 +821,10 @@ def run_silent_install(
         append_install_log(
             f"Installation abgeschlossen — {APP_VERSION} Build {APP_BUILD}"
         )
+        app_exe = target / _EXE_NAME
+        if app_exe.exists():
+            append_install_log(f"Starte aktualisierte Anwendung: {app_exe}")
+            launch_application(app_exe)
         return 0
     except Exception as exc:
         append_install_log(f"FEHLER: {exc}")

@@ -441,8 +441,89 @@ class StockpileRepository:
         refinery_job_id: int,
         station_label: str,
         created_by=None,
+        ship_id: int | None = None,
     ) -> None:
         """Rohmaterial vom Schiff für Raffinerie-Job abziehen (ohne commit)."""
+        if not self._table_exists() or quantity_scu <= 0:
+            return
+
+        remaining = float(quantity_scu)
+        user_id = created_by or self._current_user_id()
+        station_label = (station_label or "").strip() or "—"
+        to_label = tr(
+            "storage.event.to_refinery",
+            station=station_label,
+        )
+
+        ship_filter = ""
+        params: list = [material_code]
+        if ship_id is not None:
+            ship_filter = "AND material_stockpiles.ship_id = ?"
+            params.append(ship_id)
+
+        while remaining > 1e-9:
+            self.cursor.execute(f"""
+            SELECT
+                material_stockpiles.id,
+                material_stockpiles.quantity_scu
+            FROM material_stockpiles
+            INNER JOIN material_types
+                ON material_types.id =
+                    material_stockpiles.material_type_id
+            WHERE material_stockpiles.is_deleted = 0
+            AND material_types.material_code = ?
+            AND material_stockpiles.location_kind = 'SHIP'
+            AND material_stockpiles.status = 'IN_SHIP'
+            AND material_stockpiles.quantity_scu > 0
+            {ship_filter}
+            ORDER BY material_stockpiles.last_activity_at ASC
+            LIMIT 1
+            """, params)
+
+            row = self.cursor.fetchone()
+            if not row:
+                break
+
+            stockpile_id = int(row[0])
+            available = float(row[1])
+            take = min(remaining, available)
+
+            self._reduce_stockpile_quantity(
+                stockpile_id,
+                take,
+                user_id,
+                to_label=to_label,
+                payload={
+                    "reason": "refinery_reserve",
+                    "refinery_job_id": refinery_job_id,
+                    "material_code": material_code,
+                },
+            )
+            remaining -= take
+
+        if remaining > 1e-9:
+            label = material_label(material_code)
+            raise ValueError(
+                tr(
+                    "error.storage.insufficient_ship_pool",
+                    material=label,
+                    available=f"{quantity_scu - remaining:g}",
+                    requested=f"{quantity_scu:g}",
+                )
+            )
+
+    def reserve_stored_stockpile_for_refinery(
+        self,
+        *,
+        material_code: str,
+        quantity_scu: float,
+        refinery_job_id: int,
+        station_label: str,
+        location_kind: str,
+        location_key: str,
+        created_by=None,
+    ) -> None:
+        """Rohmaterial vom Lager (Station/Stadt) für Raffinerie abziehen."""
         if not self._table_exists() or quantity_scu <= 0:
             return
 
@@ -465,21 +546,20 @@ class StockpileRepository:
                     material_stockpiles.material_type_id
             WHERE material_stockpiles.is_deleted = 0
             AND material_types.material_code = ?
-            AND material_stockpiles.location_kind = 'SHIP'
-            AND material_stockpiles.status = 'IN_SHIP'
+            AND material_stockpiles.location_kind = ?
+            AND material_stockpiles.status = 'STORED'
+            AND material_stockpiles.location_key = ?
             AND material_stockpiles.quantity_scu > 0
             ORDER BY material_stockpiles.last_activity_at ASC
             LIMIT 1
-            """, (material_code,))
+            """, (material_code, location_kind, location_key))
 
             row = self.cursor.fetchone()
             if not row:
                 break
 
             stockpile_id = int(row[0])
-            available = float(row[1])
-            take = min(remaining, available)
-
+            take = min(remaining, float(row[1]))
             self._reduce_stockpile_quantity(
                 stockpile_id,
                 take,
@@ -492,6 +572,17 @@ class StockpileRepository:
                 },
             )
             remaining -= take
+
+        if remaining > 1e-9:
+            label = material_label(material_code)
+            raise ValueError(
+                tr(
+                    "error.storage.insufficient_stored_pool",
+                    material=label,
+                    available=f"{quantity_scu - remaining:g}",
+                    requested=f"{quantity_scu:g}",
+                )
+            )
 
     def restore_ship_stockpile_from_refinery_cancel(
         self,
@@ -683,6 +774,492 @@ class StockpileRepository:
 
         return (primary_source_type, primary_source_id)
 
+    def _transfer_from_stored_stockpiles(
+        self,
+        material_code: str,
+        quantity_scu: float,
+        created_by=None,
+        *,
+        stockpile_id: int | None = None,
+        to_label: str | None = None,
+    ) -> tuple[str, int | None]:
+        """Station/Stadt → Ziel; optional nur von einer Bestandszeile."""
+        remaining = float(quantity_scu)
+        user_id = created_by or self._current_user_id()
+        primary_source_type = "STOCKPILE"
+        primary_source_id = None
+
+        if stockpile_id is not None:
+            existing = self.get_stockpile(stockpile_id)
+            if not existing:
+                raise ValueError(tr("error.storage.not_found"))
+            if existing["material_code"] != material_code:
+                raise ValueError(tr("error.storage.transfer_material_mismatch"))
+            if existing["location_kind"] not in {"STATION", "CITY"}:
+                raise ValueError(tr("error.storage.transfer_invalid_source"))
+            if existing["status"] != "STORED":
+                raise ValueError(tr("error.storage.transfer_invalid_source"))
+            available = float(existing["quantity_scu"])
+            if available + 1e-9 < remaining:
+                raise ValueError(
+                    tr(
+                        "error.storage.insufficient_at_source",
+                        available=f"{available:g}",
+                        material=material_label(material_code),
+                    )
+                )
+            self._reduce_stockpile_quantity(
+                stockpile_id,
+                remaining,
+                user_id,
+                to_label=to_label,
+                payload={
+                    "reason": "location_transfer",
+                    "material_code": material_code,
+                },
+            )
+            return ("STOCKPILE", stockpile_id)
+
+        while remaining > 1e-9:
+            self.cursor.execute("""
+            SELECT
+                material_stockpiles.id,
+                material_stockpiles.quantity_scu
+            FROM material_stockpiles
+            INNER JOIN material_types
+                ON material_types.id =
+                    material_stockpiles.material_type_id
+            WHERE material_stockpiles.is_deleted = 0
+            AND material_types.material_code = ?
+            AND material_stockpiles.location_kind IN ('STATION', 'CITY')
+            AND material_stockpiles.status = 'STORED'
+            AND material_stockpiles.quantity_scu > 0
+            ORDER BY material_stockpiles.last_activity_at ASC
+            LIMIT 1
+            """, (material_code,))
+
+            row = self.cursor.fetchone()
+            if not row:
+                break
+
+            source_id = int(row[0])
+            available = float(row[1])
+            take = min(remaining, available)
+
+            if primary_source_id is None:
+                primary_source_id = source_id
+
+            self._reduce_stockpile_quantity(
+                source_id,
+                take,
+                user_id,
+                to_label=to_label,
+                payload={
+                    "reason": "location_transfer",
+                    "material_code": material_code,
+                },
+            )
+            remaining -= take
+
+        if remaining > 1e-9:
+            self.cursor.execute("""
+            SELECT COALESCE(SUM(material_stockpiles.quantity_scu), 0)
+            FROM material_stockpiles
+            INNER JOIN material_types
+                ON material_types.id =
+                    material_stockpiles.material_type_id
+            WHERE material_stockpiles.is_deleted = 0
+            AND material_types.material_code = ?
+            AND material_stockpiles.location_kind IN ('STATION', 'CITY')
+            AND material_stockpiles.status = 'STORED'
+            AND material_stockpiles.quantity_scu > 0
+            """, (material_code,))
+
+            available_row = self.cursor.fetchone()
+            available = float(available_row[0] if available_row else 0)
+            raise ValueError(
+                tr(
+                    "error.storage.insufficient_at_location",
+                    available=f"{available:g}",
+                    material=material_label(material_code),
+                )
+            )
+
+        return (primary_source_type, primary_source_id)
+
+    def _resolve_inbound_transfer(
+        self,
+        material_code: str,
+        quantity_scu: float,
+        *,
+        target_location_kind: str,
+        created_by=None,
+    ) -> tuple[str, str, int | None, str]:
+        user_id = created_by or self._current_user_id()
+        to_label = tr("storage.event.inbound_transfer")
+
+        if target_location_kind == "SHIP":
+            attempts = (
+                (
+                    lambda: self._transfer_from_stored_stockpiles(
+                        material_code,
+                        quantity_scu,
+                        user_id,
+                        to_label=to_label,
+                    ),
+                    tr("storage.event.from_location"),
+                    "LOCATION_TRANSFER",
+                ),
+                (
+                    lambda: self.materials.transfer_global_to_stockpile(
+                        material_code,
+                        quantity_scu,
+                        created_by=user_id,
+                    ),
+                    tr("dashboard.action.legacy_storage"),
+                    "GLOBAL_TRANSFER",
+                ),
+            )
+        else:
+            attempts = (
+                (
+                    lambda: self._transfer_from_ship_stockpiles(
+                        material_code,
+                        quantity_scu,
+                        created_by=user_id,
+                    ),
+                    tr("storage.event.from_ship"),
+                    "SHIP_TRANSFER",
+                ),
+                (
+                    lambda: self._transfer_from_stored_stockpiles(
+                        material_code,
+                        quantity_scu,
+                        user_id,
+                        to_label=to_label,
+                    ),
+                    tr("storage.event.from_location"),
+                    "LOCATION_TRANSFER",
+                ),
+                (
+                    lambda: self.materials.transfer_global_to_stockpile(
+                        material_code,
+                        quantity_scu,
+                        created_by=user_id,
+                    ),
+                    tr("dashboard.action.legacy_storage"),
+                    "GLOBAL_TRANSFER",
+                ),
+            )
+
+        last_error: ValueError | None = None
+        for resolver, from_label, transfer_key in attempts:
+            try:
+                source_type, source_id = resolver()
+                return from_label, source_type, source_id, transfer_key
+            except ValueError as error:
+                last_error = error
+
+        if last_error is not None:
+            raise last_error
+        raise ValueError(tr("error.storage.transfer_failed"))
+
+    def _find_location_stockpile(
+        self,
+        *,
+        material_code: str,
+        location_kind: str,
+        location_key: str | None,
+        location_label: str,
+        ship_id: int | None = None,
+        status: str,
+    ) -> tuple[int, float] | None:
+        if location_kind == "SHIP":
+            if ship_id is None:
+                return None
+            return self._find_ship_stockpile(
+                material_code=material_code,
+                ship_id=ship_id,
+            )
+
+        self.cursor.execute("""
+        SELECT
+            material_stockpiles.id,
+            material_stockpiles.quantity_scu
+        FROM material_stockpiles
+        INNER JOIN material_types
+            ON material_types.id =
+                material_stockpiles.material_type_id
+        WHERE material_stockpiles.is_deleted = 0
+        AND material_types.material_code = ?
+        AND material_stockpiles.location_kind = ?
+        AND material_stockpiles.status = ?
+        AND material_stockpiles.quantity_scu > 0
+        AND (
+            (? IS NOT NULL AND material_stockpiles.location_key = ?)
+            OR material_stockpiles.location_label = ?
+        )
+        ORDER BY material_stockpiles.last_activity_at ASC
+        LIMIT 1
+        """, (
+            material_code,
+            location_kind,
+            status,
+            location_key,
+            location_key,
+            location_label,
+        ))
+
+        row = self.cursor.fetchone()
+        if not row:
+            return None
+        return int(row[0]), float(row[1])
+
+    def _locations_match(
+        self,
+        source: dict,
+        *,
+        location_kind: str,
+        location_key: str | None,
+        location_label: str,
+        ship_id: int | None,
+    ) -> bool:
+        if source["location_kind"] == "SHIP" and location_kind == "SHIP":
+            return source.get("ship_id") == ship_id
+
+        if source["location_kind"] in {"STATION", "CITY"} and (
+            location_kind in {"STATION", "CITY"}
+        ):
+            if (
+                source.get("location_key")
+                and location_key
+                and source["location_key"] == location_key
+            ):
+                return source["location_kind"] == location_kind
+            return (
+                source["location_kind"] == location_kind
+                and (source.get("location_label") or "").casefold()
+                == location_label.casefold()
+            )
+
+        return False
+
+    def _credit_stockpile_at_location(
+        self,
+        *,
+        material_code: str,
+        quantity_scu: float,
+        location_kind: str,
+        location_label: str,
+        location_key: str | None,
+        ship_id: int | None,
+        status: str,
+        from_label: str,
+        source_type: str,
+        source_id: int | None,
+        transfer_source: str,
+        event_type: str = "DEPOSIT",
+        notes: str | None = None,
+        reserve_tag: str | None = None,
+        revert_metadata: dict | None = None,
+    ) -> int:
+        material_type_id = self.materials.get_material_type_id(
+            material_code
+        )
+        now = self._now()
+        user_id = self._current_user_id()
+
+        existing = self._find_location_stockpile(
+            material_code=material_code,
+            location_kind=location_kind,
+            location_key=location_key,
+            location_label=location_label,
+            ship_id=ship_id,
+            status=status,
+        )
+
+        if existing:
+            stockpile_id, current_qty = existing
+            new_qty = current_qty + quantity_scu
+            self.cursor.execute("""
+            UPDATE material_stockpiles
+            SET
+                quantity_scu = ?,
+                last_activity_at = ?,
+                idle_reminded_at = NULL,
+                updated_at = datetime('now', 'localtime'),
+                updated_by = ?
+            WHERE id = ?
+            AND is_deleted = 0
+            """, (new_qty, now, user_id, stockpile_id))
+        else:
+            self.cursor.execute("""
+            INSERT INTO material_stockpiles (
+                material_type_id,
+                quantity_scu,
+                location_kind,
+                location_key,
+                location_label,
+                status,
+                ship_id,
+                session_id,
+                reserve_tag,
+                notes,
+                last_activity_at,
+                created_at,
+                created_by
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, datetime('now', 'localtime'), ?)
+            """, (
+                material_type_id,
+                quantity_scu,
+                location_kind,
+                location_key,
+                location_label,
+                status,
+                ship_id,
+                reserve_tag,
+                notes,
+                now,
+                user_id,
+            ))
+            stockpile_id = self.cursor.lastrowid
+
+        if "storage_item_id" in self.db._table_columns(
+            "material_stockpiles"
+        ):
+            self._ensure_stockpile_storage_item(
+                stockpile_id,
+                material_type_id,
+                quantity_scu,
+                user_id,
+                source_type=source_type,
+                source_id=source_id,
+            )
+
+        self._add_event(
+            stockpile_id=stockpile_id,
+            event_type=event_type,
+            quantity_delta=quantity_scu,
+            from_label=from_label,
+            to_label=location_label,
+            notes=notes,
+            payload={
+                "material_code": material_code,
+                "location_kind": location_kind,
+                "status": status,
+                "source": transfer_source,
+                **(
+                    {"revert": revert_metadata}
+                    if revert_metadata
+                    else {}
+                ),
+            },
+        )
+
+        return stockpile_id
+
+    def transfer_stockpile(
+        self,
+        *,
+        source_stockpile_id: int,
+        quantity_scu: float,
+        location_kind: str,
+        location_label: str,
+        location_key: str | None = None,
+        ship_id: int | None = None,
+    ) -> int:
+        """Material von einer Bestandszeile zu Schiff/Station/Stadt verschieben."""
+        if not self._table_exists():
+            raise ValueError(tr("error.storage.not_available"))
+
+        if quantity_scu <= 0:
+            raise ValueError(tr("error.storage.quantity_positive"))
+
+        location_label = (location_label or "").strip()
+        if not location_label:
+            raise ValueError(tr("error.storage.location_required"))
+
+        source = self.get_stockpile(source_stockpile_id)
+        if not source:
+            raise ValueError(tr("error.storage.not_found"))
+
+        if source["status"] not in {"STORED", "IN_SHIP"}:
+            raise ValueError(tr("error.storage.transfer_invalid_source"))
+
+        available = float(source["quantity_scu"])
+        if available + 1e-9 < quantity_scu:
+            raise ValueError(
+                tr(
+                    "error.storage.insufficient_at_source",
+                    available=f"{available:g}",
+                    material=material_label(source["material_code"]),
+                )
+            )
+
+        if location_kind == "SHIP":
+            status = "IN_SHIP"
+            if ship_id is None:
+                raise ValueError(tr("error.storage.ship_required"))
+        else:
+            status = "STORED"
+            if location_kind not in {"STATION", "CITY"}:
+                raise ValueError(tr("error.storage.location_required"))
+
+        if self._locations_match(
+            source,
+            location_kind=location_kind,
+            location_key=location_key,
+            location_label=location_label,
+            ship_id=ship_id,
+        ):
+            raise ValueError(tr("error.storage.transfer_same_location"))
+
+        from_label = self.format_location(source)
+        to_label = (
+            tr("storage.location.ship", ship=location_label)
+            if location_kind == "SHIP"
+            else location_label
+        )
+        user_id = self._current_user_id()
+
+        try:
+            self.connection.execute("BEGIN IMMEDIATE")
+
+            self._reduce_stockpile_quantity(
+                source_stockpile_id,
+                quantity_scu,
+                user_id,
+                to_label=to_label,
+                payload={
+                    "reason": "transfer",
+                    "material_code": source["material_code"],
+                    "target_kind": location_kind,
+                },
+            )
+
+            dest_id = self._credit_stockpile_at_location(
+                material_code=source["material_code"],
+                quantity_scu=quantity_scu,
+                location_kind=location_kind,
+                location_label=location_label,
+                location_key=location_key,
+                ship_id=ship_id,
+                status=status,
+                from_label=from_label,
+                source_type="STOCKPILE",
+                source_id=source_stockpile_id,
+                transfer_source="STOCKPILE_TRANSFER",
+                event_type="TRANSFER",
+            )
+
+            self.connection.commit()
+        except Exception:
+            self.connection.rollback()
+            raise
+
+        return dest_id
+
     def deposit_session_capture(
         self,
         *,
@@ -834,46 +1411,18 @@ class StockpileRepository:
         )
         now = self._now()
         user_id = self._current_user_id()
-        from_label = tr("dashboard.action.legacy_storage")
-        transfer_source = "GLOBAL_TRANSFER"
 
         try:
             self.connection.execute("BEGIN IMMEDIATE")
 
-            if location_kind == "SHIP":
-                source_type, source_id = (
-                    self.materials.transfer_global_to_stockpile(
-                        material_code,
-                        quantity_scu,
-                        created_by=user_id,
-                    )
+            from_label, source_type, source_id, transfer_source = (
+                self._resolve_inbound_transfer(
+                    material_code,
+                    quantity_scu,
+                    target_location_kind=location_kind,
+                    created_by=user_id,
                 )
-                from_label = tr("dashboard.action.legacy_storage")
-            else:
-                try:
-                    source_type, source_id = (
-                        self._transfer_from_ship_stockpiles(
-                            material_code,
-                            quantity_scu,
-                            created_by=user_id,
-                        )
-                    )
-                    from_label = tr("storage.event.from_ship")
-                    transfer_source = "SHIP_TRANSFER"
-                except ValueError as ship_error:
-                    try:
-                        source_type, source_id = (
-                            self.materials.transfer_global_to_stockpile(
-                                material_code,
-                                quantity_scu,
-                                created_by=user_id,
-                            )
-                        )
-                        from_label = tr(
-                            "dashboard.action.legacy_storage"
-                        )
-                    except ValueError:
-                        raise ship_error
+            )
 
             stockpile_columns = self.db._table_columns(
                 "material_stockpiles"
@@ -1227,6 +1776,40 @@ class StockpileRepository:
 
         self.connection.commit()
 
+    def clear_reserve_tag(self, stockpile_id: int) -> None:
+        if not self._table_exists():
+            raise ValueError(tr("error.storage.not_available"))
+
+        existing = self.get_stockpile(stockpile_id)
+        if not existing:
+            raise ValueError(tr("error.storage.not_found"))
+
+        if not (existing.get("reserve_tag") or "").strip():
+            raise ValueError(tr("error.storage.reserve_not_set"))
+
+        self.cursor.execute("""
+        UPDATE material_stockpiles
+        SET
+            reserve_tag = NULL,
+            updated_at = datetime('now', 'localtime'),
+            updated_by = ?
+        WHERE id = ?
+        AND is_deleted = 0
+        """, (self._current_user_id(), stockpile_id))
+
+        self._add_event(
+            stockpile_id=stockpile_id,
+            event_type="TAG_CLEAR",
+            from_label=existing["location_label"],
+            notes=existing.get("reserve_tag"),
+            payload={
+                "material_code": existing["material_code"],
+                "reserve_tag": existing.get("reserve_tag"),
+            },
+        )
+
+        self.connection.commit()
+
     def set_reserve_tag(
         self,
         stockpile_id: int,
@@ -1390,6 +1973,454 @@ class StockpileRepository:
             for row in self.cursor.fetchall()
         ]
 
+    def _load_event(self, event_id: int) -> dict | None:
+        if not self.db._table_exists("material_stockpile_events"):
+            return None
+
+        self.cursor.execute("""
+        SELECT
+            material_stockpile_events.id,
+            material_stockpile_events.stockpile_id,
+            material_stockpile_events.event_type,
+            material_stockpile_events.quantity_delta,
+            material_stockpile_events.from_label,
+            material_stockpile_events.to_label,
+            material_stockpile_events.payload_json,
+            material_stockpile_events.notes,
+            material_stockpile_events.created_at,
+            material_stockpile_events.is_deleted
+        FROM material_stockpile_events
+        WHERE material_stockpile_events.id = ?
+        """, (event_id,))
+
+        row = self.cursor.fetchone()
+        if not row:
+            return None
+
+        payload = {}
+        if row[6]:
+            try:
+                payload = json.loads(row[6])
+            except json.JSONDecodeError:
+                payload = {}
+
+        return {
+            "id": row[0],
+            "stockpile_id": row[1],
+            "event_type": row[2],
+            "quantity_delta": row[3],
+            "from_label": row[4],
+            "to_label": row[5],
+            "payload": payload,
+            "notes": row[7],
+            "created_at": row[8],
+            "is_deleted": row[9],
+        }
+
+    def list_session_capture_events(
+        self,
+        session_id: int,
+        *,
+        limit: int = 50,
+    ) -> list[dict]:
+        if not self.db._table_exists("material_stockpile_events"):
+            return []
+
+        self.cursor.execute("""
+        SELECT
+            material_stockpile_events.id,
+            material_stockpile_events.stockpile_id,
+            material_stockpile_events.quantity_delta,
+            material_stockpile_events.created_at,
+            material_stockpile_events.payload_json,
+            material_types.material_code
+        FROM material_stockpile_events
+        LEFT JOIN material_stockpiles
+            ON material_stockpiles.id =
+                material_stockpile_events.stockpile_id
+        LEFT JOIN material_types
+            ON material_types.id =
+                material_stockpiles.material_type_id
+        WHERE material_stockpile_events.is_deleted = 0
+        AND material_stockpile_events.event_type = 'DEPOSIT'
+        AND json_extract(
+            material_stockpile_events.payload_json,
+            '$.source'
+        ) = 'SESSION_CAPTURE'
+        AND CAST(json_extract(
+            material_stockpile_events.payload_json,
+            '$.session_id'
+        ) AS INTEGER) = ?
+        AND COALESCE(json_extract(
+            material_stockpile_events.payload_json,
+            '$.reverted'
+        ), 0) = 0
+        ORDER BY material_stockpile_events.id DESC
+        LIMIT ?
+        """, (session_id, limit))
+
+        results = []
+        for row in self.cursor.fetchall():
+            payload = {}
+            if row[4]:
+                try:
+                    payload = json.loads(row[4])
+                except json.JSONDecodeError:
+                    payload = {}
+
+            material_code = (
+                payload.get("material_code")
+                or row[5]
+                or "—"
+            )
+            results.append({
+                "id": row[0],
+                "stockpile_id": row[1],
+                "quantity_scu": float(row[2] or 0),
+                "created_at": row[3],
+                "material_code": material_code,
+                "batch_id": payload.get("batch_id"),
+                "session_id": payload.get("session_id"),
+            })
+
+        return results
+
+    def _reduce_ship_stockpile_capture(
+        self,
+        *,
+        stockpile_id: int,
+        quantity_scu: float,
+        batch_id: int,
+        material_code: str,
+        user_id,
+    ) -> None:
+        entry = self.get_stockpile(stockpile_id)
+        if not entry:
+            raise ValueError(tr("error.storage.not_found"))
+
+        current_qty = float(entry.get("quantity_scu") or 0)
+        if current_qty + 1e-9 < quantity_scu:
+            raise ValueError(tr("error.material.storage_changed"))
+
+        new_qty = current_qty - quantity_scu
+        now = self._now()
+
+        if new_qty <= 1e-9:
+            self.cursor.execute("""
+            UPDATE material_stockpiles
+            SET
+                quantity_scu = 0,
+                is_deleted = 1,
+                deleted_at = datetime('now', 'localtime'),
+                last_activity_at = ?,
+                updated_at = datetime('now', 'localtime'),
+                updated_by = ?
+            WHERE id = ?
+            AND is_deleted = 0
+            """, (now, user_id, stockpile_id))
+        else:
+            self.cursor.execute("""
+            UPDATE material_stockpiles
+            SET
+                quantity_scu = ?,
+                last_activity_at = ?,
+                updated_at = datetime('now', 'localtime'),
+                updated_by = ?
+            WHERE id = ?
+            AND is_deleted = 0
+            """, (new_qty, now, user_id, stockpile_id))
+
+        self.cursor.execute("""
+        SELECT storage_item_id
+        FROM material_stockpiles
+        WHERE id = ?
+        """, (stockpile_id,))
+        storage_row = self.cursor.fetchone()
+        storage_item_id = (
+            storage_row[0] if storage_row else None
+        )
+        if storage_item_id:
+            self.materials._deduct_storage_row(
+                storage_item_id,
+                quantity_scu,
+                updated_by=user_id,
+            )
+
+    def undo_session_capture_event(
+        self,
+        event_id: int,
+        *,
+        updated_by=None,
+    ) -> None:
+        event = self._load_event(event_id)
+        if not event or event.get("is_deleted"):
+            raise ValueError(tr("error.storage.event_not_found"))
+
+        payload = event.get("payload") or {}
+        if payload.get("source") != "SESSION_CAPTURE":
+            raise ValueError(
+                tr("error.correction.capture_not_reversible")
+            )
+
+        if payload.get("reverted"):
+            raise ValueError(
+                tr("error.correction.already_reverted")
+            )
+
+        batch_id = payload.get("batch_id")
+        session_id = payload.get("session_id")
+        material_code = payload.get("material_code")
+        quantity_scu = float(event.get("quantity_delta") or 0)
+
+        if (
+            not batch_id
+            or not session_id
+            or not material_code
+            or quantity_scu <= 0
+        ):
+            raise ValueError(
+                tr("error.correction.capture_not_reversible")
+            )
+
+        user_id = updated_by or self._current_user_id()
+        stockpile_id = event.get("stockpile_id")
+
+        try:
+            self.connection.execute("BEGIN IMMEDIATE")
+
+            self.materials.reduce_session_capture(
+                int(batch_id),
+                quantity_scu,
+                updated_by=user_id,
+            )
+
+            if stockpile_id:
+                self._reduce_ship_stockpile_capture(
+                    stockpile_id=int(stockpile_id),
+                    quantity_scu=quantity_scu,
+                    batch_id=int(batch_id),
+                    material_code=material_code,
+                    user_id=user_id,
+                )
+
+            payload["reverted"] = True
+            self.cursor.execute("""
+            UPDATE material_stockpile_events
+            SET
+                payload_json = ?,
+                notes = COALESCE(notes, '') ||
+                    CASE
+                        WHEN notes IS NULL OR TRIM(notes) = ''
+                        THEN ?
+                        ELSE char(10) || ?
+                    END
+            WHERE id = ?
+            """, (
+                json.dumps(payload, ensure_ascii=False),
+                tr("storage.event.reverted_note"),
+                tr("storage.event.reverted_note"),
+                event_id,
+            ))
+
+            self._add_event(
+                stockpile_id=stockpile_id,
+                event_type="REVERT",
+                quantity_delta=-quantity_scu,
+                from_label=event.get("to_label"),
+                to_label=tr("storage.event.session_salvage"),
+                payload={
+                    "reverts_event_id": event_id,
+                    "source": "SESSION_CAPTURE_UNDO",
+                    "material_code": material_code,
+                    "session_id": session_id,
+                    "batch_id": batch_id,
+                },
+            )
+
+            self.connection.commit()
+        except Exception:
+            self.connection.rollback()
+            raise
+
+    def revert_stockpile_event(
+        self,
+        event_id: int,
+        *,
+        updated_by=None,
+    ) -> None:
+        event = self._load_event(event_id)
+        if not event or event.get("is_deleted"):
+            raise ValueError(tr("error.storage.event_not_found"))
+
+        payload = event.get("payload") or {}
+        if payload.get("reverted"):
+            raise ValueError(
+                tr("error.correction.already_reverted")
+            )
+
+        event_type = event.get("event_type")
+        user_id = updated_by or self._current_user_id()
+
+        if event_type == "DEPOSIT" and (
+            payload.get("source") == "SESSION_CAPTURE"
+        ):
+            self.undo_session_capture_event(
+                event_id,
+                updated_by=user_id,
+            )
+            return
+
+        revert_info = payload.get("revert")
+        if not revert_info:
+            raise ValueError(
+                tr("error.correction.event_not_reversible")
+            )
+
+        quantity_scu = abs(
+            float(
+                revert_info.get("quantity_scu")
+                or event.get("quantity_delta")
+                or 0
+            )
+        )
+        if quantity_scu <= 0:
+            raise ValueError(
+                tr("error.correction.event_not_reversible")
+            )
+
+        try:
+            self.connection.execute("BEGIN IMMEDIATE")
+
+            if event_type == "TRANSFER":
+                dest_id = event.get("stockpile_id")
+                if not dest_id:
+                    raise ValueError(
+                        tr("error.correction.event_not_reversible")
+                    )
+
+                source_pool = revert_info.get("source_pool")
+                if not isinstance(source_pool, dict):
+                    raise ValueError(
+                        tr("error.correction.event_not_reversible")
+                    )
+
+                self._reduce_stockpile_quantity(
+                    int(dest_id),
+                    quantity_scu,
+                    user_id,
+                    to_label=event.get("from_label") or "—",
+                    payload={
+                        "reason": "transfer_revert",
+                        "reverts_event_id": event_id,
+                    },
+                )
+
+                if source_pool.get("pool_kind") == "SHIP":
+                    ship_id = source_pool.get("ship_id")
+                    ship_name = source_pool.get("ship_name") or "—"
+                    self._credit_stockpile_at_location(
+                        material_code=source_pool["material_code"],
+                        quantity_scu=quantity_scu,
+                        location_kind="SHIP",
+                        location_key=str(ship_id) if ship_id else None,
+                        location_label=ship_name,
+                        ship_id=ship_id,
+                        status="IN_SHIP",
+                        from_label=event.get("to_label") or "—",
+                        source_type="STOCKPILE",
+                        source_id=dest_id,
+                        transfer_source="TRANSFER_REVERT",
+                        event_type="REVERT",
+                    )
+                else:
+                    self._credit_stockpile_at_location(
+                        material_code=source_pool["material_code"],
+                        quantity_scu=quantity_scu,
+                        location_kind=source_pool.get(
+                            "location_kind"
+                        ),
+                        location_key=source_pool.get(
+                            "location_key"
+                        ),
+                        location_label=source_pool.get(
+                            "location_label"
+                        )
+                        or "—",
+                        ship_id=None,
+                        status="STORED",
+                        from_label=event.get("to_label") or "—",
+                        source_type="STOCKPILE",
+                        source_id=dest_id,
+                        transfer_source="TRANSFER_REVERT",
+                        event_type="REVERT",
+                    )
+
+            elif event_type == "WITHDRAW":
+                source_pool = revert_info.get("source_pool")
+                if not isinstance(source_pool, dict):
+                    raise ValueError(
+                        tr("error.correction.event_not_reversible")
+                    )
+
+                if source_pool.get("pool_kind") == "SHIP":
+                    ship_id = source_pool.get("ship_id")
+                    ship_name = source_pool.get("ship_name") or "—"
+                    self._credit_stockpile_at_location(
+                        material_code=source_pool["material_code"],
+                        quantity_scu=quantity_scu,
+                        location_kind="SHIP",
+                        location_key=str(ship_id) if ship_id else None,
+                        location_label=ship_name,
+                        ship_id=ship_id,
+                        status="IN_SHIP",
+                        from_label=event.get("to_label") or "—",
+                        source_type="STOCKPILE",
+                        source_id=None,
+                        transfer_source="WITHDRAW_REVERT",
+                        event_type="REVERT",
+                    )
+                else:
+                    self._credit_stockpile_at_location(
+                        material_code=source_pool["material_code"],
+                        quantity_scu=quantity_scu,
+                        location_kind=source_pool.get(
+                            "location_kind"
+                        ),
+                        location_key=source_pool.get(
+                            "location_key"
+                        ),
+                        location_label=source_pool.get(
+                            "location_label"
+                        )
+                        or "—",
+                        ship_id=None,
+                        status="STORED",
+                        from_label=event.get("to_label") or "—",
+                        source_type="STOCKPILE",
+                        source_id=None,
+                        transfer_source="WITHDRAW_REVERT",
+                        event_type="REVERT",
+                    )
+            else:
+                raise ValueError(
+                    tr("error.correction.event_not_reversible")
+                )
+
+            payload["reverted"] = True
+            self.cursor.execute("""
+            UPDATE material_stockpile_events
+            SET payload_json = ?
+            WHERE id = ?
+            """, (
+                json.dumps(payload, ensure_ascii=False),
+                event_id,
+            ))
+
+            self.connection.commit()
+        except Exception:
+            self.connection.rollback()
+            raise
+
     def delete_event(self, event_id: int) -> None:
         if not self.db._table_exists("material_stockpile_events"):
             raise ValueError(tr("error.storage.not_available"))
@@ -1407,6 +2438,460 @@ class StockpileRepository:
             raise ValueError(tr("error.storage.event_not_found"))
 
         self.connection.commit()
+
+    def list_material_pools(
+        self,
+        *,
+        raw_cm_only: bool = False,
+    ) -> list[dict]:
+        """Aggregierte Material-Pools (Schiff oder Lager) für Raffinerie/Transfer."""
+        if not self._table_exists():
+            return []
+
+        from config.materials import RAW_CM_MATERIAL_CODES
+
+        material_filter = ""
+        params: list = []
+        if raw_cm_only:
+            placeholders = ", ".join("?" * len(RAW_CM_MATERIAL_CODES))
+            material_filter = (
+                f"AND material_types.material_code IN ({placeholders})"
+            )
+            params.extend(RAW_CM_MATERIAL_CODES)
+
+        pools: list[dict] = []
+
+        self.cursor.execute(f"""
+        SELECT
+            material_types.material_code,
+            material_stockpiles.ship_id,
+            COALESCE(ships.ship_name, material_stockpiles.location_label),
+            COALESCE(SUM(material_stockpiles.quantity_scu), 0)
+        FROM material_stockpiles
+        INNER JOIN material_types
+            ON material_types.id =
+                material_stockpiles.material_type_id
+        LEFT JOIN ships
+            ON ships.id = material_stockpiles.ship_id
+        WHERE material_stockpiles.is_deleted = 0
+        AND material_stockpiles.quantity_scu > 0
+        AND material_stockpiles.location_kind = 'SHIP'
+        AND material_stockpiles.status = 'IN_SHIP'
+        {material_filter}
+        GROUP BY
+            material_types.material_code,
+            material_stockpiles.ship_id,
+            ships.ship_name,
+            material_stockpiles.location_label
+        ORDER BY ships.ship_name, material_types.material_code
+        """, params)
+
+        for code, ship_id, ship_name, qty in self.cursor.fetchall():
+            if float(qty or 0) <= 0:
+                continue
+            pools.append({
+                "pool_kind": "SHIP",
+                "material_code": code,
+                "quantity_scu": float(qty),
+                "ship_id": ship_id,
+                "ship_name": ship_name or "—",
+                "location_kind": "SHIP",
+                "location_key": str(ship_id) if ship_id else None,
+                "location_label": ship_name or "—",
+            })
+
+        self.cursor.execute(f"""
+        SELECT
+            material_types.material_code,
+            material_stockpiles.location_kind,
+            material_stockpiles.location_key,
+            material_stockpiles.location_label,
+            COALESCE(SUM(material_stockpiles.quantity_scu), 0)
+        FROM material_stockpiles
+        INNER JOIN material_types
+            ON material_types.id =
+                material_stockpiles.material_type_id
+        WHERE material_stockpiles.is_deleted = 0
+        AND material_stockpiles.quantity_scu > 0
+        AND material_stockpiles.location_kind IN ('STATION', 'CITY')
+        AND material_stockpiles.status = 'STORED'
+        {material_filter}
+        GROUP BY
+            material_types.material_code,
+            material_stockpiles.location_kind,
+            material_stockpiles.location_key,
+            material_stockpiles.location_label
+        ORDER BY material_stockpiles.location_label, material_types.material_code
+        """, params)
+
+        for (
+            code,
+            loc_kind,
+            loc_key,
+            loc_label,
+            qty,
+        ) in self.cursor.fetchall():
+            if float(qty or 0) <= 0:
+                continue
+            pools.append({
+                "pool_kind": "STORED",
+                "material_code": code,
+                "quantity_scu": float(qty),
+                "ship_id": None,
+                "ship_name": None,
+                "location_kind": loc_kind,
+                "location_key": loc_key,
+                "location_label": loc_label or "—",
+            })
+
+        return pools
+
+    def session_ids_for_pool(self, pool: dict) -> list[int]:
+        """Session-IDs, die Material in diesem Pool liefern (auch nach Sitzungsende)."""
+        if not pool or not self._table_exists():
+            return []
+
+        material_code = pool.get("material_code")
+        if not material_code:
+            return []
+
+        session_ids: set[int] = set()
+        pool_kind = pool.get("pool_kind")
+
+        if pool_kind == "SHIP" and pool.get("ship_id"):
+            ship_id = int(pool["ship_id"])
+            if hasattr(self.db, "materials"):
+                for session_id in (
+                    self.db.materials.session_ids_for_ship_material(
+                        material_code,
+                        ship_id,
+                    )
+                ):
+                    session_ids.add(session_id)
+
+            self.cursor.execute("""
+            SELECT DISTINCT ms.session_id
+            FROM material_stockpiles ms
+            INNER JOIN material_types mt
+                ON mt.id = ms.material_type_id
+            WHERE ms.is_deleted = 0
+            AND ms.ship_id = ?
+            AND ms.session_id IS NOT NULL
+            AND ms.quantity_scu > 0
+            AND mt.material_code = ?
+            """, (ship_id, material_code))
+            for row in self.cursor.fetchall():
+                if row[0]:
+                    session_ids.add(int(row[0]))
+
+        elif pool_kind == "STORED":
+            loc_kind = pool.get("location_kind")
+            loc_key = pool.get("location_key")
+            if loc_kind and loc_key is not None:
+                self.cursor.execute("""
+                SELECT DISTINCT ms.session_id
+                FROM material_stockpiles ms
+                INNER JOIN material_types mt
+                    ON mt.id = ms.material_type_id
+                WHERE ms.is_deleted = 0
+                AND ms.location_kind = ?
+                AND ms.location_key = ?
+                AND ms.session_id IS NOT NULL
+                AND ms.quantity_scu > 0
+                AND mt.material_code = ?
+                """, (
+                    loc_kind,
+                    str(loc_key),
+                    material_code,
+                ))
+                for row in self.cursor.fetchall():
+                    if row[0]:
+                        session_ids.add(int(row[0]))
+
+        return sorted(session_ids)
+
+    def _pool_quantity(self, pool: dict) -> float:
+        if not self._table_exists():
+            return 0.0
+
+        material_code = pool.get("material_code")
+        if not material_code:
+            return 0.0
+
+        if pool.get("pool_kind") == "SHIP":
+            ship_id = pool.get("ship_id")
+            if ship_id is None:
+                return 0.0
+            self.cursor.execute("""
+            SELECT COALESCE(SUM(material_stockpiles.quantity_scu), 0)
+            FROM material_stockpiles
+            INNER JOIN material_types
+                ON material_types.id =
+                    material_stockpiles.material_type_id
+            WHERE material_stockpiles.is_deleted = 0
+            AND material_types.material_code = ?
+            AND material_stockpiles.location_kind = 'SHIP'
+            AND material_stockpiles.status = 'IN_SHIP'
+            AND material_stockpiles.ship_id = ?
+            """, (material_code, ship_id))
+        else:
+            self.cursor.execute("""
+            SELECT COALESCE(SUM(material_stockpiles.quantity_scu), 0)
+            FROM material_stockpiles
+            INNER JOIN material_types
+                ON material_types.id =
+                    material_stockpiles.material_type_id
+            WHERE material_stockpiles.is_deleted = 0
+            AND material_types.material_code = ?
+            AND material_stockpiles.location_kind = ?
+            AND material_stockpiles.status = 'STORED'
+            AND material_stockpiles.location_key = ?
+            """, (
+                material_code,
+                pool.get("location_kind"),
+                pool.get("location_key"),
+            ))
+
+        row = self.cursor.fetchone()
+        return float(row[0] if row else 0)
+
+    def _withdraw_from_pool(
+        self,
+        pool: dict,
+        quantity_scu: float,
+        *,
+        to_label: str,
+        payload: dict | None = None,
+        created_by=None,
+    ) -> None:
+        if quantity_scu <= 0:
+            raise ValueError(tr("error.storage.quantity_positive"))
+
+        material_code = pool["material_code"]
+        remaining = float(quantity_scu)
+        user_id = created_by or self._current_user_id()
+
+        if pool.get("pool_kind") == "SHIP":
+            ship_id = pool.get("ship_id")
+            ship_filter = ""
+            params: list = [material_code]
+            if ship_id is not None:
+                ship_filter = "AND material_stockpiles.ship_id = ?"
+                params.append(ship_id)
+
+            while remaining > 1e-9:
+                self.cursor.execute(f"""
+                SELECT
+                    material_stockpiles.id,
+                    material_stockpiles.quantity_scu
+                FROM material_stockpiles
+                INNER JOIN material_types
+                    ON material_types.id =
+                        material_stockpiles.material_type_id
+                WHERE material_stockpiles.is_deleted = 0
+                AND material_types.material_code = ?
+                AND material_stockpiles.location_kind = 'SHIP'
+                AND material_stockpiles.status = 'IN_SHIP'
+                AND material_stockpiles.quantity_scu > 0
+                {ship_filter}
+                ORDER BY material_stockpiles.last_activity_at ASC
+                LIMIT 1
+                """, params)
+                row = self.cursor.fetchone()
+                if not row:
+                    break
+                stockpile_id = int(row[0])
+                take = min(remaining, float(row[1]))
+                event_payload = {
+                    **(payload or {}),
+                    "revert": {
+                        "source_pool": dict(pool),
+                        "quantity_scu": take,
+                    },
+                }
+                self._reduce_stockpile_quantity(
+                    stockpile_id,
+                    take,
+                    user_id,
+                    to_label=to_label,
+                    payload=event_payload,
+                )
+                remaining -= take
+        else:
+            loc_kind = pool.get("location_kind")
+            loc_key = pool.get("location_key")
+            while remaining > 1e-9:
+                self.cursor.execute("""
+                SELECT
+                    material_stockpiles.id,
+                    material_stockpiles.quantity_scu
+                FROM material_stockpiles
+                INNER JOIN material_types
+                    ON material_types.id =
+                        material_stockpiles.material_type_id
+                WHERE material_stockpiles.is_deleted = 0
+                AND material_types.material_code = ?
+                AND material_stockpiles.location_kind = ?
+                AND material_stockpiles.status = 'STORED'
+                AND material_stockpiles.location_key = ?
+                AND material_stockpiles.quantity_scu > 0
+                ORDER BY material_stockpiles.last_activity_at ASC
+                LIMIT 1
+                """, (material_code, loc_kind, loc_key))
+                row = self.cursor.fetchone()
+                if not row:
+                    break
+                stockpile_id = int(row[0])
+                take = min(remaining, float(row[1]))
+                event_payload = {
+                    **(payload or {}),
+                    "revert": {
+                        "source_pool": dict(pool),
+                        "quantity_scu": take,
+                    },
+                }
+                self._reduce_stockpile_quantity(
+                    stockpile_id,
+                    take,
+                    user_id,
+                    to_label=to_label,
+                    payload=event_payload,
+                )
+                remaining -= take
+
+        if remaining > 1e-9:
+            label = material_label(material_code)
+            raise ValueError(
+                tr(
+                    "error.storage.insufficient_pool",
+                    material=label,
+                    available=f"{quantity_scu - remaining:g}",
+                    requested=f"{quantity_scu:g}",
+                )
+            )
+
+    def withdraw_from_material_pool(
+        self,
+        pool: dict,
+        quantity_scu: float,
+        *,
+        created_by=None,
+    ) -> None:
+        """Material aus Pool entnehmen (FIFO über zugrundeliegende Zeilen)."""
+        if not self._table_exists():
+            raise ValueError(tr("error.storage.not_available"))
+
+        try:
+            self.connection.execute("BEGIN IMMEDIATE")
+            available = self._pool_quantity(pool)
+            if quantity_scu > available + 1e-9:
+                label = material_label(pool.get("material_code", ""))
+                raise ValueError(
+                    tr(
+                        "error.storage.insufficient_pool",
+                        material=label,
+                        available=f"{available:g}",
+                        requested=f"{quantity_scu:g}",
+                    )
+                )
+
+            location = pool.get("location_label") or "—"
+            if pool.get("ship_name"):
+                location = tr(
+                    "storage.location.ship",
+                    ship=pool["ship_name"],
+                )
+
+            self._withdraw_from_pool(
+                pool,
+                quantity_scu,
+                to_label=tr("storage.event.withdrawn"),
+                payload={
+                    "reason": "pool_withdraw",
+                    "material_code": pool.get("material_code"),
+                },
+                created_by=created_by,
+            )
+            self.connection.commit()
+        except Exception:
+            self.connection.rollback()
+            raise
+
+    def transfer_from_material_pool(
+        self,
+        pool: dict,
+        quantity_scu: float,
+        *,
+        location_kind: str,
+        location_key: str | None,
+        location_label: str,
+        ship_id: int | None = None,
+        created_by=None,
+    ) -> int:
+        """Material aus Pool an Ziel verschieben (FIFO)."""
+        if not self._table_exists():
+            raise ValueError(tr("error.storage.not_available"))
+
+        material_code = pool.get("material_code")
+        if not material_code:
+            raise ValueError(tr("error.storage.not_found"))
+
+        try:
+            self.connection.execute("BEGIN IMMEDIATE")
+            available = self._pool_quantity(pool)
+            if quantity_scu > available + 1e-9:
+                label = material_label(material_code)
+                raise ValueError(
+                    tr(
+                        "error.storage.insufficient_pool",
+                        material=label,
+                        available=f"{available:g}",
+                        requested=f"{quantity_scu:g}",
+                    )
+                )
+
+            source_label = pool.get("location_label") or "—"
+            if pool.get("ship_name"):
+                source_label = tr(
+                    "storage.location.ship",
+                    ship=pool["ship_name"],
+                )
+
+            self._withdraw_from_pool(
+                pool,
+                quantity_scu,
+                to_label=location_label,
+                payload={
+                    "reason": "pool_transfer",
+                    "material_code": material_code,
+                    "destination": location_label,
+                },
+                created_by=created_by,
+            )
+
+            dest_id = self._credit_stockpile_at_location(
+                material_code=material_code,
+                quantity_scu=quantity_scu,
+                location_kind=location_kind,
+                location_key=location_key,
+                location_label=location_label,
+                ship_id=ship_id,
+                status="IN_SHIP" if location_kind == "SHIP" else "STORED",
+                from_label=source_label,
+                source_type="STOCKPILE",
+                source_id=None,
+                transfer_source="POOL_TRANSFER",
+                event_type="TRANSFER",
+                revert_metadata={
+                    "quantity_scu": quantity_scu,
+                    "source_pool": dict(pool),
+                },
+            )
+            self.connection.commit()
+            return dest_id
+        except Exception:
+            self.connection.rollback()
+            raise
 
     def totals_by_material(self) -> list[dict]:
         if not self._table_exists():

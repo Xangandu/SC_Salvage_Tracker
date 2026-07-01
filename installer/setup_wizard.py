@@ -15,6 +15,7 @@ from config.editions import EDITION_TITLES, edition_title
 from config.version import APP_PRODUCT_NAME
 from installer.install_engine import (
     is_silent_install_argv,
+    is_update_mode_argv,
     resolve_install_dir,
     run_silent_install,
     uninstall_installation,
@@ -94,7 +95,13 @@ def main(argv: list[str] | None = None) -> int:
             return 1
 
     edition = _parse_edition(argv)
-    return run_wizard(demo_mode=False, edition=edition, argv=argv)
+    update_mode = is_update_mode_argv(argv)
+    return run_wizard(
+        demo_mode=False,
+        edition=edition,
+        argv=argv,
+        update_mode=update_mode,
+    )
 
 
 if __name__ == "__main__":

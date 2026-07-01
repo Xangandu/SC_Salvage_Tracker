@@ -7,19 +7,23 @@ from PySide6.QtWidgets import QApplication, QMessageBox
 
 from config.update import UpdateManifest
 from config.i18n import tr
-from config.version import format_version_subtitle
+from config.version import APP_EDITION, format_version_subtitle
 from ui.mobiglas_message_box import question as mobiglas_question
 from ui.update_dialog import (
     UpdateAvailableDialog,
     UpdateDialogResult,
     UpdateDownloadDialog,
+    UpdateInstallConfirmDialog,
 )
 from update.service import (
     can_launch_installer,
     get_network_update_warning,
+    install_path_source_label,
     is_auto_check_enabled,
+    is_install_path_known,
     launch_installer,
     record_last_check,
+    resolve_update_install_dir,
     set_auto_check_enabled,
     set_skipped_version,
     should_offer_update,
@@ -163,6 +167,12 @@ class UpdateManager(QObject):
             set_skipped_version(self.db, manifest.version)
             self._clear_pending_update()
 
+    def _resolve_install_target(self) -> tuple[str, str] | None:
+        edition = APP_EDITION or "solo"
+        install_dir, source = resolve_update_install_dir(edition)
+        source_label = install_path_source_label(source)
+        return str(install_dir), source_label
+
     def _start_install(self, manifest):
         if not can_launch_installer():
             QMessageBox.information(
@@ -191,10 +201,36 @@ class UpdateManager(QObject):
             if answer != QMessageBox.StandardButton.Yes:
                 return
 
+        target = self._resolve_install_target()
+        if target is None:
+            return
+        install_dir, source_label = target
+
+        edition = APP_EDITION or "solo"
+        resolved_dir, source = resolve_update_install_dir(edition)
+        if not is_install_path_known(source):
+            answer = QMessageBox.warning(
+                self.parent,
+                tr("update.manager.install_confirm.title"),
+                tr(
+                    "update.manager.install_path.unknown",
+                    install_dir=str(resolved_dir),
+                ),
+                QMessageBox.StandardButton.Yes
+                | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No,
+            )
+            if answer != QMessageBox.StandardButton.Yes:
+                return
+
         confirm = QMessageBox.question(
             self.parent,
             tr("update.manager.install_confirm.title"),
-            tr("update.manager.install_confirm.message"),
+            tr(
+                "update.manager.install_confirm.message",
+                install_dir=install_dir,
+                source_label=source_label,
+            ),
             QMessageBox.StandardButton.Yes
             | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.Yes,
@@ -202,9 +238,14 @@ class UpdateManager(QObject):
         if confirm != QMessageBox.StandardButton.Yes:
             return
 
-        self._download_and_install(manifest)
+        self._download_and_install(manifest, install_dir, source_label)
 
-    def _download_and_install(self, manifest):
+    def _download_and_install(
+        self,
+        manifest: UpdateManifest,
+        install_dir: str,
+        source_label: str,
+    ):
         if (
             self._download_worker
             and self._download_worker.isRunning()
@@ -214,6 +255,8 @@ class UpdateManager(QObject):
         progress_dialog = UpdateDownloadDialog(
             manifest,
             self.parent,
+            install_dir=install_dir,
+            install_source_label=source_label,
         )
         progress_dialog.show()
 
@@ -226,11 +269,22 @@ class UpdateManager(QObject):
                 path,
                 error,
                 progress_dialog,
+                manifest,
+                install_dir,
+                source_label,
             )
         )
         self._download_worker.start()
 
-    def _on_download_finished(self, path, error, progress_dialog):
+    def _on_download_finished(
+        self,
+        path,
+        error,
+        progress_dialog,
+        manifest,
+        install_dir,
+        source_label,
+    ):
         progress_dialog.close()
 
         if error:
@@ -239,6 +293,15 @@ class UpdateManager(QObject):
                 tr("update.manager.download.title"),
                 tr("update.manager.download.failed", error=error),
             )
+            return
+
+        confirm_dialog = UpdateInstallConfirmDialog(
+            manifest,
+            install_dir,
+            source_label,
+            self.parent,
+        )
+        if confirm_dialog.exec() != confirm_dialog.DialogCode.Accepted:
             return
 
         try:

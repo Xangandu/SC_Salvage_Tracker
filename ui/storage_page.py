@@ -1,4 +1,5 @@
-from PySide6.QtCore import Signal
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QAction
 from PySide6.QtWidgets import (
     QWidget,
     QVBoxLayout,
@@ -13,6 +14,7 @@ from PySide6.QtWidgets import (
     QCheckBox,
     QFrame,
     QDialog,
+    QMenu,
 )
 
 from database.access import get_database
@@ -31,6 +33,8 @@ from config.storage_idle import (
 from config.i18n import tr, format_number, format_scu, format_scu_delta
 from config.strings_de import parse_number_de
 from config.permissions import apply_widget_permissions
+from ui.storage_pool_utils import entry_pool
+from ui.storage_transfer_dialog import StorageTransferDialog
 from ui.system_location_picker import SystemLocationPicker
 from ui.mobiglas_input_dialog import MobiglasTextInputDialog
 from ui.table_utils import (
@@ -152,6 +156,12 @@ class StoragePage(QWidget):
             "dataTable",
         )
         self.stockpile_table.setMinimumHeight(200)
+        self.stockpile_table.setContextMenuPolicy(
+            Qt.ContextMenuPolicy.CustomContextMenu
+        )
+        self.stockpile_table.customContextMenuRequested.connect(
+            self._show_stockpile_context_menu
+        )
         self.stockpile_empty = empty_info_panel(
             tr("storage.empty"),
             "assets/images/icons/info.svg",
@@ -164,8 +174,8 @@ class StoragePage(QWidget):
         self.reminded_button = _secondary_button(
             tr("storage.button.reminded")
         )
-        self.reserve_button = _secondary_button(
-            tr("storage.button.set_reserve")
+        self.transfer_button = _secondary_button(
+            tr("storage.button.transfer")
         )
         self.moved_button = _secondary_button(
             tr("storage.button.moved")
@@ -174,7 +184,7 @@ class StoragePage(QWidget):
             tr("storage.button.delete")
         )
         list_actions.addWidget(self.reminded_button)
-        list_actions.addWidget(self.reserve_button)
+        list_actions.addWidget(self.transfer_button)
         list_actions.addWidget(self.moved_button)
         list_actions.addWidget(self.delete_stockpile_button)
         list_actions.addStretch()
@@ -307,7 +317,7 @@ class StoragePage(QWidget):
         history_actions = QHBoxLayout()
         history_actions.setSpacing(12)
         self.delete_event_button = _secondary_button(
-            tr("storage.button.delete_event")
+            tr("storage.button.revert_event")
         )
         history_actions.addWidget(self.delete_event_button)
         history_actions.addStretch()
@@ -336,8 +346,8 @@ class StoragePage(QWidget):
         self.reminded_button.clicked.connect(
             self.acknowledge_selected_idle
         )
-        self.reserve_button.clicked.connect(
-            self.set_reserve_on_selected
+        self.transfer_button.clicked.connect(
+            self.transfer_selected_stockpile
         )
         self.moved_button.clicked.connect(
             self.mark_selected_moved
@@ -346,7 +356,7 @@ class StoragePage(QWidget):
             self.delete_selected_stockpile
         )
         self.delete_event_button.clicked.connect(
-            self.delete_selected_event
+            self.revert_selected_event
         )
 
         self._on_location_type_changed()
@@ -618,6 +628,39 @@ class StoragePage(QWidget):
             return None
         return self._stockpile_rows[row]
 
+    def _show_stockpile_context_menu(self, pos) -> None:
+        row = self.stockpile_table.rowAt(pos.y())
+        if row < 0 or row >= len(self._stockpile_rows):
+            return
+
+        self.stockpile_table.selectRow(row)
+        entry = self._stockpile_rows[row]
+
+        menu = QMenu(self)
+        menu.setObjectName("storageContextMenu")
+
+        set_reserve = QAction(
+            tr("storage.button.set_reserve"),
+            menu,
+        )
+        set_reserve.triggered.connect(self.set_reserve_on_selected)
+        menu.addAction(set_reserve)
+
+        clear_reserve = QAction(
+            tr("storage.button.clear_reserve"),
+            menu,
+        )
+        clear_reserve.triggered.connect(self.clear_reserve_on_selected)
+        menu.addAction(clear_reserve)
+
+        writable = self.delete_stockpile_button.isEnabled()
+        has_reserve = bool((entry.get("reserve_tag") or "").strip())
+        set_reserve.setEnabled(writable)
+        clear_reserve.setEnabled(writable and has_reserve)
+
+        global_pos = self.stockpile_table.viewport().mapToGlobal(pos)
+        menu.exec(global_pos)
+
     def save_entry(self):
         material_code = self.material_combo.currentData()
         quantity = parse_number_de(self.quantity_input.text())
@@ -699,6 +742,33 @@ class StoragePage(QWidget):
         )
         self.load_data()
 
+    def transfer_selected_stockpile(self):
+        entry = self._selected_stockpile()
+        initial_id = entry["id"] if entry else None
+
+        if not self._stockpile_rows:
+            QMessageBox.warning(
+                self,
+                tr("common.error"),
+                tr("storage.empty"),
+            )
+            return
+
+        dialog = StorageTransferDialog(
+            self,
+            self._stockpile_rows,
+            initial_stockpile_id=initial_id,
+        )
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+
+        QMessageBox.information(
+            self,
+            tr("common.success"),
+            tr("storage.msg.transferred"),
+        )
+        self.load_data()
+
     def acknowledge_selected_idle(self):
         entry = self._selected_stockpile()
         if not entry:
@@ -723,6 +793,49 @@ class StoragePage(QWidget):
             self,
             tr("common.success"),
             tr("storage.msg.reminded"),
+        )
+        self.load_data()
+
+    def clear_reserve_on_selected(self):
+        entry = self._selected_stockpile()
+        if not entry:
+            QMessageBox.warning(
+                self,
+                tr("common.error"),
+                tr("storage.msg.no_selection"),
+            )
+            return
+
+        if not (entry.get("reserve_tag") or "").strip():
+            QMessageBox.warning(
+                self,
+                tr("common.error"),
+                tr("error.storage.reserve_not_set"),
+            )
+            return
+
+        answer = QMessageBox.question(
+            self,
+            tr("storage.msg.reserve_clear_confirm.title"),
+            tr("storage.msg.reserve_clear_confirm.message"),
+        )
+        if answer != QMessageBox.StandardButton.Yes:
+            return
+
+        try:
+            self.db.clear_stockpile_reserve(entry["id"])
+        except ValueError as error:
+            QMessageBox.warning(
+                self,
+                tr("common.error"),
+                str(error),
+            )
+            return
+
+        QMessageBox.information(
+            self,
+            tr("common.success"),
+            tr("storage.msg.reserve_cleared"),
         )
         self.load_data()
 
@@ -784,8 +897,21 @@ class StoragePage(QWidget):
             )
             return
 
+        pool = entry_pool(entry)
+        quantity = float(entry.get("quantity_scu") or 0)
+        if quantity <= 0:
+            QMessageBox.warning(
+                self,
+                tr("common.error"),
+                tr("error.storage.quantity_positive"),
+            )
+            return
+
         try:
-            self.db.mark_stockpile_moved(entry["id"])
+            self.db.withdraw_from_material_pool(
+                pool,
+                quantity,
+            )
         except ValueError as error:
             QMessageBox.warning(
                 self,
@@ -839,6 +965,48 @@ class StoragePage(QWidget):
             self,
             tr("common.success"),
             tr("storage.msg.deleted"),
+        )
+        self.load_data()
+
+    def revert_selected_event(self):
+        row = self.history_table.currentRow()
+        if row < 0:
+            QMessageBox.warning(
+                self,
+                tr("common.error"),
+                tr("storage.msg.no_selection"),
+            )
+            return
+
+        events = self.db.list_stockpile_events()
+        if row >= len(events):
+            return
+
+        event_id = events[row]["id"]
+
+        answer = QMessageBox.question(
+            self,
+            tr("storage.msg.revert_event_confirm.title"),
+            tr("storage.msg.revert_event_confirm.message"),
+        )
+
+        if answer != QMessageBox.StandardButton.Yes:
+            return
+
+        try:
+            self.db.revert_stockpile_event(event_id)
+        except ValueError as error:
+            QMessageBox.warning(
+                self,
+                tr("common.error"),
+                str(error),
+            )
+            return
+
+        QMessageBox.information(
+            self,
+            tr("common.success"),
+            tr("storage.msg.reverted"),
         )
         self.load_data()
 

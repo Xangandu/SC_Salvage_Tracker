@@ -8,7 +8,7 @@ from PySide6.QtWidgets import (
 from database.access import get_database
 from config.dates import format_date
 from config.materials import material_label
-from config.i18n import tr, format_number
+from config.i18n import tr, format_number, status_label
 from config.permissions import apply_widget_permissions
 from ui.table_utils import (
     configure_mobiglas_table,
@@ -32,8 +32,43 @@ class HistoryPage(QWidget):
 
         content, layout = page_content_widget()
         layout.addWidget(page_title(tr("history.title")))
+
         layout.addWidget(
-            section_accent(tr("history.section"))
+            section_accent(tr("history.section.sessions"))
+        )
+        layout.addLayout(hud_divider())
+
+        sessions_panel, sessions_layout = page_panel()
+        sessions_layout.setContentsMargins(12, 12, 12, 12)
+
+        self.sessions_table = QTableWidget()
+        self.sessions_table.setColumnCount(6)
+        self.sessions_table.setHorizontalHeaderLabels([
+            tr("history.session.no"),
+            tr("history.session.ship"),
+            tr("history.session.status"),
+            tr("history.session.ended"),
+            tr("history.session.mission_costs"),
+            tr("history.session.total_costs"),
+        ])
+        configure_mobiglas_table(
+            self.sessions_table,
+            "dataTable",
+        )
+        self.sessions_table.setMinimumHeight(220)
+
+        self.sessions_empty_panel = empty_info_panel(
+            tr("history.sessions.empty"),
+            "assets/images/icons/info.svg",
+        )
+
+        sessions_layout.addWidget(self.sessions_table)
+        sessions_layout.addWidget(self.sessions_empty_panel)
+        self.sessions_empty_panel.hide()
+        layout.addWidget(sessions_panel)
+
+        layout.addWidget(
+            section_accent(tr("history.section.sales"))
         )
         layout.addLayout(hud_divider())
 
@@ -54,7 +89,7 @@ class HistoryPage(QWidget):
             self.history_table,
             "dataTable",
         )
-        self.history_table.setMinimumHeight(400)
+        self.history_table.setMinimumHeight(280)
 
         self.history_empty_panel = empty_info_panel(
             tr("history.empty"),
@@ -78,8 +113,78 @@ class HistoryPage(QWidget):
     def refresh_history(self):
         self.load_history()
 
+    def _load_sessions_history(self, db):
+        sessions = db.get_archived_sessions()
+        has_sessions = len(sessions) > 0
+
+        self.sessions_table.setVisible(has_sessions)
+        self.sessions_empty_panel.setVisible(not has_sessions)
+        self.sessions_table.setRowCount(len(sessions))
+
+        for row, session in enumerate(sessions):
+            mission_text = (
+                "\n".join(session["mission_lines"])
+                if session["mission_lines"]
+                else tr("history.session.no_missions")
+            )
+            ended = session.get("end_time") or session.get(
+                "start_time"
+            )
+
+            self.sessions_table.setItem(
+                row,
+                0,
+                QTableWidgetItem(f"#{session['id']}"),
+            )
+            self.sessions_table.setItem(
+                row,
+                1,
+                QTableWidgetItem(session.get("name") or "—"),
+            )
+            self.sessions_table.setItem(
+                row,
+                2,
+                QTableWidgetItem(
+                    status_label(session.get("status") or "")
+                ),
+            )
+            self.sessions_table.setItem(
+                row,
+                3,
+                QTableWidgetItem(
+                    format_date(ended) if ended else "—"
+                ),
+            )
+            self.sessions_table.setItem(
+                row,
+                4,
+                QTableWidgetItem(mission_text),
+            )
+            self.sessions_table.setItem(
+                row,
+                5,
+                QTableWidgetItem(
+                    tr(
+                        "history.session.costs_total",
+                        mission_total=format_number(
+                            session.get("mission_total") or 0
+                        ),
+                        session_total=format_number(
+                            session.get("session_total") or 0
+                        ),
+                    )
+                ),
+            )
+
+        finalize_table_columns(
+            self.sessions_table,
+            stretch_column=4,
+        )
+
     def load_history(self):
         db = get_database()
+        self._load_sessions_history(db)
+
         sales = db.get_sales_history()
         has_sales = len(sales) > 0
 

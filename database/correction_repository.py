@@ -224,6 +224,10 @@ class CorrectionRepository:
                 for row in self.cursor.fetchall()
             ]
 
+            batch_cleanup = self._session_batch_cleanup_amounts(
+                batch_ids
+            )
+
             for batch_id in batch_ids:
                 self.cursor.execute("""
                 SELECT id
@@ -244,6 +248,12 @@ class CorrectionRepository:
                     batch_id,
                 )
 
+            self._cleanup_session_stockpiles(
+                session_id,
+                batch_cleanup,
+                updated_by=updated_by,
+            )
+
             self._mark_deleted("sessions", session_id)
 
             self.connection.commit()
@@ -251,6 +261,210 @@ class CorrectionRepository:
         except Exception:
             self.connection.rollback()
             raise
+
+    def _session_batch_cleanup_amounts(
+        self,
+        batch_ids: list[int],
+    ) -> list[dict]:
+        if not batch_ids:
+            return []
+
+        batch_columns = self.db._table_columns(
+            "material_batches"
+        )
+        has_remaining = (
+            "remaining_quantity" in batch_columns
+        )
+        qty_sql = (
+            "material_batches.remaining_quantity"
+            if has_remaining
+            else "material_batches.quantity"
+        )
+
+        placeholders = ", ".join("?" * len(batch_ids))
+        self.cursor.execute(f"""
+        SELECT
+            material_types.material_code,
+            {qty_sql}
+        FROM material_batches
+        INNER JOIN material_types
+            ON material_types.id =
+                material_batches.material_type_id
+        WHERE material_batches.id IN ({placeholders})
+        """, batch_ids)
+
+        return [
+            {
+                "material_code": row[0],
+                "quantity_scu": float(row[1] or 0),
+            }
+            for row in self.cursor.fetchall()
+            if float(row[1] or 0) > 0
+        ]
+
+    def _cleanup_session_stockpiles(
+        self,
+        session_id: int,
+        batch_amounts: list[dict],
+        *,
+        updated_by=None,
+    ) -> None:
+        if (
+            not batch_amounts
+            or not hasattr(self.db, "stockpiles")
+            or not self.db._table_exists("material_stockpiles")
+        ):
+            return
+
+        ship = self.db.get_session_ship(session_id)
+        if not ship:
+            return
+
+        user_id = updated_by or user_session.get_user_id()
+        ship_id = ship["ship_id"]
+
+        for entry in batch_amounts:
+            material_code = entry["material_code"]
+            quantity_scu = float(entry["quantity_scu"] or 0)
+            if quantity_scu <= 0:
+                continue
+
+            existing = self.db.stockpiles._find_ship_stockpile(
+                material_code=material_code,
+                ship_id=ship_id,
+            )
+            if not existing:
+                continue
+
+            stockpile_id, current_qty = existing
+            new_qty = current_qty - quantity_scu
+            now = self.db.stockpiles._now()
+
+            if new_qty <= 1e-9:
+                self.cursor.execute("""
+                UPDATE material_stockpiles
+                SET
+                    quantity_scu = 0,
+                    is_deleted = 1,
+                    deleted_at = datetime('now', 'localtime'),
+                    updated_at = datetime('now', 'localtime'),
+                    updated_by = ?
+                WHERE id = ?
+                AND is_deleted = 0
+                """, (user_id, stockpile_id))
+            else:
+                self.cursor.execute("""
+                UPDATE material_stockpiles
+                SET
+                    quantity_scu = ?,
+                    updated_at = datetime('now', 'localtime'),
+                    updated_by = ?
+                WHERE id = ?
+                AND is_deleted = 0
+                """, (new_qty, user_id, stockpile_id))
+
+    def can_delete_mission_cost(self, cost_id: int):
+        cost_columns = self.db._table_columns("costs")
+        deleted_filter = ""
+
+        if "is_deleted" in cost_columns:
+            deleted_filter = "AND COALESCE(c.is_deleted, 0) = 0"
+
+        self.cursor.execute(f"""
+        SELECT
+            c.session_id,
+            ct.cost_name
+        FROM costs c
+        JOIN cost_types ct
+            ON ct.id = c.cost_type_id
+        WHERE c.id = ?
+        {deleted_filter}
+        """, (cost_id,))
+
+        row = self.cursor.fetchone()
+        if not row:
+            return False, tr("error.cost.not_found")
+
+        if row[1] != "Mission":
+            return False, tr("error.cost.not_mission")
+
+        session_id = row[0]
+        self.cursor.execute("""
+        SELECT status
+        FROM sessions
+        WHERE id = ?
+        AND COALESCE(is_deleted, 0) = 0
+        """, (session_id,))
+
+        session_row = self.cursor.fetchone()
+        if not session_row:
+            return False, tr("error.session.not_found")
+
+        if session_row[0] not in (
+            "ACTIVE",
+            "WAITING_FOR_REFINERY",
+        ):
+            return False, tr("error.cost.session_locked")
+
+        return True, None
+
+    def delete_mission_cost(
+        self,
+        cost_id: int,
+        updated_by=None,
+    ) -> None:
+        ok, reason = self.can_delete_mission_cost(cost_id)
+        if not ok:
+            raise ValueError(reason)
+
+        self._mark_deleted("costs", cost_id)
+        self.connection.commit()
+
+    def can_reopen_session(self, session_id: int):
+        session_columns = self.db._table_columns("sessions")
+        deleted_filter = ""
+
+        if "is_deleted" in session_columns:
+            deleted_filter = "AND COALESCE(is_deleted, 0) = 0"
+
+        self.cursor.execute(f"""
+        SELECT status
+        FROM sessions
+        WHERE id = ?
+        {deleted_filter}
+        """, (session_id,))
+
+        row = self.cursor.fetchone()
+        if not row:
+            return False, tr("error.session.not_found")
+
+        if row[0] != "WAITING_FOR_REFINERY":
+            return False, tr("error.session.reopen.not_waiting")
+
+        if self.db.get_active_session():
+            return False, tr("error.session.reopen.active_exists")
+
+        return True, None
+
+    def reopen_session(self, session_id: int) -> None:
+        ok, reason = self.can_reopen_session(session_id)
+        if not ok:
+            raise ValueError(reason)
+
+        session_columns = self.db._table_columns("sessions")
+        end_clear = ""
+
+        if "end_time" in session_columns:
+            end_clear = ", end_time = NULL"
+
+        self.cursor.execute(f"""
+        UPDATE sessions
+        SET status = 'ACTIVE'
+        {end_clear}
+        WHERE id = ?
+        """, (session_id,))
+
+        self.connection.commit()
 
     def get_correctable_sessions(self, limit=25):
         session_columns = self.db._table_columns("sessions")

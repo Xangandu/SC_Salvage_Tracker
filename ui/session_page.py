@@ -10,6 +10,8 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QPushButton,
     QLabel,
+    QTableWidget,
+    QTableWidgetItem,
 )
 
 from database.access import get_database
@@ -37,6 +39,10 @@ from ui.page_layout import (
     primary_button,
     empty_info_panel,
     hud_divider,
+)
+from ui.table_utils import (
+    configure_mobiglas_table,
+    finalize_table_columns,
 )
 
 
@@ -102,9 +108,6 @@ class SessionPage(QWidget):
             )
         )
         self.mission_costs_total_label.setObjectName("statValue")
-        self.mission_costs_list_label = QLabel("")
-        self.mission_costs_list_label.setObjectName("mutedLabel")
-        self.mission_costs_list_label.setWordWrap(True)
 
         self.add_mission_cost_button = primary_button(
             tr("session.button.add_mission")
@@ -114,22 +117,17 @@ class SessionPage(QWidget):
         )
 
         self.rmc_input = QLineEdit()
-        self.rmc_input.setPlaceholderText(tr("session.placeholder.rmc"))
-
         self.cm_rubble_input = QLineEdit()
-        self.cm_rubble_input.setPlaceholderText(
-            f"{material_label('CM_RUBBLE')} SCU"
-        )
-
         self.cm_scraps_input = QLineEdit()
-        self.cm_scraps_input.setPlaceholderText(
-            f"{material_label('CM_SCRAPS')} SCU"
-        )
-
         self.cm_salvage_input = QLineEdit()
-        self.cm_salvage_input.setPlaceholderText(
-            f"{material_label('CM_SALVAGE')} SCU"
-        )
+        material_placeholder = tr("session.placeholder.quantity")
+        for field in (
+            self.rmc_input,
+            self.cm_rubble_input,
+            self.cm_scraps_input,
+            self.cm_salvage_input,
+        ):
+            field.setPlaceholderText(material_placeholder)
 
         self.finish_button = primary_button(tr("session.button.save_run"))
         self.finish_button.clicked.connect(self.complete_run)
@@ -151,6 +149,13 @@ class SessionPage(QWidget):
             self.delete_selected_session
         )
 
+        self.reopen_session_button = _secondary_button(
+            tr("session.button.reopen")
+        )
+        self.reopen_session_button.clicked.connect(
+            self.reopen_selected_session
+        )
+
         self.delete_session_panel = QWidget()
         delete_row = QHBoxLayout(self.delete_session_panel)
         delete_row.setContentsMargins(0, 0, 0, 0)
@@ -164,6 +169,9 @@ class SessionPage(QWidget):
         )
         delete_row.addWidget(
             self.delete_session_button
+        )
+        delete_row.addWidget(
+            self.reopen_session_button
         )
         self.delete_session_panel.hide()
 
@@ -192,6 +200,13 @@ class SessionPage(QWidget):
         start_layout.addWidget(start_hint)
 
         start_layout.addWidget(self.start_button)
+
+        self.archived_hint = QLabel(tr("session.hint.archived"))
+        self.archived_hint.setWordWrap(True)
+        self.archived_hint.setObjectName("mutedLabel")
+        self.archived_hint.hide()
+        start_layout.addWidget(self.archived_hint)
+
         layout.addWidget(self.start_panel)
 
         self.client_session_panel, client_layout = info_panel()
@@ -249,7 +264,30 @@ class SessionPage(QWidget):
 
         mission_layout.addWidget(self.add_mission_cost_button)
         mission_layout.addWidget(self.mission_costs_total_label)
-        mission_layout.addWidget(self.mission_costs_list_label)
+
+        self.mission_costs_table = QTableWidget()
+        self.mission_costs_table.setColumnCount(2)
+        self.mission_costs_table.setHorizontalHeaderLabels([
+            tr("session.table.mission_amount"),
+            tr("session.table.mission_payer"),
+        ])
+        configure_mobiglas_table(
+            self.mission_costs_table,
+            "dataTable",
+        )
+        self.mission_costs_table.setMinimumHeight(100)
+        mission_layout.addWidget(self.mission_costs_table)
+
+        mission_actions = QHBoxLayout()
+        self.delete_mission_button = _secondary_button(
+            tr("session.button.delete_mission")
+        )
+        self.delete_mission_button.clicked.connect(
+            self.delete_selected_mission_cost
+        )
+        mission_actions.addWidget(self.delete_mission_button)
+        mission_actions.addStretch()
+        mission_layout.addLayout(mission_actions)
         layout.addWidget(self.mission_costs_panel)
         self.mission_costs_panel.hide()
 
@@ -285,6 +323,40 @@ class SessionPage(QWidget):
         action_row.addWidget(self.end_session_button)
         action_row.addStretch()
         material_layout.addLayout(action_row)
+
+        material_layout.addWidget(
+            subsection_title(tr("session.section.captures"))
+        )
+        captures_hint = QLabel(tr("session.hint.captures"))
+        captures_hint.setWordWrap(True)
+        captures_hint.setObjectName("mutedLabel")
+        material_layout.addWidget(captures_hint)
+
+        self.captures_table = QTableWidget()
+        self.captures_table.setColumnCount(3)
+        self.captures_table.setHorizontalHeaderLabels([
+            tr("session.table.capture_material"),
+            tr("session.table.capture_quantity"),
+            tr("session.table.capture_time"),
+        ])
+        configure_mobiglas_table(
+            self.captures_table,
+            "dataTable",
+        )
+        self.captures_table.setMinimumHeight(120)
+        material_layout.addWidget(self.captures_table)
+
+        capture_actions = QHBoxLayout()
+        self.undo_capture_button = _secondary_button(
+            tr("session.button.undo_capture")
+        )
+        self.undo_capture_button.clicked.connect(
+            self.undo_selected_capture
+        )
+        capture_actions.addWidget(self.undo_capture_button)
+        capture_actions.addStretch()
+        material_layout.addLayout(capture_actions)
+
         material_layout.addWidget(self.delete_session_panel)
         layout.addWidget(material_panel)
 
@@ -293,6 +365,9 @@ class SessionPage(QWidget):
         outer.addWidget(build_page_scroll(content))
 
         self._apply_client_layout()
+        self.delete_session_combo.currentIndexChanged.connect(
+            self._on_correction_session_changed
+        )
         self.refresh_session()
 
     def _apply_client_layout(self):
@@ -305,6 +380,267 @@ class SessionPage(QWidget):
             self.client_session_panel.hide()
             self.end_session_button.show()
             self._refresh_delete_sessions()
+
+    def _correction_session_id(self):
+        if self.is_network_client:
+            session = self._selected_client_session()
+            return session.get("id") if session else None
+
+        active = self.db.get_active_session()
+        if active:
+            return active[0]
+
+        return self.delete_session_combo.currentData()
+
+    def _on_correction_session_changed(self, _index=-1):
+        session_id = self.delete_session_combo.currentData()
+        if self.db.get_active_session():
+            return
+
+        self._refresh_mission_costs(session_id)
+        self._refresh_captures(session_id)
+        self._update_reopen_button()
+
+    def _update_reopen_button(self):
+        if self.is_network_client:
+            self.reopen_session_button.hide()
+            return
+
+        session_id = self.delete_session_combo.currentData()
+        if session_id is None:
+            self.reopen_session_button.setEnabled(False)
+            return
+
+        sessions = self.db.get_correctable_sessions()
+        selected = next(
+            (
+                item
+                for item in sessions
+                if item["id"] == session_id
+            ),
+            None,
+        )
+        can_reopen = (
+            selected is not None
+            and selected.get("status") == "WAITING_FOR_REFINERY"
+            and not self.db.get_active_session()
+        )
+        self.reopen_session_button.setVisible(bool(sessions))
+        self.reopen_session_button.setEnabled(can_reopen)
+
+    def _refresh_captures(self, session_id=None):
+        if session_id is None:
+            session_id = self._correction_session_id()
+
+        self.captures_table.setRowCount(0)
+        self.undo_capture_button.setEnabled(False)
+
+        if not session_id:
+            return
+
+        captures = self.db.list_session_capture_events(session_id)
+        self.captures_table.setRowCount(len(captures))
+
+        for row, capture in enumerate(captures):
+            material = material_label(capture["material_code"])
+            quantity = format_number(
+                capture["quantity_scu"],
+                0,
+            )
+            created_at = capture.get("created_at") or "—"
+
+            material_item = QTableWidgetItem(material)
+            material_item.setData(
+                256,
+                capture["id"],
+            )
+            self.captures_table.setItem(row, 0, material_item)
+            self.captures_table.setItem(
+                row,
+                1,
+                QTableWidgetItem(quantity),
+            )
+            self.captures_table.setItem(
+                row,
+                2,
+                QTableWidgetItem(str(created_at)),
+            )
+
+        finalize_table_columns(
+            self.captures_table,
+            stretch_column=0,
+        )
+
+        self.undo_capture_button.setEnabled(bool(captures))
+
+    def undo_selected_capture(self):
+        row = self.captures_table.currentRow()
+        if row < 0:
+            if self.captures_table.rowCount() <= 0:
+                QMessageBox.warning(
+                    self,
+                    tr("common.error"),
+                    tr("session.msg.no_session"),
+                )
+                return
+            row = 0
+            self.captures_table.selectRow(row)
+
+        item = self.captures_table.item(row, 0)
+        if item is None:
+            return
+
+        event_id = item.data(256)
+        material = item.text()
+        quantity_item = self.captures_table.item(row, 1)
+        quantity = (
+            quantity_item.text()
+            if quantity_item
+            else "0"
+        )
+
+        answer = QMessageBox.question(
+            self,
+            tr("session.msg.capture_undo_confirm.title"),
+            tr(
+                "session.msg.capture_undo_confirm.message",
+                quantity=quantity,
+                material=material,
+            ),
+            QMessageBox.Yes | QMessageBox.No,
+        )
+        if answer != QMessageBox.Yes:
+            return
+
+        try:
+            self.db.undo_session_capture(event_id)
+        except ValueError as error:
+            QMessageBox.warning(
+                self,
+                tr("common.error"),
+                str(error),
+            )
+            return
+
+        session_id = self._correction_session_id()
+        self._refresh_captures(session_id)
+        self._refresh_mission_costs(session_id)
+
+        main_window = self.window()
+        if hasattr(main_window, "dashboard_page"):
+            main_window.dashboard_page.refresh_dashboard()
+        if hasattr(main_window, "refinery_page"):
+            main_window.refinery_page.load_data()
+        if hasattr(main_window, "storage_page"):
+            main_window.storage_page.load_data()
+
+        QMessageBox.information(
+            self,
+            tr("common.success"),
+            tr("session.msg.capture_undone"),
+        )
+
+    def delete_selected_mission_cost(self):
+        row = self.mission_costs_table.currentRow()
+        if row < 0:
+            QMessageBox.warning(
+                self,
+                tr("common.error"),
+                tr("session.msg.no_session"),
+            )
+            return
+
+        amount_item = self.mission_costs_table.item(row, 0)
+        payer_item = self.mission_costs_table.item(row, 1)
+        if amount_item is None:
+            return
+
+        cost_id = amount_item.data(256)
+        amount = amount_item.text()
+        paid_by = payer_item.text() if payer_item else "—"
+
+        answer = QMessageBox.question(
+            self,
+            tr("session.msg.mission_delete_confirm.title"),
+            tr(
+                "session.msg.mission_delete_confirm.message",
+                amount=amount,
+                paid_by=paid_by,
+            ),
+            QMessageBox.Yes | QMessageBox.No,
+        )
+        if answer != QMessageBox.Yes:
+            return
+
+        try:
+            self.db.delete_mission_cost(cost_id)
+        except ValueError as error:
+            QMessageBox.warning(
+                self,
+                tr("common.error"),
+                str(error),
+            )
+            return
+
+        session_id = self._correction_session_id()
+        self._refresh_mission_costs(session_id)
+
+        main_window = self.window()
+        if hasattr(main_window, "dashboard_page"):
+            main_window.dashboard_page.refresh_dashboard()
+
+        QMessageBox.information(
+            self,
+            tr("common.success"),
+            tr("session.msg.mission_deleted"),
+        )
+
+    def reopen_selected_session(self):
+        session_id = self.delete_session_combo.currentData()
+        if session_id is None:
+            QMessageBox.warning(
+                self,
+                tr("common.hint"),
+                tr("session.msg.no_deletable"),
+            )
+            return
+
+        answer = QMessageBox.question(
+            self,
+            tr("session.msg.reopen_confirm.title"),
+            tr(
+                "session.msg.reopen_confirm.message",
+                session_id=session_id,
+            ),
+            QMessageBox.Yes | QMessageBox.No,
+        )
+        if answer != QMessageBox.Yes:
+            return
+
+        try:
+            self.db.reopen_session(session_id)
+        except ValueError as error:
+            QMessageBox.warning(
+                self,
+                tr("common.error"),
+                str(error),
+            )
+            return
+
+        self.refresh_session()
+
+        main_window = self.window()
+        if hasattr(main_window, "dashboard_page"):
+            main_window.dashboard_page.refresh_dashboard()
+
+        QMessageBox.information(
+            self,
+            tr("session.msg.reopened.title"),
+            tr(
+                "session.msg.reopened.message",
+                session_id=session_id,
+            ),
+        )
 
     def set_network_client_mode(self, is_network_client: bool):
         """Client-Modus zur Laufzeit (z. B. nach Verbindung in Einstellungen)."""
@@ -334,7 +670,7 @@ class SessionPage(QWidget):
         session = self._selected_client_session()
         if not session:
             self.active_ship_label.setText("—")
-            self.active_status_label.setText("—")
+            self.active_status_label.setText(tr("session.label.not_started"))
             self.finish_button.setEnabled(False)
             self._apply_material_fields_for_ship("")
             return
@@ -473,12 +809,14 @@ class SessionPage(QWidget):
 
     def _refresh_mission_costs(self, session_id=None):
         if session_id is None:
-            session_id = self._selected_session_id()
+            session_id = self._correction_session_id()
 
         if not session_id:
             self.mission_costs_panel.hide()
             self.mission_cost_input.clear()
             self.mission_cost_paid_by.clear()
+            self.mission_costs_table.setRowCount(0)
+            self.delete_mission_button.setEnabled(False)
             self.mission_costs_total_label.setText(
                 tr(
                     "session.mission.costs_total",
@@ -486,41 +824,49 @@ class SessionPage(QWidget):
                     session_total=format_number(0),
                 )
             )
-            self.mission_costs_list_label.setText("")
             return
 
-        session = None
+        status = None
         if self.is_network_client:
             selected = self._selected_client_session()
             if selected and selected.get("id") == session_id:
-                session = selected
+                status = selected.get("status")
         else:
             active = self.db.get_active_session()
             if active and active[0] == session_id:
-                session = active
+                status = active[2]
+            else:
+                sessions = self.db.get_correctable_sessions()
+                selected = next(
+                    (
+                        item
+                        for item in sessions
+                        if item["id"] == session_id
+                    ),
+                    None,
+                )
+                if selected:
+                    status = selected.get("status")
 
-        if not session:
-            self.mission_costs_panel.hide()
-            return
-
-        status = (
-            session.get("status")
-            if isinstance(session, dict)
-            else session[2]
-        )
-        if status != "ACTIVE":
+        if status not in ("ACTIVE", "WAITING_FOR_REFINERY"):
             self.mission_costs_panel.hide()
             return
 
         self.mission_costs_panel.show()
-        self._refresh_mission_cost_payers(session_id)
+        can_edit = status == "ACTIVE"
+        self.mission_cost_input.setEnabled(can_edit)
+        self.add_mission_cost_button.setEnabled(can_edit)
+        self.mission_cost_paid_by.setEnabled(can_edit)
 
-        costs = self.db.get_session_costs(session_id)
-        mission_costs = [
-            row for row in costs
-            if row[0] == "Mission"
-        ]
-        mission_total = sum(row[1] for row in mission_costs)
+        if can_edit:
+            self._refresh_mission_cost_payers(session_id)
+
+        mission_costs = self.db.get_session_mission_costs(
+            session_id
+        )
+        mission_total = sum(
+            row["amount"] for row in mission_costs
+        )
         session_total = self.db.get_total_costs(session_id)
 
         self.mission_costs_total_label.setText(
@@ -531,26 +877,31 @@ class SessionPage(QWidget):
             )
         )
 
-        if mission_costs:
-            lines = [
-                tr(
-                    "session.mission.line",
-                    index=index,
-                    amount=format_number(amount),
-                    paid_by=paid_by,
-                )
-                for index, (_, amount, paid_by) in enumerate(
-                    mission_costs,
-                    start=1,
-                )
-            ]
-            self.mission_costs_list_label.setText(
-                "\n".join(lines)
+        self.mission_costs_table.setRowCount(len(mission_costs))
+        for row, cost in enumerate(mission_costs):
+            amount_item = QTableWidgetItem(
+                format_number(cost["amount"])
             )
-        else:
-            self.mission_costs_list_label.setText(
-                tr("session.mission.none")
+            amount_item.setData(256, cost["id"])
+            self.mission_costs_table.setItem(
+                row,
+                0,
+                amount_item,
             )
+            self.mission_costs_table.setItem(
+                row,
+                1,
+                QTableWidgetItem(cost.get("paid_by") or "—"),
+            )
+
+        finalize_table_columns(
+            self.mission_costs_table,
+            stretch_column=1,
+        )
+
+        self.delete_mission_button.setEnabled(
+            bool(mission_costs)
+        )
 
     def add_mission_cost(self):
         session_id = self._selected_session_id()
@@ -619,11 +970,16 @@ class SessionPage(QWidget):
             self._refresh_mission_costs(session_id)
             return
 
+        self.db.sync_session_workflow_statuses()
         session = self.db.get_active_session()
 
         if not session:
+            self.start_panel.show()
+            self.archived_hint.setVisible(
+                bool(self.db.get_archived_sessions(limit=1))
+            )
             self.active_ship_label.setText("—")
-            self.active_status_label.setText("—")
+            self.active_status_label.setText(tr("session.label.not_started"))
             self.finish_button.setEnabled(False)
             self.end_session_button.setEnabled(False)
             self._apply_material_fields_for_ship(
@@ -631,8 +987,11 @@ class SessionPage(QWidget):
             )
             self._refresh_delete_sessions()
             self._refresh_mission_costs()
+            self._refresh_captures()
             return
 
+        self.start_panel.hide()
+        self.archived_hint.hide()
         self.active_ship_label.setText(session[1])
         self.active_status_label.setText(
             status_label(session[2])
@@ -646,6 +1005,7 @@ class SessionPage(QWidget):
         self._apply_material_fields_for_ship(session[1])
         self._refresh_delete_sessions()
         self._refresh_mission_costs(session[0])
+        self._refresh_captures(session[0])
 
     def _refresh_delete_sessions(self):
         if self.is_network_client:
@@ -671,6 +1031,13 @@ class SessionPage(QWidget):
                 )
 
         self.delete_session_combo.blockSignals(False)
+        self._update_reopen_button()
+
+        if not self.db.get_active_session():
+            session_id = self.delete_session_combo.currentData()
+            if session_id:
+                self._refresh_mission_costs(session_id)
+                self._refresh_captures(session_id)
 
     def delete_selected_session(self):
         session_id = self.delete_session_combo.currentData()
@@ -887,6 +1254,8 @@ class SessionPage(QWidget):
         main_window = self.window()
         if hasattr(main_window, "dashboard_page"):
             main_window.dashboard_page.refresh_dashboard()
+        if hasattr(main_window, "history_page"):
+            main_window.history_page.refresh_history()
 
         QMessageBox.information(
             self,

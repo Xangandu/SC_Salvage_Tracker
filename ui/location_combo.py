@@ -2,9 +2,124 @@
 
 from __future__ import annotations
 
+from PySide6.QtGui import QFont
 from PySide6.QtWidgets import QComboBox
 
 from config.i18n import tr
+
+LocationEntryData = dict[str, str]
+
+
+def _combo_model_item(combo: QComboBox, index: int):
+    model = combo.model()
+    if model is None:
+        return None
+    return model.item(index)
+
+
+def _add_non_selectable_header(combo: QComboBox, label: str) -> None:
+    combo.addItem(label, None)
+    item = _combo_model_item(combo, combo.count() - 1)
+    if item is None:
+        return
+    item.setEnabled(False)
+    item.setSelectable(False)
+    font = QFont(item.font())
+    font.setBold(True)
+    item.setFont(font)
+
+
+def _add_location_item(
+    combo: QComboBox,
+    *,
+    kind: str,
+    location_id: str,
+    name: str,
+) -> None:
+    combo.addItem(
+        name,
+        {"kind": kind, "key": location_id},
+    )
+
+
+def populate_station_city_location_combo(
+    combo: QComboBox,
+    stations: list[tuple[str, str]],
+    cities: list[tuple[str, str]],
+    *,
+    placeholder: str = "",
+) -> None:
+    """Eine Combo: Überschriften (nicht wählbar) + Stationen + Städte."""
+    combo.blockSignals(True)
+    combo.clear()
+
+    if placeholder:
+        combo.addItem(placeholder, None)
+
+    if stations:
+        _add_non_selectable_header(
+            combo,
+            tr("location.group.stations"),
+        )
+        for location_id, name in stations:
+            _add_location_item(
+                combo,
+                kind="STATION",
+                location_id=location_id,
+                name=name,
+            )
+
+    if cities:
+        _add_non_selectable_header(
+            combo,
+            tr("location.group.cities"),
+        )
+        for location_id, name in cities:
+            _add_location_item(
+                combo,
+                kind="CITY",
+                location_id=location_id,
+                name=name,
+            )
+
+    combo.setCurrentIndex(0)
+    combo.blockSignals(False)
+
+
+def station_city_combo_selection(
+    combo: QComboBox,
+) -> tuple[str, str, str] | None:
+    """(kind, location_key, label) oder None."""
+    data = combo.currentData()
+    if not isinstance(data, dict):
+        return None
+
+    kind = data.get("kind")
+    location_key = data.get("key")
+    if kind not in {"STATION", "CITY"} or not location_key:
+        return None
+
+    return (
+        str(kind),
+        str(location_key),
+        combo.currentText().strip(),
+    )
+
+
+def set_station_city_combo_selection(
+    combo: QComboBox,
+    *,
+    kind: str,
+    location_key: str,
+) -> bool:
+    for index in range(combo.count()):
+        data = combo.itemData(index)
+        if not isinstance(data, dict):
+            continue
+        if data.get("kind") == kind and data.get("key") == location_key:
+            combo.setCurrentIndex(index)
+            return True
+    return False
 
 
 def build_location_combo(

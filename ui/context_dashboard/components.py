@@ -213,7 +213,15 @@ class ProgressBarRow(QWidget):
 
     BAR_HEIGHT_PX = 11
 
-    def __init__(self, label: str, detail: str, percent: int, parent=None):
+    def __init__(
+        self,
+        label: str,
+        detail: str,
+        percent: int,
+        parent=None,
+        *,
+        badge_text: str | None = None,
+    ):
         super().__init__(parent)
         bar_h = self.BAR_HEIGHT_PX
         col = QVBoxLayout(self)
@@ -223,11 +231,12 @@ class ProgressBarRow(QWidget):
         head = QHBoxLayout()
         name = QLabel(label)
         name.setObjectName("formLabel")
-        pct = QLabel(f"{percent} %")
+        pct = QLabel(badge_text if badge_text is not None else f"{percent} %")
         pct.setObjectName("mutedLabel")
         head.addWidget(name)
         head.addStretch()
-        head.addWidget(pct)
+        if badge_text is not None or percent > 0:
+            head.addWidget(pct)
         col.addLayout(head)
 
         fill_host = QFrame()
@@ -237,20 +246,24 @@ class ProgressBarRow(QWidget):
         )
         fill_layout = QHBoxLayout(fill_host)
         fill_layout.setContentsMargins(0, 0, 0, 0)
+        fill_layout.setSpacing(0)
         fill = QFrame()
         fill.setStyleSheet(
             f"background: #E07A2A; border-radius: {bar_h // 2}px; "
             f"min-height: {bar_h}px;"
         )
         fill.setFixedHeight(bar_h)
-        if percent <= 0:
-            fill.setMinimumWidth(0)
-            fill.setMaximumWidth(0)
+        fill.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Fixed,
+        )
+        clamped = max(0, min(100, int(percent)))
+        if clamped <= 0:
+            fill_layout.addStretch(1)
         else:
-            fill.setMaximumWidth(16777215)
-            fill.setMinimumWidth(max(24, int(2.4 * percent)))
-        fill_layout.addWidget(fill)
-        fill_layout.addStretch()
+            fill_layout.addWidget(fill, clamped)
+            if clamped < 100:
+                fill_layout.addStretch(100 - clamped)
         col.addWidget(fill_host)
 
         detail_label = QLabel(detail)

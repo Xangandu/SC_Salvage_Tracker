@@ -73,9 +73,19 @@ def _groups_from_stations(
     return groups
 
 
-def cities_for_system(system: str) -> list[tuple[str, str]]:
+def cities_for_system(
+    system: str,
+    *,
+    refinery_only: bool = False,
+) -> list[tuple[str, str]]:
     """Landeplätze / Städte eines Systems: [(id, name), …]."""
     entries = landing_zones_catalog().get("systems", {}).get(system, [])
+    if refinery_only:
+        entries = [
+            entry
+            for entry in entries
+            if entry.get("has_refinery")
+        ]
     return [(e["id"], e["name"]) for e in entries]
 
 

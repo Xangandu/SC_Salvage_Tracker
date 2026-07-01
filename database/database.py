@@ -4,7 +4,7 @@ from datetime import datetime
 from pathlib import Path
 
 from config.debug import debug_log
-from config.i18n import tr
+from config.i18n import tr, format_number
 from config.paths import data_dir
 from database.user_auth import UserAuthMixin
 from database.initial_setup import InitialSetupMixin
@@ -164,7 +164,14 @@ class Database(UserAuthMixin, InitialSetupMixin):
             self.connection.close()
             self.connection = None
             self.cursor = None
-    
+
+    def _ensure_cursor(self) -> bool:
+        if self.connection is None:
+            return False
+        if self.cursor is None:
+            self.cursor = self.connection.cursor()
+        return True
+
     def get_schema_directory(self):
 
         return (
@@ -683,6 +690,63 @@ class Database(UserAuthMixin, InitialSetupMixin):
             cost_paid_by=cost_paid_by,
         )
 
+    def get_refinery_material_pools(self):
+        return self.refinery.get_material_pools()
+
+    def create_refinery_job_from_pool(
+        self,
+        refinery_name,
+        end_time,
+        *,
+        pool,
+        input_quantity,
+        notes=None,
+        created_by=None,
+        refinery_method="",
+        cost=0.0,
+        cost_paid_by="",
+    ):
+        return self.refinery.create_job_from_pool(
+            refinery_name,
+            end_time,
+            pool=pool,
+            input_quantity=input_quantity,
+            created_by=created_by,
+            notes=notes,
+            refinery_method=refinery_method,
+            cost=cost,
+            cost_paid_by=cost_paid_by,
+        )
+
+    def list_material_pools(self, **kwargs):
+        return self.stockpiles.list_material_pools(**kwargs)
+
+    def get_session_ids_for_material_pool(self, pool: dict) -> list[int]:
+        if hasattr(self, "stockpiles"):
+            return self.stockpiles.session_ids_for_pool(pool)
+        return []
+
+    def get_crew_for_material_pool(self, pool: dict) -> list[str]:
+        crew: list[str] = []
+        seen: set[str] = set()
+        for session_id in self.get_session_ids_for_material_pool(pool):
+            for row in self.get_crew_members(session_id):
+                name = (row[0] or "").strip()
+                if name and name not in seen:
+                    seen.add(name)
+                    crew.append(name)
+        return crew
+
+    def transfer_from_material_pool(self, **kwargs):
+        return self.stockpiles.transfer_from_material_pool(**kwargs)
+
+    def withdraw_from_material_pool(self, pool, quantity_scu, **kwargs):
+        return self.stockpiles.withdraw_from_material_pool(
+            pool,
+            quantity_scu,
+            **kwargs,
+        )
+
     def sync_expired_refinery_jobs(self):
         if hasattr(self, "refinery"):
             return self.refinery.sync_expired_jobs()
@@ -721,6 +785,9 @@ class Database(UserAuthMixin, InitialSetupMixin):
     def create_material_stockpile(self, **kwargs):
         return self.stockpiles.create_stockpile(**kwargs)
 
+    def transfer_material_stockpile(self, **kwargs):
+        return self.stockpiles.transfer_stockpile(**kwargs)
+
     def update_material_stockpile(self, stockpile_id, **kwargs):
         return self.stockpiles.update_stockpile(
             stockpile_id,
@@ -747,6 +814,9 @@ class Database(UserAuthMixin, InitialSetupMixin):
 
     def set_stockpile_reserve(self, stockpile_id, reserve_tag=None):
         return self.stockpiles.set_reserve_tag(stockpile_id, reserve_tag)
+
+    def clear_stockpile_reserve(self, stockpile_id):
+        return self.stockpiles.clear_reserve_tag(stockpile_id)
 
     def mark_stockpile_moved(self, stockpile_id):
         return self.stockpiles.mark_moved_or_withdrawn(stockpile_id)
@@ -901,6 +971,9 @@ class Database(UserAuthMixin, InitialSetupMixin):
         return self.cursor.lastrowid
 
     def _table_exists(self, table_name):
+        if not self._ensure_cursor():
+            return False
+
         self.cursor.execute("""
         SELECT 1
         FROM sqlite_master
@@ -1443,14 +1516,19 @@ class Database(UserAuthMixin, InitialSetupMixin):
         self,
         session_id
     ):
+        cost_columns = self._table_columns("costs")
+        deleted_filter = ""
+        if "is_deleted" in cost_columns:
+            deleted_filter = "AND COALESCE(is_deleted, 0) = 0"
 
-        self.cursor.execute("""
+        self.cursor.execute(f"""
         SELECT COALESCE(
             SUM(amount),
             0
         )
         FROM costs
         WHERE session_id = ?
+        {deleted_filter}
         """, (session_id,))
 
         return self.cursor.fetchone()[0]
@@ -1613,6 +1691,69 @@ class Database(UserAuthMixin, InitialSetupMixin):
             limit
         )
 
+    def get_archived_sessions(self, limit=100):
+        """Abgeschlossene Sitzungen für Historie (nach Raffinerie-Phase)."""
+        session_columns = self._table_columns("sessions")
+        deleted_filter = ""
+        if "is_deleted" in session_columns:
+            deleted_filter = "AND COALESCE(is_deleted, 0) = 0"
+
+        name_column = self._session_name_column()
+        end_column = (
+            "end_time"
+            if "end_time" in session_columns
+            else "start_time"
+        )
+
+        self.cursor.execute(f"""
+        SELECT
+            id,
+            {name_column},
+            status,
+            start_time,
+            {end_column}
+        FROM sessions
+        WHERE status IN (
+            'WAITING_FOR_SALE',
+            'WAITING_FOR_PAYOUT',
+            'SOLD',
+            'CLOSED'
+        )
+        {deleted_filter}
+        ORDER BY id DESC
+        LIMIT ?
+        """, (limit,))
+
+        archived = []
+        for row in self.cursor.fetchall():
+            session_id = row[0]
+            mission_costs = self.get_session_mission_costs(
+                session_id
+            )
+            mission_lines = [
+                tr(
+                    "history.session.mission_line",
+                    amount=format_number(cost["amount"]),
+                    paid_by=cost.get("paid_by") or "—",
+                )
+                for cost in mission_costs
+            ]
+            mission_total = sum(
+                cost["amount"] for cost in mission_costs
+            )
+            archived.append({
+                "id": session_id,
+                "name": row[1],
+                "status": row[2],
+                "start_time": row[3],
+                "end_time": row[4],
+                "mission_total": mission_total,
+                "session_total": self.get_total_costs(session_id),
+                "mission_lines": mission_lines,
+            })
+
+        return archived
+
     def cancel_refinery_job(self, job_id):
         return self.corrections.cancel_refinery_job(job_id)
 
@@ -1624,6 +1765,87 @@ class Database(UserAuthMixin, InitialSetupMixin):
 
     def void_payout(self, payout_id):
         return self.corrections.void_payout(payout_id)
+
+    def delete_mission_cost(self, cost_id):
+        return self.corrections.delete_mission_cost(cost_id)
+
+    def reopen_session(self, session_id):
+        return self.corrections.reopen_session(session_id)
+
+    def sync_session_workflow_statuses(self):
+        """Offene Sitzungen an Verkauf/Auszahlung anpassen (Reparatur)."""
+        if not hasattr(self, "payouts"):
+            return
+
+        session_columns = self._table_columns("sessions")
+        deleted_filter = ""
+        if "is_deleted" in session_columns:
+            deleted_filter = "AND COALESCE(is_deleted, 0) = 0"
+
+        self.cursor.execute(f"""
+        SELECT id
+        FROM sessions
+        WHERE status NOT IN ('SOLD', 'CLOSED')
+        {deleted_filter}
+        ORDER BY id
+        """)
+
+        for (session_id,) in self.cursor.fetchall():
+            self.payouts.refresh_session_status(session_id)
+
+    def undo_session_capture(self, event_id):
+        if hasattr(self, "stockpiles"):
+            return self.stockpiles.undo_session_capture_event(
+                event_id
+            )
+        raise ValueError(tr("error.storage.not_available"))
+
+    def list_session_capture_events(self, session_id, **kwargs):
+        if hasattr(self, "stockpiles"):
+            return self.stockpiles.list_session_capture_events(
+                session_id,
+                **kwargs,
+            )
+        return []
+
+    def revert_stockpile_event(self, event_id):
+        if hasattr(self, "stockpiles"):
+            return self.stockpiles.revert_stockpile_event(
+                event_id
+            )
+        raise ValueError(tr("error.storage.not_available"))
+
+    def get_session_mission_costs(self, session_id):
+        cost_columns = self._table_columns("costs")
+        if "cost_type_id" not in cost_columns:
+            return []
+
+        deleted_filter = ""
+        if "is_deleted" in cost_columns:
+            deleted_filter = "AND c.is_deleted = 0"
+
+        self.cursor.execute(f"""
+        SELECT
+            c.id,
+            c.amount,
+            {self._cost_payer_select_sql("c")}
+        FROM costs c
+        JOIN cost_types ct
+            ON ct.id = c.cost_type_id
+        WHERE c.session_id = ?
+        AND ct.cost_name = 'Mission'
+        {deleted_filter}
+        ORDER BY c.id
+        """, (session_id,))
+
+        return [
+            {
+                "id": row[0],
+                "amount": row[1],
+                "paid_by": row[2],
+            }
+            for row in self.cursor.fetchall()
+        ]
 
     def get_payout_history(self, limit=100):
         restrict_user = None

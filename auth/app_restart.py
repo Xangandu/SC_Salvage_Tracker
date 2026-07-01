@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import subprocess
 import sys
+from pathlib import Path
 
 from auth.remember_me import save_remember_data
 from config.paths import install_root, is_frozen
@@ -87,21 +88,42 @@ def shutdown_before_restart() -> None:
     set_host_server(None)
 
 
-def restart_application() -> None:
+def _windows_hidden_popen_kwargs() -> dict:
+    if sys.platform != "win32":
+        return {}
+
+    creationflags = (
+        getattr(subprocess, "CREATE_NO_WINDOW", 0)
+        | getattr(subprocess, "DETACHED_PROCESS", 0)
+        | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+    )
+    startupinfo = subprocess.STARTUPINFO()
+    startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+    startupinfo.wShowWindow = subprocess.SW_HIDE
+    return {
+        "creationflags": creationflags,
+        "startupinfo": startupinfo,
+    }
+
+
+def _restart_command() -> tuple[list[str], str]:
+    workdir = str(install_root())
     if is_frozen():
-        command = [sys.executable]
-        workdir = str(install_root())
-    else:
-        command = [sys.executable, str(install_root() / "main.py")]
-        workdir = str(install_root())
+        return [sys.executable], workdir
 
-    creationflags = 0
-    if sys.platform == "win32":
-        creationflags = getattr(subprocess, "DETACHED_PROCESS", 0)
+    main_py = install_root() / "main.py"
+    python_dir = Path(sys.executable).parent
+    pythonw = python_dir / "pythonw.exe"
+    if pythonw.is_file():
+        return [str(pythonw), str(main_py)], workdir
+    return [sys.executable, str(main_py)], workdir
 
+
+def restart_application() -> None:
+    command, workdir = _restart_command()
     subprocess.Popen(
         command,
         cwd=workdir,
         close_fds=True,
-        creationflags=creationflags,
+        **_windows_hidden_popen_kwargs(),
     )

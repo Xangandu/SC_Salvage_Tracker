@@ -41,6 +41,19 @@ QWidget {
     border-right: 1px solid #1E2A38;
 }
 
+QScrollArea#navScroll {
+    background: transparent;
+    border: none;
+}
+
+QWidget#navScrollContent {
+    background: transparent;
+}
+
+QWidget#navMiddleSection {
+    background: transparent;
+}
+
 QWidget#navBrandBlock {
     background: transparent;
 }
@@ -79,9 +92,9 @@ QLabel#navTitleSecondary {
 QLabel#navEditionBadge {
     color: #55E8FF;
     font-family: "Orbitron";
-    font-size: 38px;
+    font-size: 32px;
     font-weight: bold;
-    letter-spacing: 5px;
+    letter-spacing: 4px;
     padding: 0;
     margin: 0;
     background: transparent;
@@ -277,14 +290,28 @@ QPushButton#navStorageBadge:pressed {
     border-left: 3px solid transparent;
     border-radius: 0;
     color: #8FA3B8;
-    padding: 6px 16px 6px 8px;
+    padding: 5px 12px 5px 8px;
     min-height: 100px;
     text-align: left;
     font-family: "Rajdhani";
-    font-size: 17px;
+    font-size: 15px;
     font-weight: bold;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.4px;
     icon-size: 100px 100px;
+}
+
+#navPanel[navWidth="narrow"] #navButton {
+    padding: 4px 8px 4px 6px;
+    min-height: 82px;
+    font-size: 14px;
+    icon-size: 76px 76px;
+}
+
+#navPanel[navWidth="wide"] #navButton {
+    padding: 6px 14px 6px 10px;
+    min-height: 112px;
+    font-size: 16px;
+    icon-size: 112px 112px;
 }
 
 #navButton:hover {
@@ -304,6 +331,22 @@ QPushButton#navStorageBadge:pressed {
     );
     border-left: 3px solid #E07A2A;
     color: #F4F8FC;
+}
+
+#navButton[dashboardWindowVisible="true"] {
+    background-color: rgba(61, 220, 132, 0.11);
+}
+
+#navButton[dashboardWindowVisible="false"] {
+    background-color: rgba(255, 96, 96, 0.10);
+}
+
+#navButton[dashboardWindowVisible="true"]:hover {
+    background-color: rgba(61, 220, 132, 0.17);
+}
+
+#navButton[dashboardWindowVisible="false"]:hover {
+    background-color: rgba(255, 96, 96, 0.15);
 }
 
 

@@ -20,6 +20,10 @@ from config.update import (
 from config.version import APP_BUILD
 from config.i18n import tr
 from database.access import get_client_connection, get_host_server
+from installer.install_engine import (
+    INSTALL_SOURCE_DEFAULT,
+    resolve_installed_dir,
+)
 from network.constants import NETWORK_MODE_CLIENT, NETWORK_MODE_HOST
 from network.network_state import get_network_state
 
@@ -29,32 +33,28 @@ SETTING_LAST_CHECK = "update_last_check"
 
 DOWNLOAD_CHUNK_BYTES = 256 * 1024
 
-_PROCESS_NAME = "SC_Salvage_Tracker"
-_EXE_NAME = "SC_Salvage_Tracker.exe"
+
+def resolve_update_install_dir(edition: str) -> tuple[Path, str]:
+    """Ermittelt den Zielordner für ein In-App-Update."""
+    return resolve_installed_dir(edition)
+
+
+def install_path_source_label(source: str) -> str:
+    return tr(f"update.install_path.source.{source}", default=source)
+
+
+def is_install_path_known(source: str) -> bool:
+    return source != INSTALL_SOURCE_DEFAULT
 
 
 def _installer_cli_args(install_dir: Path, edition: str) -> list[str]:
     return [
-        "--quiet",
+        "--update-mode",
         "--install-dir",
         str(install_dir),
         "--edition",
         edition,
     ]
-
-
-def _resolve_update_install_dir(edition: str) -> Path:
-    from config.paths import install_root
-    from installer.install_engine import find_install_dir_from_registry
-
-    registry_dir = find_install_dir_from_registry(edition)
-    if registry_dir is not None:
-        return registry_dir
-    return install_root()
-
-
-def _powershell_single_quote(value: str) -> str:
-    return value.replace("'", "''")
 
 
 def is_auto_check_enabled(db) -> bool:
@@ -204,66 +204,17 @@ def launch_installer(setup_path: Path) -> None:
 
     setup_path = setup_path.resolve()
     edition = APP_EDITION or "solo"
-    install_dir = _resolve_update_install_dir(edition)
+    install_dir, _source = resolve_update_install_dir(edition)
     installer_args = _installer_cli_args(install_dir, edition)
 
-    cache_dir = updates_cache_dir()
-    script_path = cache_dir / "apply_update.ps1"
-    log_path = cache_dir / "install.log"
+    from installer.install_engine import append_install_log
 
-    arg_list = ", ".join(
-        f"'{_powershell_single_quote(arg)}'" for arg in installer_args
+    append_install_log(
+        f"Starte sichtbares Update-Setup — Ziel={install_dir}, "
+        f"Setup={setup_path.name}"
     )
 
-    script_content = f"""$ErrorActionPreference = 'Stop'
-$LogPath = '{_powershell_single_quote(str(log_path))}'
-function Write-Log {{
-    param([string]$Message)
-    Add-Content -Path $LogPath -Value ("$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') " + $Message)
-}}
-Write-Log 'Update-Starter gestartet (PySide Setup, ohne Inno)'
-$SetupPath = '{_powershell_single_quote(str(setup_path))}'
-$InstallDir = '{_powershell_single_quote(str(install_dir))}'
-$AppExe = Join-Path $InstallDir '{_EXE_NAME}'
-while (Get-Process -Name '{_PROCESS_NAME}' -ErrorAction SilentlyContinue) {{
-    Start-Sleep -Seconds 1
-}}
-Start-Sleep -Seconds 2
-Write-Log "Starte Setup: $SetupPath"
-Write-Log "Installationsordner: $InstallDir"
-$argList = @({arg_list})
-try {{
-    $p = Start-Process -FilePath $SetupPath -ArgumentList $argList -Wait -PassThru -WindowStyle Hidden
-    Write-Log "Setup beendet, Exit=$($p.ExitCode)"
-    if ($p.ExitCode -ne 0) {{
-        exit $p.ExitCode
-    }}
-    if (Test-Path $AppExe) {{
-        Write-Log 'Starte aktualisierte Anwendung'
-        Start-Process -FilePath $AppExe
-    }} else {{
-        Write-Log "WARNUNG: $AppExe nicht gefunden"
-    }}
-    exit 0
-}} catch {{
-    Write-Log "FEHLER: $_"
-    exit 1
-}}
-"""
-    script_path.write_text(script_content, encoding="utf-8")
-
     subprocess.Popen(
-        [
-            "powershell.exe",
-            "-NoProfile",
-            "-ExecutionPolicy",
-            "Bypass",
-            "-WindowStyle",
-            "Hidden",
-            "-File",
-            str(script_path),
-        ],
+        [str(setup_path), *installer_args],
         close_fds=True,
-        creationflags=getattr(subprocess, "DETACHED_PROCESS", 0)
-        | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0),
     )

@@ -1584,7 +1584,11 @@ class StatisticsPage(QWidget):
         ):
             main_window.dashboard_page.on_payout_saved()
 
+        if hasattr(main_window, "session_page"):
+            main_window.session_page.refresh_session()
 
+        if hasattr(main_window, "history_page"):
+            main_window.history_page.refresh_history()
 
     def _selected_payout_id(self):
 

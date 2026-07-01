@@ -186,6 +186,8 @@ class DashboardWindow(MobiglasFramelessMixin, QMainWindow):
             parent_window.btn_dashboard.setText(
                 tr("nav.dashboard")
             )
+            if hasattr(parent_window, "_sync_dashboard_nav_background"):
+                parent_window._sync_dashboard_nav_background()
 
         super().closeEvent(
             event

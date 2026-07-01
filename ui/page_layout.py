@@ -24,6 +24,34 @@ def configure_aaa_tabs(tab_widget):
     bar.setUsesScrollButtons(True)
 
 
+def build_nav_scroll(content_widget):
+    """Scrollbare Navigationsliste (Hauptfenster)."""
+    scroll = QScrollArea()
+    scroll.setObjectName("navScroll")
+    scroll.setWidgetResizable(True)
+    scroll.setFrameShape(QFrame.Shape.NoFrame)
+    scroll.setHorizontalScrollBarPolicy(
+        Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+    )
+    scroll.setVerticalScrollBarPolicy(
+        Qt.ScrollBarPolicy.ScrollBarAsNeeded
+    )
+    scroll.setWidget(content_widget)
+    scroll.setSizePolicy(
+        QSizePolicy.Policy.Preferred,
+        QSizePolicy.Policy.Expanding,
+    )
+    return scroll
+
+
+def build_nav_divider() -> QFrame:
+    """Horizontaler Trenner der Navigationsleiste (wie unter dem Branding)."""
+    divider = QFrame()
+    divider.setObjectName("navDivider")
+    divider.setFixedHeight(1)
+    return divider
+
+
 def build_page_scroll(
     content_widget,
     scroll_object_name="pageScroll",

@@ -1,6 +1,40 @@
 SC SALVAGE TRACKER – PATCHNOTES
 ================================
 
+VERSION 0.16.4 Beta | Build 2026.15 | Codename: LOGISTICS POOLING
+--------------------------------------------------------------------
+
+NEU — LOGISTIK-POOLING
+• Salvage-Runs weiter einzeln erfassen; gleiches Material wird im Hintergrund zusammengeführt
+• Material-Pools nach Standort + Materialtyp (Schiff oder Lager)
+• Raffinerie: Quelle Schiff/Lager, freie Menge aus Gesamtsumme (FIFO)
+• Lager: Verschieben und Entnahme aus Pool-Summe statt einzelner Zeile
+• Batch-Merge pro Sitzung + Material bei Session-Erfassung
+
+UI
+• Raffinerie: Tabelle „Verfügbares Material“, Material-Quelle als Pool-Auswahl
+• Lager: Verschiebe-Dialog mit zusammengefassten Quellen
+• „Als bewegt markieren“ entnimmt Material aus dem Pool (FIFO)
+
+DOKUMENTATION
+• docs/LOGISTICS_POOLING.md — Spieler-Workflow und technisches Modell
+
+NEU — SICHTBARES IN-APP-UPDATE
+• Setup-Assistent im Update-Modus (sichtbar, nicht im Hintergrund)
+• Installationsordner wird automatisch erkannt und angezeigt
+• Bestätigung vor der Installation, Fortschritt im Setup
+• Aktualisierte Version startet nach dem Update automatisch (ohne CMD)
+
+FIXES — KORREKTUREN & SESSION
+• Granulare Rückgängig-Funktionen (Salvage, Missionskosten, Lager, Sitzung)
+• Raffinerie „Bezahlt von“: Crew-Auswahl auch nach Session-Ende
+• Missionskosten-Archivierung in der Historie nach Auszahlung
+• Design-Fix Missionskosten-Tabelle (Dark Theme)
+
+HINWEIS
+• Von 0.16.3: In-App-Update testen (Einstellungen → Updates oder Start-Prüfung)
+
+
 VERSION 0.16.3 Beta | Build 2026.14 | Codename: LOCATION FLOW
 --------------------------------------------------------------------
 

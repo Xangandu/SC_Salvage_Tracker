@@ -13,6 +13,8 @@ def get_database():
     global _app_database
     if _app_database is None:
         _app_database = Database()
+    elif getattr(_app_database, "connection", None) is None:
+        _app_database = Database()
     return _app_database
 
 

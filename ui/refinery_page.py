@@ -106,13 +106,11 @@ class RefineryPage(QWidget):
         )
 
         self.batches_table = QTableWidget()
-        self.batches_table.setColumnCount(5)
+        self.batches_table.setColumnCount(3)
         self.batches_table.setHorizontalHeaderLabels([
-            tr("refinery.table.batch"),
+            tr("refinery.table.location"),
             tr("refinery.table.material"),
             tr("refinery.table.available_scu"),
-            tr("refinery.table.original_scu"),
-            tr("refinery.table.session"),
         ])
         configure_mobiglas_table(
             self.batches_table,
@@ -149,7 +147,7 @@ class RefineryPage(QWidget):
             tr("session.mission.paid_by.placeholder")
         )
 
-        self.batch_combo = QComboBox()
+        self.pool_combo = QComboBox()
 
         self.input_cscu = QLineEdit()
         self.input_cscu.setPlaceholderText(
@@ -215,8 +213,8 @@ class RefineryPage(QWidget):
         )
         add_form_field(
             form_layout,
-            tr("refinery.label.batch"),
-            self.batch_combo,
+            tr("refinery.label.material_source"),
+            self.pool_combo,
         )
         add_form_field(
             form_layout,
@@ -325,7 +323,7 @@ class RefineryPage(QWidget):
         self.minutes_input.textChanged.connect(
             self.update_ready_time
         )
-        self.batch_combo.currentIndexChanged.connect(
+        self.pool_combo.currentIndexChanged.connect(
             self._update_refinery_cost_payers
         )
         self.input_cscu.textChanged.connect(
@@ -480,26 +478,28 @@ class RefineryPage(QWidget):
         self.load_history()
 
     def load_batches(self):
-        batches = self.db.get_available_refinery_batches()
+        pools = self.db.get_refinery_material_pools()
 
-        self.batch_combo.blockSignals(True)
-        self.batch_combo.clear()
+        self.pool_combo.blockSignals(True)
+        self.pool_combo.clear()
 
-        self.batches_table.setRowCount(len(batches))
+        self.batches_table.setRowCount(len(pools))
 
-        for row, batch in enumerate(batches):
-            label = material_label(
-                batch["material_code"]
-            )
-            batch_id = batch["batch_id"]
-            remaining = batch["remaining_quantity"]
-            original = batch["original_quantity"]
-            session_name = batch["session_name"]
+        for row, pool in enumerate(pools):
+            label = material_label(pool["material_code"])
+            if pool.get("pool_kind") == "SHIP":
+                location = tr(
+                    "storage.location.ship",
+                    ship=pool.get("ship_name") or "—",
+                )
+            else:
+                location = pool.get("location_label") or "—"
+            quantity = pool.get("quantity_scu") or 0
 
             self.batches_table.setItem(
                 row,
                 0,
-                QTableWidgetItem(f"#{batch_id}"),
+                QTableWidgetItem(location),
             )
             self.batches_table.setItem(
                 row,
@@ -509,48 +509,28 @@ class RefineryPage(QWidget):
             self.batches_table.setItem(
                 row,
                 2,
-                QTableWidgetItem(format_number(remaining, 0)),
-            )
-            self.batches_table.setItem(
-                row,
-                3,
-                QTableWidgetItem(format_number(original, 0)),
-            )
-            self.batches_table.setItem(
-                row,
-                4,
-                QTableWidgetItem(session_name),
+                QTableWidgetItem(format_number(quantity, 0)),
             )
 
             combo_text = tr(
-                "refinery.batch.combo",
-                batch_id=batch_id,
+                "refinery.pool.combo",
+                location=location,
                 material=label,
-                remaining=format_number(remaining, 0),
+                quantity=format_number(quantity, 0),
             )
-            self.batch_combo.addItem(
-                combo_text,
-                {
-                    "batch_id": batch_id,
-                    "session_id": batch["session_id"],
-                },
-            )
+            self.pool_combo.addItem(combo_text, pool)
 
-        self.batch_combo.blockSignals(False)
+        self.pool_combo.blockSignals(False)
         self._update_refinery_cost_payers()
 
         finalize_table_columns(
             self.batches_table,
-            stretch_column=4,
+            stretch_column=0,
         )
 
     def _update_refinery_cost_payers(self):
         current = self.refinery_cost_paid_by.currentText()
-        batch_data = self.batch_combo.currentData()
-        session_id = None
-
-        if isinstance(batch_data, dict):
-            session_id = batch_data.get("session_id")
+        pool = self.pool_combo.currentData()
 
         self.refinery_cost_paid_by.blockSignals(True)
         self.refinery_cost_paid_by.clear()
@@ -558,12 +538,9 @@ class RefineryPage(QWidget):
             tr("session.mission.paid_by.placeholder")
         )
 
-        if session_id is not None:
-            for row in self.db.get_crew_members(session_id):
-                member = row[0].strip()
-
-                if member:
-                    self.refinery_cost_paid_by.addItem(member)
+        if isinstance(pool, dict):
+            for member in self.db.get_crew_for_material_pool(pool):
+                self.refinery_cost_paid_by.addItem(member)
 
         index = self.refinery_cost_paid_by.findText(current)
 
@@ -727,19 +704,13 @@ class RefineryPage(QWidget):
         self._update_ready_banner(jobs)
 
     def create_job(self):
-        batch_data = self.batch_combo.currentData()
-        batch_id = None
+        pool = self.pool_combo.currentData()
 
-        if isinstance(batch_data, dict):
-            batch_id = batch_data.get("batch_id")
-        else:
-            batch_id = batch_data
-
-        if batch_id is None:
+        if not isinstance(pool, dict):
             QMessageBox.warning(
                 self,
                 tr("common.error"),
-                tr("refinery.msg.no_batch"),
+                tr("refinery.msg.no_pool"),
             )
             return
 
@@ -809,13 +780,11 @@ class RefineryPage(QWidget):
             )
 
         try:
-            self.db.create_refinery_job_from_batches(
+            self.db.create_refinery_job_from_pool(
                 refinery_name,
                 ready_time.strftime(DB_DATETIME_FMT),
-                [{
-                    "batch_id": batch_id,
-                    "input_quantity": input_scu,
-                }],
+                pool=pool,
+                input_quantity=input_scu,
                 notes=notes,
                 refinery_method=self.refinery_method_combo.currentData()
                 or "",

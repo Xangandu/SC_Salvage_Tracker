@@ -147,3 +147,15 @@ def format_datetime(value, with_seconds=False):
         else DISPLAY_DATETIME_FMT
     )
     return parsed.strftime(fmt)
+
+
+def format_month_year(value: str) -> str:
+    """YYYY-MM → lesbarer Monatsname, z. B. „Juni 2026“."""
+    text = (value or "").strip()[:7]
+    try:
+        parsed = datetime.strptime(text, "%Y-%m")
+    except ValueError:
+        return value or "—"
+
+    month_name = tr(f"dates.month.{parsed.month}")
+    return tr("dates.month_year", month=month_name, year=parsed.year)

@@ -23,7 +23,14 @@ class DashboardOperationsRepository:
 
     def __init__(self, db):
         self.db = db
-        self.cursor = db.cursor
+
+    @property
+    def cursor(self):
+        db = self.db
+        ensure = getattr(db, "_ensure_cursor", None)
+        if callable(ensure):
+            ensure()
+        return db.cursor
 
     def build_snapshot(self) -> dict:
         rows = self.collect_action_rows()
@@ -868,40 +875,6 @@ class DashboardOperationsRepository:
         if not session_id:
             return processes
 
-        if hasattr(self.db, "refinery"):
-            for job in self.db.refinery.get_active_jobs():
-                job_id = job.get("id")
-                if job_id is None:
-                    continue
-                if session_id not in self.db.refinery._session_ids_for_job(
-                    job_id,
-                ):
-                    continue
-
-                station = job.get("refinery_name") or "—"
-                job_status = job.get("status") or "RUNNING"
-                if job_status == "READY":
-                    title = tr("dashboard.action.refinery_ready")
-                    detail = tr(
-                        "dashboard.context.process_pickup",
-                        station=station,
-                        job_id=job_id,
-                    )
-                else:
-                    title = tr("dashboard.action.refinery_running")
-                    detail = tr(
-                        "dashboard.context.process_running",
-                        station=station,
-                        job_id=job_id,
-                    )
-                processes.append({
-                    "kind": "refinery",
-                    "job_id": job_id,
-                    "title": title,
-                    "detail": detail,
-                    "job": job,
-                })
-
         if status and status not in ("ACTIVE", "IDLE"):
             processes.append({
                 "kind": "status",
@@ -956,6 +929,9 @@ class DashboardOperationsRepository:
                     "input_scu": input_scu,
                     "output_scu": output_scu,
                     "material": material,
+                    "start_time": job.get("start_time"),
+                    "end_time": job.get("end_time"),
+                    "job": job,
                 })
 
         by_material = []

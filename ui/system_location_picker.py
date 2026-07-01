@@ -1,13 +1,11 @@
-"""Standorte pro System: System → Station | Stadt (zwei Dropdowns in einer Zeile)."""
+"""Standorte pro System: System → Station oder Stadt (eine Dropdown-Leiste)."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 
-from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QComboBox,
-    QHBoxLayout,
     QLabel,
     QVBoxLayout,
     QWidget,
@@ -19,6 +17,11 @@ from config.locations.catalog import (
     cities_for_system,
     stations_for_system,
 )
+from ui.location_combo import (
+    populate_station_city_location_combo,
+    set_station_city_combo_selection,
+    station_city_combo_selection,
+)
 
 
 @dataclass(frozen=True)
@@ -29,27 +32,8 @@ class SystemLocationSelection:
     location_label: str
 
 
-def _populate_choice_combo(
-    combo: QComboBox,
-    items: list[tuple[str, str]],
-    placeholder: str,
-) -> None:
-    combo.blockSignals(True)
-    combo.clear()
-    combo.addItem(placeholder, "")
-    for location_id, name in items:
-        combo.addItem(name, location_id)
-    combo.setCurrentIndex(0)
-    combo.blockSignals(False)
-
-
-def _combo_has_selection(combo: QComboBox) -> bool:
-    data = combo.currentData()
-    return data not in (None, "")
-
-
 class SystemLocationPicker(QWidget):
-    """System wählen, dann Station **oder** Stadt aus dem gewählten System."""
+    """System wählen, dann Station **oder** Stadt aus einer gemeinsamen Liste."""
 
     def __init__(
         self,
@@ -59,7 +43,6 @@ class SystemLocationPicker(QWidget):
     ):
         super().__init__(parent)
         self._refinery_stations_only = refinery_stations_only
-        self._updating = False
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -77,45 +60,19 @@ class SystemLocationPicker(QWidget):
             self.system_combo.addItem(system, system)
         layout.addWidget(self.system_combo)
 
-        row = QHBoxLayout()
-        row.setSpacing(12)
+        location_label = QLabel(tr("location.label.place"))
+        location_label.setObjectName("formLabel")
+        layout.addWidget(location_label)
 
-        station_col = QVBoxLayout()
-        station_col.setSpacing(4)
-        station_label = QLabel(tr("location.label.station"))
-        station_label.setObjectName("formLabel")
-        station_col.addWidget(station_label)
-        self.station_combo = QComboBox()
-        self.station_combo.setObjectName("locationCombo")
-        self.station_combo.setEditable(False)
-        self.station_combo.setMinimumContentsLength(20)
-        self.station_combo.setMaxVisibleItems(18)
-        station_col.addWidget(self.station_combo)
-
-        city_col = QVBoxLayout()
-        city_col.setSpacing(4)
-        city_label = QLabel(tr("location.label.city"))
-        city_label.setObjectName("formLabel")
-        city_col.addWidget(city_label)
-        self.city_combo = QComboBox()
-        self.city_combo.setObjectName("locationCombo")
-        self.city_combo.setEditable(False)
-        self.city_combo.setMinimumContentsLength(20)
-        self.city_combo.setMaxVisibleItems(18)
-        city_col.addWidget(self.city_combo)
-
-        row.addLayout(station_col, 1)
-        row.addLayout(city_col, 1)
-        layout.addLayout(row)
+        self.location_combo = QComboBox()
+        self.location_combo.setObjectName("locationCombo")
+        self.location_combo.setEditable(False)
+        self.location_combo.setMinimumContentsLength(28)
+        self.location_combo.setMaxVisibleItems(20)
+        layout.addWidget(self.location_combo)
 
         self.system_combo.currentIndexChanged.connect(
             self._reload_for_system
-        )
-        self.station_combo.currentIndexChanged.connect(
-            self._on_station_changed
-        )
-        self.city_combo.currentIndexChanged.connect(
-            self._on_city_changed
         )
 
         self._reload_for_system()
@@ -129,36 +86,17 @@ class SystemLocationPicker(QWidget):
             system,
             refinery_only=self._refinery_stations_only,
         )
-        cities = cities_for_system(system)
+        cities = cities_for_system(
+            system,
+            refinery_only=self._refinery_stations_only,
+        )
 
-        _populate_choice_combo(
-            self.station_combo,
+        populate_station_city_location_combo(
+            self.location_combo,
             stations,
-            tr("location.placeholder.station"),
-        )
-        _populate_choice_combo(
-            self.city_combo,
             cities,
-            tr("location.placeholder.city"),
+            placeholder=tr("location.placeholder.select"),
         )
-
-    def _on_station_changed(self) -> None:
-        if self._updating:
-            return
-        if not _combo_has_selection(self.station_combo):
-            return
-        self._updating = True
-        self.city_combo.setCurrentIndex(0)
-        self._updating = False
-
-    def _on_city_changed(self) -> None:
-        if self._updating:
-            return
-        if not _combo_has_selection(self.city_combo):
-            return
-        self._updating = True
-        self.station_combo.setCurrentIndex(0)
-        self._updating = False
 
     def is_selected(self) -> bool:
         return self.selection() is not None
@@ -168,23 +106,17 @@ class SystemLocationPicker(QWidget):
         if not system:
             return None
 
-        if _combo_has_selection(self.station_combo):
-            return SystemLocationSelection(
-                system=system,
-                location_kind="STATION",
-                location_key=str(self.station_combo.currentData()),
-                location_label=self.station_combo.currentText().strip(),
-            )
+        picked = station_city_combo_selection(self.location_combo)
+        if picked is None:
+            return None
 
-        if _combo_has_selection(self.city_combo):
-            return SystemLocationSelection(
-                system=system,
-                location_kind="CITY",
-                location_key=str(self.city_combo.currentData()),
-                location_label=self.city_combo.currentText().strip(),
-            )
-
-        return None
+        kind, location_key, location_label = picked
+        return SystemLocationSelection(
+            system=system,
+            location_kind=kind,
+            location_key=location_key,
+            location_label=location_label,
+        )
 
     def location_label(self) -> str:
         selected = self.selection()
@@ -212,18 +144,21 @@ class SystemLocationPicker(QWidget):
                 refinery_only=self._refinery_stations_only,
             ):
                 if name.casefold() == location_label.casefold():
-                    self._select(sys_name, self.station_combo, loc_id)
+                    self._select(sys_name, "STATION", loc_id)
                     return
 
-            for loc_id, name in cities_for_system(sys_name):
+            for loc_id, name in cities_for_system(
+                sys_name,
+                refinery_only=self._refinery_stations_only,
+            ):
                 if name.casefold() == location_label.casefold():
-                    self._select(sys_name, self.city_combo, loc_id)
+                    self._select(sys_name, "CITY", loc_id)
                     return
 
     def _select(
         self,
         system: str,
-        combo: QComboBox,
+        kind: str,
         location_id: str,
     ) -> None:
         index = self.system_combo.findData(system)
@@ -231,8 +166,8 @@ class SystemLocationPicker(QWidget):
             self.system_combo.setCurrentIndex(index)
 
         self._reload_for_system()
-
-        for row in range(combo.count()):
-            if combo.itemData(row) == location_id:
-                combo.setCurrentIndex(row)
-                return
+        set_station_city_combo_selection(
+            self.location_combo,
+            kind=kind,
+            location_key=location_id,
+        )

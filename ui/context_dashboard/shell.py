@@ -141,7 +141,16 @@ class ContextDashboardShell(QWidget):
         self.refresh()
         self._update_header()
 
+    def ensure_db(self, db=None):
+        from database.access import get_database
+
+        current = db if db is not None else get_database()
+        if current is not self.db:
+            self.db = current
+            self._repo = DashboardOperationsRepository(current)
+
     def refresh(self):
+        self.ensure_db()
         display = self._display_context()
         data = self._repo.build_context(display)
         view = self._views.get(display)

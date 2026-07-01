@@ -183,13 +183,20 @@ class UpdateAvailableDialog(MobiglasFramelessMixin, QDialog):
 
 class UpdateDownloadDialog(MobiglasFramelessMixin, QDialog):
 
-    def __init__(self, manifest: UpdateManifest, parent=None):
+    def __init__(
+        self,
+        manifest: UpdateManifest,
+        parent=None,
+        *,
+        install_dir: str | None = None,
+        install_source_label: str | None = None,
+    ):
         super().__init__(parent)
 
         self.setObjectName("mobiglasDialog")
         self.setWindowTitle(tr("update.download.title"))
         self.setModal(True)
-        self.resize(520, 180)
+        self.resize(520, 220 if install_dir else 180)
 
         layout = QVBoxLayout()
         layout.setContentsMargins(24, 24, 24, 24)
@@ -212,6 +219,18 @@ class UpdateDownloadDialog(MobiglasFramelessMixin, QDialog):
         self.progress_bar.setRange(0, 100)
         self.progress_bar.setValue(0)
         layout.addWidget(self.progress_bar)
+
+        if install_dir:
+            path_line = QLabel(
+                tr(
+                    "update.download.install_path",
+                    install_dir=install_dir,
+                    source_label=install_source_label or "",
+                )
+            )
+            path_line.setObjectName("mutedLabel")
+            path_line.setWordWrap(True)
+            layout.addWidget(path_line)
 
         self.setLayout(layout)
         apply_mobiglas_window_frame(
@@ -241,4 +260,62 @@ class UpdateDownloadDialog(MobiglasFramelessMixin, QDialog):
                 total=_format_size(total),
                 percent=percent,
             )
+        )
+
+
+class UpdateInstallConfirmDialog(MobiglasFramelessMixin, QDialog):
+
+    def __init__(
+        self,
+        manifest: UpdateManifest,
+        install_dir: str,
+        install_source_label: str,
+        parent=None,
+    ):
+        super().__init__(parent)
+
+        self.setObjectName("mobiglasDialog")
+        self.setWindowTitle(tr("update.manager.install_ready.title"))
+        self.resize(640, 360)
+
+        layout = QVBoxLayout()
+        layout.setContentsMargins(24, 24, 24, 24)
+        layout.setSpacing(16)
+
+        layout.addWidget(page_title(tr("update.manager.install_ready.title")))
+
+        message = QLabel(
+            tr(
+                "update.manager.install_ready.message",
+                version=manifest.version_display,
+                build=manifest.build,
+                install_dir=install_dir,
+                source_label=install_source_label,
+            )
+        )
+        message.setObjectName("mutedLabel")
+        message.setWordWrap(True)
+        layout.addWidget(message)
+        layout.addStretch(1)
+
+        button_row = QHBoxLayout()
+        button_row.setSpacing(8)
+
+        install_button = primary_button(tr("update.button.install"))
+        install_button.clicked.connect(self.accept)
+        button_row.addWidget(install_button)
+
+        cancel_button = QPushButton(tr("common.abort"))
+        cancel_button.setObjectName("secondaryAction")
+        cancel_button.clicked.connect(self.reject)
+        button_row.addWidget(cancel_button)
+
+        button_row.addStretch()
+        layout.addLayout(button_row)
+
+        self.setLayout(layout)
+        apply_mobiglas_window_frame(
+            self,
+            title=tr("update.manager.install_ready.title"),
+            dialog=True,
         )

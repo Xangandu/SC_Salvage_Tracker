@@ -71,27 +71,99 @@ class MaterialRepository:
         try:
             self.connection.execute("BEGIN IMMEDIATE")
 
-            self.cursor.execute("""
-            INSERT INTO material_batches (
-                session_id,
-                material_type_id,
-                quantity,
-                remaining_quantity,
-                notes,
-                created_at,
-                created_by
+            batch_columns = self.db._table_columns(
+                "material_batches"
             )
-            VALUES (?, ?, ?, ?, ?, datetime('now', 'localtime'), ?)
-            """, (
-                session_id,
-                material_type_id,
-                quantity,
-                quantity,
-                notes,
-                created_by,
-            ))
+            has_remaining = (
+                "remaining_quantity" in batch_columns
+            )
 
-            batch_id = self.cursor.lastrowid
+            self.cursor.execute(f"""
+            SELECT id
+            FROM material_batches
+            WHERE session_id = ?
+            AND material_type_id = ?
+            AND is_deleted = 0
+            AND {"remaining_quantity > 0" if has_remaining else "quantity > 0"}
+            ORDER BY id ASC
+            LIMIT 1
+            """, (session_id, material_type_id))
+
+            existing = self.cursor.fetchone()
+            if existing:
+                batch_id = int(existing[0])
+                if has_remaining:
+                    self.cursor.execute("""
+                    UPDATE material_batches
+                    SET
+                        quantity = quantity + ?,
+                        remaining_quantity = remaining_quantity + ?,
+                        updated_at = datetime('now', 'localtime'),
+                        updated_by = ?
+                    WHERE id = ?
+                    AND is_deleted = 0
+                    """, (
+                        quantity,
+                        quantity,
+                        created_by,
+                        batch_id,
+                    ))
+                else:
+                    self.cursor.execute("""
+                    UPDATE material_batches
+                    SET
+                        quantity = quantity + ?,
+                        updated_at = datetime('now', 'localtime'),
+                        updated_by = ?
+                    WHERE id = ?
+                    AND is_deleted = 0
+                    """, (
+                        quantity,
+                        created_by,
+                        batch_id,
+                    ))
+            else:
+                if has_remaining:
+                    self.cursor.execute("""
+                    INSERT INTO material_batches (
+                        session_id,
+                        material_type_id,
+                        quantity,
+                        remaining_quantity,
+                        notes,
+                        created_at,
+                        created_by
+                    )
+                    VALUES (?, ?, ?, ?, ?, datetime('now', 'localtime'), ?)
+                    """, (
+                        session_id,
+                        material_type_id,
+                        quantity,
+                        quantity,
+                        notes,
+                        created_by,
+                    ))
+                else:
+                    self.cursor.execute("""
+                    INSERT INTO material_batches (
+                        session_id,
+                        material_type_id,
+                        quantity,
+                        notes,
+                        created_at,
+                        created_by
+                    )
+                    VALUES (?, ?, ?, ?, datetime('now', 'localtime'), ?)
+                    """, (
+                        session_id,
+                        material_type_id,
+                        quantity,
+                        notes,
+                        created_by,
+                    ))
+
+                batch_id = self.cursor.lastrowid
+
             storage_id = None
 
             if use_stockpile:
@@ -286,6 +358,270 @@ class MaterialRepository:
                 updated_by,
                 storage_id,
             ))
+
+    def allocate_batches_fifo(
+        self,
+        material_code: str,
+        quantity_scu: float,
+        *,
+        ship_id: int | None = None,
+    ) -> list[dict]:
+        """Verteilt Menge FIFO auf offene Batches (Raffinerie-Buchführung)."""
+        if quantity_scu <= 0:
+            return []
+
+        batch_columns = self.db._table_columns("material_batches")
+        has_remaining = "remaining_quantity" in batch_columns
+        available_sql = (
+            "material_batches.remaining_quantity"
+            if has_remaining
+            else "material_batches.quantity"
+        )
+
+        self.cursor.execute(f"""
+        SELECT
+            material_batches.id,
+            material_batches.session_id,
+            {available_sql}
+        FROM material_batches
+        INNER JOIN material_types
+            ON material_types.id =
+                material_batches.material_type_id
+        WHERE material_batches.is_deleted = 0
+        AND material_types.material_code = ?
+        AND {available_sql} > 0
+        ORDER BY material_batches.id ASC
+        """, (material_code,))
+
+        rows = self.cursor.fetchall()
+        if ship_id is not None:
+            filtered = []
+            for batch_id, session_id, available in rows:
+                ship = self.db.get_session_ship(session_id)
+                if ship and ship.get("ship_id") == ship_id:
+                    filtered.append((batch_id, session_id, available))
+            rows = filtered
+
+        remaining = float(quantity_scu)
+        lines: list[dict] = []
+        for batch_id, _session_id, available in rows:
+            if remaining <= 1e-9:
+                break
+            take = min(remaining, float(available or 0))
+            if take <= 0:
+                continue
+            lines.append({
+                "batch_id": int(batch_id),
+                "input_quantity": take,
+                "input_material": material_code,
+            })
+            remaining -= take
+
+        if remaining > 1e-9:
+            label = material_label(material_code)
+            raise ValueError(
+                tr(
+                    "error.material.insufficient_batches",
+                    material=label,
+                    available=f"{quantity_scu - remaining:g}",
+                    requested=f"{quantity_scu:g}",
+                )
+            )
+
+        return lines
+
+    def reduce_session_capture(
+        self,
+        batch_id: int,
+        quantity_scu: float,
+        updated_by=None,
+    ) -> None:
+        """Salvage-Erfassung rückgängig: Batch-Menge reduzieren."""
+        if quantity_scu <= 0:
+            return
+
+        batch_columns = self.db._table_columns(
+            "material_batches"
+        )
+        has_remaining = (
+            "remaining_quantity" in batch_columns
+        )
+
+        remaining_sql = (
+            ", remaining_quantity"
+            if has_remaining
+            else ""
+        )
+
+        self.cursor.execute(f"""
+        SELECT
+            quantity
+            {remaining_sql}
+        FROM material_batches
+        WHERE id = ?
+        AND is_deleted = 0
+        """, (batch_id,))
+
+        row = self.cursor.fetchone()
+        if not row:
+            raise ValueError(tr("error.material.batch_not_found"))
+
+        total_qty = float(row[0] or 0)
+        remaining_qty = (
+            float(row[1] or 0)
+            if has_remaining
+            else total_qty
+        )
+
+        if (
+            total_qty + 1e-9 < quantity_scu
+            or remaining_qty + 1e-9 < quantity_scu
+        ):
+            raise ValueError(
+                tr("error.material.capture_in_use")
+            )
+
+        if self.db._table_exists("refinery_job_items"):
+            job_deleted = ""
+            if "is_deleted" in self.db._table_columns(
+                "refinery_jobs"
+            ):
+                job_deleted = (
+                    "AND COALESCE(rj.is_deleted, 0) = 0"
+                )
+
+            self.cursor.execute(f"""
+            SELECT COALESCE(SUM(rji.input_quantity), 0)
+            FROM refinery_job_items rji
+            INNER JOIN refinery_jobs rj
+                ON rj.id = rji.job_id
+            WHERE rji.batch_id = ?
+            AND rj.status IN ('RUNNING', 'READY')
+            {job_deleted}
+            """, (batch_id,))
+
+            active_reserved = float(
+                self.cursor.fetchone()[0] or 0
+            )
+            if active_reserved > 1e-9:
+                raise ValueError(
+                    tr("error.material.capture_in_refinery")
+                )
+
+        new_total = total_qty - quantity_scu
+        new_remaining = remaining_qty - quantity_scu
+
+        if new_total <= 1e-9:
+            if "is_deleted" in batch_columns:
+                if has_remaining:
+                    self.cursor.execute("""
+                    UPDATE material_batches
+                    SET
+                        quantity = 0,
+                        remaining_quantity = 0,
+                        is_deleted = 1,
+                        updated_at = datetime('now', 'localtime'),
+                        updated_by = ?
+                    WHERE id = ?
+                    """, (updated_by, batch_id))
+                else:
+                    self.cursor.execute("""
+                    UPDATE material_batches
+                    SET
+                        quantity = 0,
+                        is_deleted = 1,
+                        updated_at = datetime('now', 'localtime'),
+                        updated_by = ?
+                    WHERE id = ?
+                    """, (updated_by, batch_id))
+            elif has_remaining:
+                self.cursor.execute("""
+                UPDATE material_batches
+                SET
+                    quantity = 0,
+                    remaining_quantity = 0,
+                    updated_at = datetime('now', 'localtime'),
+                    updated_by = ?
+                WHERE id = ?
+                AND is_deleted = 0
+                """, (updated_by, batch_id))
+            else:
+                self.cursor.execute("""
+                UPDATE material_batches
+                SET
+                    quantity = 0,
+                    updated_at = datetime('now', 'localtime'),
+                    updated_by = ?
+                WHERE id = ?
+                AND is_deleted = 0
+                """, (updated_by, batch_id))
+        elif has_remaining:
+            self.cursor.execute("""
+            UPDATE material_batches
+            SET
+                quantity = ?,
+                remaining_quantity = ?,
+                updated_at = datetime('now', 'localtime'),
+                updated_by = ?
+            WHERE id = ?
+            AND is_deleted = 0
+            """, (
+                new_total,
+                new_remaining,
+                updated_by,
+                batch_id,
+            ))
+        else:
+            self.cursor.execute("""
+            UPDATE material_batches
+            SET
+                quantity = ?,
+                updated_at = datetime('now', 'localtime'),
+                updated_by = ?
+            WHERE id = ?
+            AND is_deleted = 0
+            """, (
+                new_total,
+                updated_by,
+                batch_id,
+            ))
+
+    def session_ids_for_ship_material(
+        self,
+        material_code: str,
+        ship_id: int,
+    ) -> list[int]:
+        """Session-IDs mit offenem Batch-Material auf dem Schiff."""
+        batch_columns = self.db._table_columns("material_batches")
+        has_remaining = "remaining_quantity" in batch_columns
+        available_sql = (
+            "material_batches.remaining_quantity"
+            if has_remaining
+            else "material_batches.quantity"
+        )
+
+        self.cursor.execute(f"""
+        SELECT DISTINCT material_batches.session_id
+        FROM material_batches
+        INNER JOIN material_types
+            ON material_types.id =
+                material_batches.material_type_id
+        WHERE material_batches.is_deleted = 0
+        AND material_types.material_code = ?
+        AND material_batches.session_id IS NOT NULL
+        AND {available_sql} > 0
+        ORDER BY material_batches.session_id
+        """, (material_code,))
+
+        session_ids: list[int] = []
+        for row in self.cursor.fetchall():
+            session_id = row[0]
+            if not session_id:
+                continue
+            ship = self.db.get_session_ship(session_id)
+            if ship and ship.get("ship_id") == ship_id:
+                session_ids.append(int(session_id))
+        return session_ids
 
     def restore_storage_quantity(
         self,

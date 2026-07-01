@@ -133,6 +133,7 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "nav.payout": "Payout",
         "nav.history": "History",
         "nav.settings": "Settings",
+        "nav.version_info": "Version Info",
         "nav.logout": "Sign Out",
         "nav.language.title": "Language",
         "admin.language": "Language",
@@ -581,7 +582,8 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
             "\n\nA backup was created first."
         ),
         "admin.system.reinitialize.msg.login_hint": (
-            "Please sign out and sign in again with the default admin."
+            "The application will now restart. "
+            "You can sign in again afterward."
         ),
         "status.ACTIVE": "ACTIVE",
         "permission.users.manage": "Manage users",
@@ -687,6 +689,19 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         ),
         "dates.error.invalid_timestamp": "Invalid timestamp.",
         "dates.error.invalid_datetime": "Invalid date or time.",
+        "dates.month_year": "{month} {year}",
+        "dates.month.1": "January",
+        "dates.month.2": "February",
+        "dates.month.3": "March",
+        "dates.month.4": "April",
+        "dates.month.5": "May",
+        "dates.month.6": "June",
+        "dates.month.7": "July",
+        "dates.month.8": "August",
+        "dates.month.9": "September",
+        "dates.month.10": "October",
+        "dates.month.11": "November",
+        "dates.month.12": "December",
         "error.session.not_found": "Session not found.",
         "error.session.ship_not_found": (
             "Could not resolve the session ship. "
@@ -731,6 +746,13 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
             "Not enough material in batch #{batch_id} ({label}). "
             "Available: {available} SCU, requested: {requested} SCU."
         ),
+        "error.refinery.pool_not_raw": (
+            "{material} is not raw material for the refinery."
+        ),
+        "error.refinery.insufficient_pool": (
+            "Not enough {material} at this location. "
+            "Available: {available} SCU, requested: {requested} SCU."
+        ),
         "error.refinery.cost_payer_required": (
             "Please specify who paid the refinery costs."
         ),
@@ -743,8 +765,41 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
             "Invalid input quantity in job."
         ),
         "error.material.batch_not_found": "Material batch not found.",
+        "error.material.capture_in_use": (
+            "This capture can no longer be reversed "
+            "(material already used in refinery or sale)."
+        ),
+        "error.material.capture_in_refinery": (
+            "This capture is reserved for an active refinery job."
+        ),
+        "error.cost.not_found": "Cost entry not found.",
+        "error.cost.not_mission": "Only mission costs can be removed here.",
+        "error.cost.session_locked": (
+            "Mission costs can only be removed while the session "
+            "is active or waiting for refinery."
+        ),
+        "error.correction.capture_not_reversible": (
+            "This capture entry cannot be reversed."
+        ),
+        "error.correction.already_reverted": (
+            "This entry has already been reversed."
+        ),
+        "error.correction.event_not_reversible": (
+            "This history entry cannot be reversed "
+            "(older transfers may lack restore data)."
+        ),
+        "error.session.reopen.not_waiting": (
+            "Only sessions waiting for refinery can be reopened."
+        ),
+        "error.session.reopen.active_exists": (
+            "End or delete the current active session first."
+        ),
         "error.material.insufficient_batch": (
             "Not enough material in batch ({available} SCU available)."
+        ),
+        "error.material.insufficient_batches": (
+            "Not enough {material} in open batches. "
+            "Available: {available} SCU, requested: {requested} SCU."
         ),
         "error.material.storage_changed": (
             "Stock level has changed. Please try again."
@@ -860,15 +915,16 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
             "Please choose a password other than the default."
         ),
         "session.title": "SESSION",
-        "session.section.manage": "◆ MANAGE SALVAGE RUN",
-        "session.section.new": "◆ NEW SESSION",
+        "session.section.manage": "◆ SHIP, CREW & LOOT",
+        "session.section.new": "◆ START SESSION",
         "session.section.network": "◆ NETWORK SESSION",
-        "session.section.active": "◆ ACTIVE SESSION",
-        "session.section.missions": "◆ MISSIONS (COSTS)",
-        "session.section.materials": "◆ RECORD MATERIALS",
+        "session.section.active": "◆ RUNNING SESSION",
+        "session.section.missions": "◆ MISSION COSTS",
+        "session.section.materials": "◆ RECORD LOOT",
         "session.label.ship": "Ship",
-        "session.label.crew": "Crew (one name per line)",
+        "session.label.crew": "Players (one name per line)",
         "session.label.status": "Status",
+        "session.label.not_started": "No session started yet",
         "session.label.active_session": "Active session",
         "session.label.mission_cost": "Mission cost (aUEC)",
         "session.label.paid_by": "Paid by",
@@ -877,6 +933,10 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
             "Record mission costs during the active session — one entry per accepted "
             "mission. Until the cargo hold is full, multiple missions and material "
             "runs can belong to the same session."
+        ),
+        "session.hint.archived": (
+            "Completed sessions including mission costs are listed under History. "
+            "Start your next session here."
         ),
         "session.hint.client": (
             "Select the host's running session. Material fields adjust automatically "
@@ -890,7 +950,7 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
             "Material fields follow the ship of the active session."
         ),
         "session.hint.material_ship": (
-            "Recordable with {ship}: {materials}"
+            "With {ship}: {materials}"
         ),
         "session.crew.placeholder": (
             "One name per line\n\n"
@@ -900,12 +960,15 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
             "Pilot3"
         ),
         "session.placeholder.mission_cost": "Cost of this mission in aUEC",
-        "session.placeholder.rmc": "RMC SCU",
+        "session.placeholder.quantity": "Amount in SCU",
         "session.button.start": "Start session",
-        "session.button.save_run": "Save run",
-        "session.button.end": "End session",
+        "session.button.save_run": "Save materials",
+        "session.button.end": "Complete session",
         "session.button.delete": "Delete session",
-        "session.button.add_mission": "Record mission",
+        "session.button.reopen": "Reopen session",
+        "session.button.undo_capture": "Undo",
+        "session.button.delete_mission": "Remove",
+        "session.button.add_mission": "Enter costs",
         "session.client.empty": (
             "No active session on the host.\n"
             "The host must start a session first."
@@ -917,6 +980,36 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         ),
         "session.mission.line": "Mission {index}: {amount} aUEC ({paid_by})",
         "session.mission.none": "No missions recorded yet.",
+        "session.section.captures": "◆ RECORDED LOOT (CORRECTIONS)",
+        "session.hint.captures": (
+            "Wrong amount or material? Undo individual entries here."
+        ),
+        "session.table.capture_material": "Material",
+        "session.table.capture_quantity": "SCU",
+        "session.table.capture_time": "Recorded",
+        "session.table.capture_action": "Action",
+        "session.table.mission_amount": "Amount (aUEC)",
+        "session.table.mission_payer": "Paid by",
+        "session.table.mission_action": "Action",
+        "session.msg.capture_undo_confirm.title": "Undo capture",
+        "session.msg.capture_undo_confirm.message": (
+            "Remove {quantity} SCU {material} from this session?"
+        ),
+        "session.msg.capture_undone": "Capture reversed.",
+        "session.msg.mission_delete_confirm.title": "Remove mission cost",
+        "session.msg.mission_delete_confirm.message": (
+            "Remove mission cost of {amount} aUEC ({paid_by})?"
+        ),
+        "session.msg.mission_deleted": "Mission cost removed.",
+        "session.msg.reopen_confirm.title": "Reopen session",
+        "session.msg.reopen_confirm.message": (
+            "Reopen session #{session_id}? "
+            "You can record more loot and mission costs."
+        ),
+        "session.msg.reopened.title": "Session reopened",
+        "session.msg.reopened.message": (
+            "Session #{session_id} is active again."
+        ),
         "session.section.refinery_costs": "◆ REFINERY (COSTS)",
         "session.refinery.costs_total": (
             "Refinery costs: {refinery_total} aUEC · "
@@ -952,7 +1045,7 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "session.msg.started.title": "Session started",
         "session.msg.started.message": (
             "The salvage session was started.\n\n"
-            "Record each accepted mission under “Missions (Costs)”."
+            "Record each accepted mission under “Mission Costs”."
         ),
         "session.msg.start_failed": (
             "Session could not be started:\n\n{error}"
@@ -975,11 +1068,12 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         ),
         "session.ship.unnamed": "this ship",
         "refinery.title": "REFINERY",
-        "refinery.section.batches": "◆ AVAILABLE MATERIAL BATCHES",
+        "refinery.section.batches": "◆ AVAILABLE MATERIAL",
         "refinery.section.create": "◆ CREATE REFINERY JOB",
         "refinery.section.active": "◆ ACTIVE JOBS",
         "refinery.section.history": "◆ REFINERY HISTORY",
         "refinery.table.batch": "Batch",
+        "refinery.table.location": "Location",
         "refinery.table.material": "Material",
         "refinery.table.available_scu": "Available (SCU)",
         "refinery.table.original_scu": "Original (SCU)",
@@ -998,6 +1092,7 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "refinery.label.cost": "Cost (aUEC)",
         "refinery.label.paid_by": "Paid by",
         "refinery.label.batch": "Material batch",
+        "refinery.label.material_source": "Material source",
         "refinery.label.input_scu": "Input (SCU)",
         "refinery.label.input_cscu": "Input (cSCU) — terminal",
         "refinery.label.hours": "Hours",
@@ -1015,9 +1110,12 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "location.label.system": "System",
         "location.label.station": "Space station",
         "location.label.city": "City / landing zone",
+        "location.label.place": "Location (station or city)",
         "location.placeholder.system": "— Select system —",
         "location.placeholder.station": "— Select station —",
         "location.placeholder.city": "— Select city —",
+        "location.group.stations": "— Space stations —",
+        "location.group.cities": "— Cities / landing zones —",
         "error.location.not_selected": "Please select a station or city from the list.",
         "refinery.placeholder.hours": "Hours",
         "refinery.placeholder.minutes": "Minutes",
@@ -1061,6 +1159,9 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
             "{count} refinery jobs are ready for pickup!"
         ),
         "refinery.batch.combo": "#{batch_id} | {material} | {remaining} SCU",
+        "refinery.pool.combo": (
+            "{location} · {material} · {quantity} SCU"
+        ),
         "refinery.history.input_line": (
             "{quantity} SCU {material} (Batch #{batch_id})"
         ),
@@ -1077,6 +1178,7 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
             "({job_count} jobs)"
         ),
         "refinery.msg.no_batch": "No material batch available.",
+        "refinery.msg.no_pool": "No material available at ship or storage.",
         "refinery.msg.no_station": "Please enter a refinery/station.",
         "refinery.msg.invalid_values": "Please enter valid values.",
         "refinery.msg.negative_cost": "Cost cannot be negative.",
@@ -1121,10 +1223,10 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "refinery.job_status.COMPLETED": "COMPLETED",
         "refinery.job_status.CANCELLED": "CANCELLED",
         "storage.title": "STORAGE / LOCATIONS",
-        "storage.section.list": "◆ STOCK BY LOCATION",
-        "storage.section.add": "◆ ADD ENTRY",
-        "storage.section.history": "◆ HISTORY",
-        "storage.section.totals": "◆ TOTALS",
+        "storage.section.list": "◆ MATERIAL BY LOCATION",
+        "storage.section.add": "◆ STORE MATERIAL",
+        "storage.section.history": "◆ LOG",
+        "storage.section.totals": "◆ TOTAL STOCK BY MATERIAL",
         "storage.table.location": "Location",
         "storage.table.material": "Material",
         "storage.table.quantity": "Quantity (SCU)",
@@ -1133,14 +1235,14 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "storage.table.activity": "Last activity",
         "storage.table.reserve": "Reserve",
         "storage.table.notes": "Note",
-        "storage.label.location_type": "Location type",
+        "storage.label.location_type": "Where is it?",
         "storage.label.location": "Location",
         "storage.label.ship": "Ship",
         "storage.label.material": "Material",
         "storage.label.quantity": "Quantity (SCU)",
         "storage.label.reserve": "Reserve tag",
         "storage.label.notes": "Note",
-        "storage.label.sort": "Sort by",
+        "storage.label.sort": "Sort list by",
         "storage.location_type.station": "Station / city",
         "storage.location_type.ship": "In ship",
         "storage.location.ship": "Ship · {ship}",
@@ -1153,27 +1255,75 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "storage.status.IN_REFINERY": "In refinery",
         "storage.status.READY_PICKUP": "Ready for pickup",
         "storage.status.RESERVED": "Reserve",
-        "storage.sort.location": "Location",
-        "storage.sort.material": "Material",
-        "storage.sort.age": "Age (oldest first)",
+        "storage.sort.location": "Location (A–Z)",
+        "storage.sort.material": "Material type",
+        "storage.sort.age": "Last activity (oldest first)",
         "storage.placeholder.reserve": "e.g. Reserve — no warning",
         "storage.placeholder.notes": "Note (optional)",
         "storage.empty": "No stored material recorded yet.",
         "storage.totals.line": "{material}: {quantity} SCU",
         "storage.totals.none": "No stock totals.",
-        "storage.button.save": "Save entry",
+        "storage.button.save": "Store",
         "storage.button.delete": "Delete entry",
         "storage.button.delete_event": "Delete history entry",
-        "storage.button.reminded": "Acknowledged",
+        "storage.button.revert_event": "Undo movement",
+        "storage.event.reverted_note": "Reversed",
+        "storage.msg.revert_event_confirm.title": "Undo movement",
+        "storage.msg.revert_event_confirm.message": (
+            "Reverse this stock movement? "
+            "Quantities will be restored accordingly."
+        ),
+        "storage.msg.reverted": "Movement reversed.",
+        "storage.button.reminded": "Warning read",
         "storage.button.set_reserve": "Set reserve tag",
-        "storage.button.moved": "Moved / withdrawn",
+        "storage.button.clear_reserve": "Remove reserve tag",
+        "storage.button.moved": "Mark as moved",
+        "storage.button.transfer": "Move material",
+        "storage.transfer.title": "Move material",
+        "storage.transfer.hint": "Select source, quantity, and destination. Material is deducted from the source row and credited at the target location.",
+        "storage.transfer.pool_hint": (
+            "Sources are grouped by location and material type. "
+            "The quantity is taken from the total (FIFO across underlying rows)."
+        ),
+        "storage.transfer.pool_option": (
+            "{location} · {material} · {quantity} SCU"
+        ),
+        "storage.transfer.label.source": "Source",
+        "storage.transfer.label.destination_type": "Destination type",
+        "storage.transfer.confirm": "Move",
+        "storage.transfer.source_option": "{location} · {material} · {quantity} SCU",
+        "storage.transfer.msg.no_source": "Please select a source stock entry.",
+        "storage.msg.transferred": "Material moved successfully.",
+        "storage.event.from_location": "From location stock",
+        "storage.event.inbound_transfer": "Inbound transfer",
+        "storage.event.withdrawn": "Withdrawn from stock",
+        "storage.history.type.TRANSFER": "Transfer",
+        "storage.history.type.WITHDRAW": "Withdrawal",
+        "error.storage.insufficient_at_location": "Not enough material at locations ({available} SCU {material} available).",
+        "error.storage.insufficient_at_source": "Not enough material at source ({available} SCU {material} available).",
+        "error.storage.transfer_same_location": "Source and destination are the same.",
+        "error.storage.transfer_invalid_source": "This stock entry cannot be used as a transfer source.",
+        "error.storage.transfer_material_mismatch": "Material does not match the selected source.",
+        "error.storage.transfer_failed": "Transfer failed — no suitable source found.",
+        "error.storage.insufficient_pool": (
+            "Not enough {material} at this location. "
+            "Available: {available} SCU, requested: {requested} SCU."
+        ),
+        "error.storage.insufficient_ship_pool": (
+            "Not enough {material} on ship. "
+            "Available: {available} SCU, requested: {requested} SCU."
+        ),
+        "error.storage.insufficient_stored_pool": (
+            "Not enough {material} in storage. "
+            "Available: {available} SCU, requested: {requested} SCU."
+        ),
         "storage.filter.warnings_only": "Warnings only",
         "storage.idle.banner.title": (
             "{count} stockpile(s) idle for more than {days} days"
         ),
         "storage.idle.banner.hint": (
-            "Select an entry below and mark it as acknowledged, "
-            "reserve, or moved."
+            "Select an entry below and acknowledge the warning, "
+            "mark it as reserve, or mark it as moved."
         ),
         "storage.idle.banner.collapse": "Hide",
         "storage.idle.banner.expand": "Show",
@@ -1181,9 +1331,13 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "storage.activity.yesterday": "Yesterday",
         "storage.activity.days_ago": "{days} days ago",
         "storage.activity.warning_prefix": "⚠ ",
-        "storage.msg.reminded": "Reminder acknowledged.",
+        "storage.msg.reminded": "Warning acknowledged.",
         "storage.msg.reserve_set": "Reserve tag saved.",
-        "storage.msg.moved": "Activity updated.",
+        "storage.msg.reserve_cleared": "Reserve tag removed.",
+        "storage.msg.reserve_clear_confirm.title": "Remove reserve tag",
+        "storage.msg.reserve_clear_confirm.message": "Remove the reserve tag from this stockpile? Idle warnings may apply again.",
+        "error.storage.reserve_not_set": "This stockpile has no reserve tag.",
+        "storage.msg.moved": "Material withdrawn from stock.",
         "storage.msg.reserve_prompt.title": "Reserve tag",
         "storage.msg.reserve_prompt.label": "Tag for this stockpile",
         "nav.badge.storage_idle": "◆ {count} IDLE",
@@ -1193,11 +1347,12 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "storage.history.type.DELETE": "Delete",
         "storage.history.type.IDLE_REMINDED": "Idle reminder",
         "storage.history.type.TAG_SET": "Reserve tag",
+        "storage.history.type.TAG_CLEAR": "Reserve removed",
         "storage.history.type.ACTIVITY": "Activity",
         "storage.history.type": "Type",
         "storage.history.delta": "Change",
         "storage.history.when": "When",
-        "storage.msg.saved": "Storage entry saved.",
+        "storage.msg.saved": "Material stored.",
         "storage.msg.deleted": "Storage entry deleted.",
         "storage.msg.no_selection": "Please select an entry.",
         "storage.msg.delete_confirm.title": "Delete entry",
@@ -1440,7 +1595,14 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "dashboard.context.sale_items": "READY TO SELL",
         "dashboard.context.open_payouts": "OPEN PAYOUTS",
         "dashboard.context.open_total": "TOTAL OPEN",
-        "dashboard.context.revenue_trend": "REVENUE TREND",
+        "dashboard.context.revenue_trend": "MONTHLY REVENUE",
+        "dashboard.context.revenue_trend_hint": (
+            "Sales revenue per month (last 6 months). "
+            "With multiple months, bar length compares to the best month."
+        ),
+        "dashboard.context.revenue_peak_month": "Best month",
+        "dashboard.context.revenue_vs_peak": "{pct} % of best month",
+        "dashboard.context.revenue_trend_empty": "No sales recorded yet.",
         "dashboard.context.recent_events": "RECENT EVENTS",
         "dashboard.context.refinery_station": "Refinery · {station}",
         "dashboard.context.refinery_job_detail": "Job #{job_id} · {status} · {scu} SCU",
@@ -1607,9 +1769,27 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "dashboard.preset.msg.delete_confirm": (
             "Really delete preset \"{name}\"?"
         ),
-        "history.title": "SALES HISTORY",
-        "history.section": "◆ ALL SALES",
+        "history.title": "HISTORY",
+        "history.section.sessions": "◆ COMPLETED SESSIONS",
+        "history.section.sales": "◆ ALL SALES",
         "history.empty": "No sales recorded yet.",
+        "history.sessions.empty": (
+            "No completed sessions yet. "
+            "Mission costs appear here after refinery/sale workflow."
+        ),
+        "history.session.no": "No.",
+        "history.session.ship": "Ship",
+        "history.session.status": "Status",
+        "history.session.ended": "Ended",
+        "history.session.mission_costs": "Mission costs",
+        "history.session.total_costs": "Total costs",
+        "history.session.mission_line": (
+            "{amount} aUEC ({paid_by})"
+        ),
+        "history.session.no_missions": "No mission costs",
+        "history.session.costs_total": (
+            "Mission: {mission_total} aUEC · Total: {session_total} aUEC"
+        ),
         "common.ok": "OK",
         "common.cancel": "Cancel",
         "common.back": "Back",
@@ -1931,8 +2111,32 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         ),
         "update.manager.install_confirm.title": "Install update",
         "update.manager.install_confirm.message": (
-            "The app will close and the update will install in the "
-            "background.\n\nContinue?"
+            "The update will be downloaded first.\n\n"
+            "Install location:\n{install_dir}\n\n"
+            "Detected via: {source_label}\n\n"
+            "Continue?"
+        ),
+        "update.manager.install_ready.title": "Ready to install",
+        "update.manager.install_ready.message": (
+            "The update has been downloaded successfully.\n\n"
+            "Version: {version} (Build {build})\n"
+            "Install location:\n{install_dir}\n\n"
+            "Detected via: {source_label}\n\n"
+            "The app will close and the setup wizard will install "
+            "the update visibly. The updated app will start "
+            "automatically when installation finishes."
+        ),
+        "update.manager.install_path.unknown": (
+            "No existing installation was found. The default path "
+            "will be used:\n{install_dir}"
+        ),
+        "update.install_path.source.explicit": "Manual selection",
+        "update.install_path.source.registry": "Windows registry",
+        "update.install_path.source.manifest": "Installation manifest",
+        "update.install_path.source.running_exe": "Running application",
+        "update.install_path.source.default": "Default path",
+        "update.download.install_path": (
+            "Install location: {install_dir} ({source_label})"
         ),
         "update.manager.download.title": "Download",
         "update.manager.download.failed": (
@@ -2123,6 +2327,7 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "nav.payout": "Auszahlung",
         "nav.history": "Historie",
         "nav.settings": "Einstellungen",
+        "nav.version_info": "Version Info",
         "nav.logout": "Abmelden",
         "nav.language.title": "Sprache",
         "admin.language": "Sprache",
@@ -2653,8 +2858,8 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
             "\n\nEine Sicherung wurde vorher erstellt."
         ),
         "admin.system.reinitialize.msg.login_hint": (
-            "Bitte abmelden und mit dem Standard-Admin erneut "
-            "anmelden."
+            "Das Programm wird jetzt neu gestartet. "
+            "Du kannst dich danach wieder anmelden."
         ),
         "permission.users.manage": "Benutzer verwalten",
         "permission.roles.manage": "Rollen verwalten",
@@ -2775,6 +2980,19 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "dates.error.invalid_datetime": (
             "Ungültiges Datum oder Uhrzeit."
         ),
+        "dates.month_year": "{month} {year}",
+        "dates.month.1": "Januar",
+        "dates.month.2": "Februar",
+        "dates.month.3": "März",
+        "dates.month.4": "April",
+        "dates.month.5": "Mai",
+        "dates.month.6": "Juni",
+        "dates.month.7": "Juli",
+        "dates.month.8": "August",
+        "dates.month.9": "September",
+        "dates.month.10": "Oktober",
+        "dates.month.11": "November",
+        "dates.month.12": "Dezember",
         "error.session.not_found": "Sitzung nicht gefunden.",
         "error.session.ship_not_found": (
             "Session-Schiff konnte nicht ermittelt werden. "
@@ -2828,6 +3046,14 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
             "Verfügbar: {available} SCU, "
             "angefordert: {requested} SCU."
         ),
+        "error.refinery.pool_not_raw": (
+            "{material} ist kein Rohmaterial für die Raffinerie."
+        ),
+        "error.refinery.insufficient_pool": (
+            "Nicht genug {material} an diesem Ort. "
+            "Verfügbar: {available} SCU, "
+            "angefordert: {requested} SCU."
+        ),
         "error.refinery.cost_payer_required": (
             "Bitte angeben, wer die "
             "Raffinerie-Kosten bezahlt hat."
@@ -2845,9 +3071,43 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
             "Ungültige Eingabemenge im Auftrag."
         ),
         "error.material.batch_not_found": "Material-Batch nicht gefunden.",
+        "error.material.capture_in_use": (
+            "Diese Erfassung kann nicht mehr rückgängig gemacht werden "
+            "(Material bereits in Raffinerie oder Verkauf)."
+        ),
+        "error.material.capture_in_refinery": (
+            "Diese Erfassung ist für einen aktiven Raffinerie-Auftrag reserviert."
+        ),
+        "error.cost.not_found": "Kosten-Eintrag nicht gefunden.",
+        "error.cost.not_mission": "Hier können nur Missionskosten entfernt werden.",
+        "error.cost.session_locked": (
+            "Missionskosten können nur entfernt werden, solange die Sitzung "
+            "aktiv ist oder auf Raffinerie wartet."
+        ),
+        "error.correction.capture_not_reversible": (
+            "Diese Erfassung kann nicht rückgängig gemacht werden."
+        ),
+        "error.correction.already_reverted": (
+            "Dieser Eintrag wurde bereits rückgängig gemacht."
+        ),
+        "error.correction.event_not_reversible": (
+            "Dieser Historie-Eintrag kann nicht rückgängig gemacht werden "
+            "(ältere Verschiebungen ohne Wiederherstellungsdaten)."
+        ),
+        "error.session.reopen.not_waiting": (
+            "Nur Sitzungen mit Status „Wartet auf Raffinerie“ können wieder geöffnet werden."
+        ),
+        "error.session.reopen.active_exists": (
+            "Beende oder lösche zuerst die aktuelle aktive Sitzung."
+        ),
         "error.material.insufficient_batch": (
             "Nicht genug Material im Batch "
             "({available} SCU verfügbar)."
+        ),
+        "error.material.insufficient_batches": (
+            "Nicht genug {material} in offenen Batches. "
+            "Verfügbar: {available} SCU, "
+            "angefordert: {requested} SCU."
         ),
         "error.material.storage_changed": (
             "Lagerbestand hat sich geändert. "
@@ -2993,15 +3253,16 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
             "Standard-Passwort wählen."
         ),
         "session.title": "SITZUNG",
-        "session.section.manage": "◆ SALVAGE-EINSATZ VERWALTEN",
-        "session.section.new": "◆ NEUE SITZUNG",
+        "session.section.manage": "◆ SCHIFF, CREW & BEUTE",
+        "session.section.new": "◆ SITZUNG STARTEN",
         "session.section.network": "◆ NETZWERK-SITZUNG",
-        "session.section.active": "◆ AKTIVE SITZUNG",
-        "session.section.missions": "◆ MISSIONEN (KOSTEN)",
-        "session.section.materials": "◆ MATERIALIEN ERFASSEN",
+        "session.section.active": "◆ LAUFENDE SITZUNG",
+        "session.section.missions": "◆ MISSIONSKOSTEN",
+        "session.section.materials": "◆ BEUTE EINTRAGEN",
         "session.label.ship": "Schiff",
-        "session.label.crew": "Crew (ein Name pro Zeile)",
+        "session.label.crew": "Mitspieler (ein Name pro Zeile)",
         "session.label.status": "Status",
+        "session.label.not_started": "Noch keine Sitzung gestartet",
         "session.label.active_session": "Aktive Sitzung",
         "session.label.mission_cost": "Missionskosten (aUEC)",
         "session.label.paid_by": "Bezahlt von",
@@ -3011,6 +3272,10 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
             "erfasst — pro angenommener Mission einzeln. "
             "Bis der Laderaum voll ist, können mehrere Missionen "
             "und Material-Einsätze zur gleichen Sitzung gehören."
+        ),
+        "session.hint.archived": (
+            "Abgeschlossene Sitzungen inkl. Missionskosten findest du "
+            "unter Historie. Hier startest du die nächste Sitzung."
         ),
         "session.hint.client": (
             "Wähle die laufende Sitzung des Hosts. "
@@ -3026,7 +3291,7 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
             "der aktiven Sitzung."
         ),
         "session.hint.material_ship": (
-            "Erfassbar mit {ship}: {materials}"
+            "Mit {ship}: {materials}"
         ),
         "session.crew.placeholder": (
             "Ein Name pro Zeile\n\n"
@@ -3036,12 +3301,15 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
             "Pilot3"
         ),
         "session.placeholder.mission_cost": "Kosten dieser Mission in aUEC",
-        "session.placeholder.rmc": "RMC SCU",
+        "session.placeholder.quantity": "Menge in SCU",
         "session.button.start": "Sitzung starten",
-        "session.button.save_run": "Einsatz speichern",
-        "session.button.end": "Sitzung beenden",
+        "session.button.save_run": "Material speichern",
+        "session.button.end": "Sitzung abschließen",
         "session.button.delete": "Sitzung löschen",
-        "session.button.add_mission": "Mission erfassen",
+        "session.button.reopen": "Sitzung wieder öffnen",
+        "session.button.undo_capture": "Rückgängig",
+        "session.button.delete_mission": "Entfernen",
+        "session.button.add_mission": "Kosten eintragen",
         "session.client.empty": (
             "Keine aktive Sitzung auf dem Host.\n"
             "Der Host muss zuerst eine Sitzung starten."
@@ -3055,6 +3323,36 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
             "Mission {index}: {amount} aUEC ({paid_by})"
         ),
         "session.mission.none": "Noch keine Missionen erfasst.",
+        "session.section.captures": "◆ ERFASSTE BEUTE (KORREKTUR)",
+        "session.hint.captures": (
+            "Falsche Menge oder Material? Einzelne Erfassungen hier rückgängig machen."
+        ),
+        "session.table.capture_material": "Material",
+        "session.table.capture_quantity": "SCU",
+        "session.table.capture_time": "Erfasst",
+        "session.table.capture_action": "Aktion",
+        "session.table.mission_amount": "Betrag (aUEC)",
+        "session.table.mission_payer": "Bezahlt von",
+        "session.table.mission_action": "Aktion",
+        "session.msg.capture_undo_confirm.title": "Erfassung rückgängig",
+        "session.msg.capture_undo_confirm.message": (
+            "{quantity} SCU {material} aus dieser Sitzung entfernen?"
+        ),
+        "session.msg.capture_undone": "Erfassung rückgängig gemacht.",
+        "session.msg.mission_delete_confirm.title": "Missionskosten entfernen",
+        "session.msg.mission_delete_confirm.message": (
+            "Missionskosten {amount} aUEC ({paid_by}) entfernen?"
+        ),
+        "session.msg.mission_deleted": "Missionskosten entfernt.",
+        "session.msg.reopen_confirm.title": "Sitzung wieder öffnen",
+        "session.msg.reopen_confirm.message": (
+            "Sitzung #{session_id} wieder öffnen? "
+            "Du kannst dann weiter Beute und Missionskosten erfassen."
+        ),
+        "session.msg.reopened.title": "Sitzung wieder geöffnet",
+        "session.msg.reopened.message": (
+            "Sitzung #{session_id} ist wieder aktiv."
+        ),
         "session.section.refinery_costs": "◆ RAFFINERIE (KOSTEN)",
         "session.refinery.costs_total": (
             "Raffineriekosten: {refinery_total} aUEC · "
@@ -3096,7 +3394,7 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "session.msg.started.title": "Sitzung gestartet",
         "session.msg.started.message": (
             "Die Salvage-Sitzung wurde gestartet.\n\n"
-            "Erfasse unter „Missionen (Kosten)“ jede angenommene Mission einzeln."
+            "Erfasse unter „Missionskosten“ jede angenommene Mission einzeln."
         ),
         "session.msg.start_failed": (
             "Sitzung konnte nicht gestartet werden:\n\n{error}"
@@ -3111,7 +3409,7 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
             "Erlaubt: {allowed}"
         ),
         "session.msg.material_saved.title": "Erfolg",
-        "session.msg.material_saved.message": "Materialien gespeichert.",
+        "session.msg.material_saved.message": "Material gespeichert.",
         "session.msg.no_active_found": "Keine aktive Sitzung gefunden.",
         "session.msg.ended.title": "Sitzung beendet",
         "session.msg.ended.message": (
@@ -3119,11 +3417,12 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         ),
         "session.ship.unnamed": "diesem Schiff",
         "refinery.title": "RAFFINERIE",
-        "refinery.section.batches": "◆ VERFÜGBARE MATERIAL-BATCHES",
+        "refinery.section.batches": "◆ VERFÜGBARES MATERIAL",
         "refinery.section.create": "◆ RAFFINERIEAUFTRAG ANLEGEN",
         "refinery.section.active": "◆ AKTIVE AUFTRÄGE",
         "refinery.section.history": "◆ RAFFINERIE-HISTORIE",
         "refinery.table.batch": "Batch",
+        "refinery.table.location": "Standort",
         "refinery.table.material": "Material",
         "refinery.table.available_scu": "Verfügbar (SCU)",
         "refinery.table.original_scu": "Original (SCU)",
@@ -3142,6 +3441,7 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "refinery.label.cost": "Kosten (aUEC)",
         "refinery.label.paid_by": "Bezahlt von",
         "refinery.label.batch": "Material-Batch",
+        "refinery.label.material_source": "Material-Quelle",
         "refinery.label.input_scu": "Eingabe (SCU)",
         "refinery.label.input_cscu": "Eingabe (cSCU) — Terminal",
         "refinery.label.hours": "Stunden",
@@ -3159,9 +3459,12 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "location.label.system": "System",
         "location.label.station": "Weltraum-Station",
         "location.label.city": "Stadt / Landeplatz",
+        "location.label.place": "Standort (Station oder Stadt)",
         "location.placeholder.system": "— System wählen —",
         "location.placeholder.station": "— Station wählen —",
         "location.placeholder.city": "— Stadt wählen —",
+        "location.group.stations": "— Weltraum-Stationen —",
+        "location.group.cities": "— Städte / Landeplätze —",
         "error.location.not_selected": "Bitte eine Station oder Stadt aus der Liste wählen.",
         "refinery.placeholder.hours": "Stunden",
         "refinery.placeholder.minutes": "Minuten",
@@ -3205,6 +3508,9 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
             "{count} Raffinerie-Aufträge sind abholbereit!"
         ),
         "refinery.batch.combo": "#{batch_id} | {material} | {remaining} SCU",
+        "refinery.pool.combo": (
+            "{location} · {material} · {quantity} SCU"
+        ),
         "refinery.history.input_line": (
             "{quantity} SCU {material} (Batch #{batch_id})"
         ),
@@ -3221,6 +3527,9 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
             "({job_count} Aufträge)"
         ),
         "refinery.msg.no_batch": "Kein Material-Batch verfügbar.",
+        "refinery.msg.no_pool": (
+            "Kein Material am Schiff oder im Lager verfügbar."
+        ),
         "refinery.msg.no_station": "Bitte Raffinerie/Station angeben.",
         "refinery.msg.invalid_values": "Bitte gültige Werte eingeben.",
         "refinery.msg.negative_cost": "Kosten dürfen nicht negativ sein.",
@@ -3265,10 +3574,10 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "refinery.job_status.COMPLETED": "ABGESCHLOSSEN",
         "refinery.job_status.CANCELLED": "STORNIERT",
         "storage.title": "LAGER / STANDORTE",
-        "storage.section.list": "◆ BESTAND NACH ORT",
-        "storage.section.add": "◆ EINTRAG ERFASSEN",
-        "storage.section.history": "◆ HISTORIE",
-        "storage.section.totals": "◆ SUMMEN",
+        "storage.section.list": "◆ MATERIAL JE STANDORT",
+        "storage.section.add": "◆ MATERIAL EINLAGERN",
+        "storage.section.history": "◆ VERLAUF",
+        "storage.section.totals": "◆ GESAMTBESTAND PRO MATERIAL",
         "storage.table.location": "Standort",
         "storage.table.material": "Material",
         "storage.table.quantity": "Menge (SCU)",
@@ -3277,14 +3586,14 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "storage.table.activity": "Letzte Aktivität",
         "storage.table.reserve": "Reserve",
         "storage.table.notes": "Notiz",
-        "storage.label.location_type": "Standort-Typ",
+        "storage.label.location_type": "Wo liegt es?",
         "storage.label.location": "Standort",
         "storage.label.ship": "Schiff",
         "storage.label.material": "Material",
         "storage.label.quantity": "Menge (SCU)",
         "storage.label.reserve": "Reserve-Tag",
         "storage.label.notes": "Notiz",
-        "storage.label.sort": "Sortierung",
+        "storage.label.sort": "Liste sortieren nach",
         "storage.location_type.station": "Station / Stadt",
         "storage.location_type.ship": "Im Schiff",
         "storage.location.ship": "Schiff · {ship}",
@@ -3297,27 +3606,78 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "storage.status.IN_REFINERY": "In Raffinerie",
         "storage.status.READY_PICKUP": "Abholbereit",
         "storage.status.RESERVED": "Reserve",
-        "storage.sort.location": "Standort",
+        "storage.sort.location": "Standort (A–Z)",
         "storage.sort.material": "Material",
-        "storage.sort.age": "Alter (älteste zuerst)",
+        "storage.sort.age": "Zuletzt bewegt (älteste zuerst)",
         "storage.placeholder.reserve": "z.B. Reserve — keine Warnung",
         "storage.placeholder.notes": "Notiz (optional)",
         "storage.empty": "Noch kein Material an Standorten erfasst.",
         "storage.totals.line": "{material}: {quantity} SCU",
         "storage.totals.none": "Keine Bestandssummen.",
-        "storage.button.save": "Eintrag speichern",
+        "storage.button.save": "Einlagern",
         "storage.button.delete": "Eintrag löschen",
         "storage.button.delete_event": "Historie-Eintrag löschen",
-        "storage.button.reminded": "Erinnert",
+        "storage.button.revert_event": "Bewegung rückgängig",
+        "storage.event.reverted_note": "Rückgängig gemacht",
+        "storage.msg.revert_event_confirm.title": "Bewegung rückgängig",
+        "storage.msg.revert_event_confirm.message": (
+            "Diese Lagerbewegung rückgängig machen? "
+            "Der Bestand wird entsprechend zurückgebucht."
+        ),
+        "storage.msg.reverted": "Bewegung rückgängig gemacht.",
+        "storage.button.reminded": "Warnung gelesen",
         "storage.button.set_reserve": "Reserve setzen",
-        "storage.button.moved": "Verschoben / entnommen",
+        "storage.button.clear_reserve": "Reserve entfernen",
+        "storage.button.moved": "Als bewegt markieren",
+        "storage.button.transfer": "Material verschieben",
+        "storage.transfer.title": "Material verschieben",
+        "storage.transfer.hint": "Quelle, Menge und Ziel wählen. Die Menge wird von der Quell-Zeile abgezogen und am Zielort gutgeschrieben.",
+        "storage.transfer.pool_hint": (
+            "Quellen sind nach Standort und Materialtyp zusammengefasst. "
+            "Die Menge wird aus der Gesamtsumme entnommen (FIFO über die Einzelzeilen)."
+        ),
+        "storage.transfer.pool_option": (
+            "{location} · {material} · {quantity} SCU"
+        ),
+        "storage.transfer.label.source": "Quelle",
+        "storage.transfer.label.destination_type": "Ziel-Typ",
+        "storage.transfer.confirm": "Verschieben",
+        "storage.transfer.source_option": "{location} · {material} · {quantity} SCU",
+        "storage.transfer.msg.no_source": "Bitte einen Quell-Bestand wählen.",
+        "storage.msg.transferred": "Material erfolgreich verschoben.",
+        "storage.event.from_location": "Vom Standort-Lager",
+        "storage.event.inbound_transfer": "Eingehende Umlagerung",
+        "storage.event.withdrawn": "Aus Lager entnommen",
+        "storage.history.type.TRANSFER": "Verschiebung",
+        "storage.history.type.WITHDRAW": "Entnahme",
+        "error.storage.insufficient_at_location": "Nicht genug Material an Standorten ({available} SCU {material} verfügbar).",
+        "error.storage.insufficient_at_source": "Nicht genug Material an der Quelle ({available} SCU {material} verfügbar).",
+        "error.storage.transfer_same_location": "Quelle und Ziel sind identisch.",
+        "error.storage.transfer_invalid_source": "Dieser Bestand kann nicht als Quelle verwendet werden.",
+        "error.storage.transfer_material_mismatch": "Material passt nicht zur gewählten Quelle.",
+        "error.storage.transfer_failed": "Verschieben fehlgeschlagen — keine passende Quelle gefunden.",
+        "error.storage.insufficient_pool": (
+            "Nicht genug {material} an diesem Ort. "
+            "Verfügbar: {available} SCU, "
+            "angefordert: {requested} SCU."
+        ),
+        "error.storage.insufficient_ship_pool": (
+            "Nicht genug {material} am Schiff. "
+            "Verfügbar: {available} SCU, "
+            "angefordert: {requested} SCU."
+        ),
+        "error.storage.insufficient_stored_pool": (
+            "Nicht genug {material} im Lager. "
+            "Verfügbar: {available} SCU, "
+            "angefordert: {requested} SCU."
+        ),
         "storage.filter.warnings_only": "Nur Warnungen",
         "storage.idle.banner.title": (
             "{count} Bestand/Bestände seit über {days} Tagen ohne Bewegung"
         ),
         "storage.idle.banner.hint": (
-            "Eintrag in der Liste wählen und als erinnert, Reserve "
-            "oder verschoben markieren."
+            "Eintrag in der Liste wählen und Warnung bestätigen, "
+            "als Reserve markieren oder als bewegt markieren."
         ),
         "storage.idle.banner.collapse": "Ausblenden",
         "storage.idle.banner.expand": "Anzeigen",
@@ -3325,9 +3685,13 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "storage.activity.yesterday": "Gestern",
         "storage.activity.days_ago": "vor {days} Tagen",
         "storage.activity.warning_prefix": "⚠ ",
-        "storage.msg.reminded": "Erinnerung bestätigt.",
+        "storage.msg.reminded": "Warnung bestätigt.",
         "storage.msg.reserve_set": "Reserve-Tag gespeichert.",
-        "storage.msg.moved": "Aktivität aktualisiert.",
+        "storage.msg.reserve_cleared": "Reserve-Tag entfernt.",
+        "storage.msg.reserve_clear_confirm.title": "Reserve-Tag entfernen",
+        "storage.msg.reserve_clear_confirm.message": "Reserve-Tag von diesem Bestand entfernen? Idle-Warnungen können wieder erscheinen.",
+        "error.storage.reserve_not_set": "Dieser Bestand hat keinen Reserve-Tag.",
+        "storage.msg.moved": "Material aus dem Lager entnommen.",
         "storage.msg.reserve_prompt.title": "Reserve-Tag",
         "storage.msg.reserve_prompt.label": "Tag für diesen Bestand",
         "nav.badge.storage_idle": "◆ {count} INAKTIV",
@@ -3337,11 +3701,12 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "storage.history.type.DELETE": "Löschung",
         "storage.history.type.IDLE_REMINDED": "Idle-Erinnerung",
         "storage.history.type.TAG_SET": "Reserve-Tag",
+        "storage.history.type.TAG_CLEAR": "Reserve entfernt",
         "storage.history.type.ACTIVITY": "Aktivität",
         "storage.history.type": "Typ",
         "storage.history.delta": "Änderung",
         "storage.history.when": "Zeitpunkt",
-        "storage.msg.saved": "Lager-Eintrag gespeichert.",
+        "storage.msg.saved": "Material eingelagert.",
         "storage.msg.deleted": "Lager-Eintrag gelöscht.",
         "storage.msg.no_selection": "Bitte einen Eintrag auswählen.",
         "storage.msg.delete_confirm.title": "Eintrag löschen",
@@ -3597,7 +3962,14 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "dashboard.context.sale_items": "VERKAUFSBEREIT",
         "dashboard.context.open_payouts": "OFFENE PAYOUTS",
         "dashboard.context.open_total": "SUMME OFFEN",
-        "dashboard.context.revenue_trend": "UMSATZ-TREND",
+        "dashboard.context.revenue_trend": "UMSATZ PRO MONAT",
+        "dashboard.context.revenue_trend_hint": (
+            "Verkaufserlös je Monat (letzte 6 Monate). "
+            "Bei mehreren Monaten: Balkenlänge im Vergleich zum besten Monat."
+        ),
+        "dashboard.context.revenue_peak_month": "Bester Monat",
+        "dashboard.context.revenue_vs_peak": "{pct} % vom besten Monat",
+        "dashboard.context.revenue_trend_empty": "Noch keine Verkäufe erfasst.",
         "dashboard.context.recent_events": "LETZTE EREIGNISSE",
         "dashboard.context.refinery_station": "Raffinerie · {station}",
         "dashboard.context.refinery_job_detail": "Job #{job_id} · {status} · {scu} SCU",
@@ -3780,9 +4152,27 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "dashboard.preset.msg.delete_confirm": (
             "Preset „{name}“ wirklich löschen?"
         ),
-        "history.title": "VERKAUFSHISTORIE",
-        "history.section": "◆ ALLE VERKÄUFE",
+        "history.title": "HISTORIE",
+        "history.section.sessions": "◆ ABGESCHLOSSENE SITZUNGEN",
+        "history.section.sales": "◆ ALLE VERKÄUFE",
         "history.empty": "Noch keine Verkäufe erfasst.",
+        "history.sessions.empty": (
+            "Noch keine abgeschlossenen Sitzungen. "
+            "Missionskosten erscheinen hier nach Raffinerie/Verkauf."
+        ),
+        "history.session.no": "Nr.",
+        "history.session.ship": "Schiff",
+        "history.session.status": "Status",
+        "history.session.ended": "Beendet",
+        "history.session.mission_costs": "Missionskosten",
+        "history.session.total_costs": "Gesamtkosten",
+        "history.session.mission_line": (
+            "{amount} aUEC ({paid_by})"
+        ),
+        "history.session.no_missions": "Keine Missionskosten",
+        "history.session.costs_total": (
+            "Mission: {mission_total} aUEC · Gesamt: {session_total} aUEC"
+        ),
         "common.ok": "OK",
         "common.cancel": "Abbrechen",
         "common.back": "Zurück",
@@ -4163,8 +4553,32 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         ),
         "update.manager.install_confirm.title": "Update installieren",
         "update.manager.install_confirm.message": (
-            "Die App wird geschlossen und das Update im Hintergrund "
-            "installiert.\n\nFortfahren?"
+            "Das Update wird zuerst heruntergeladen.\n\n"
+            "Installationsordner:\n{install_dir}\n\n"
+            "Erkannt über: {source_label}\n\n"
+            "Fortfahren?"
+        ),
+        "update.manager.install_ready.title": "Bereit zur Installation",
+        "update.manager.install_ready.message": (
+            "Das Update wurde erfolgreich heruntergeladen.\n\n"
+            "Version: {version} (Build {build})\n"
+            "Installationsordner:\n{install_dir}\n\n"
+            "Erkannt über: {source_label}\n\n"
+            "Die App wird geschlossen und der Setup-Assistent "
+            "installiert das Update sichtbar. "
+            "Die aktualisierte Version startet danach automatisch."
+        ),
+        "update.manager.install_path.unknown": (
+            "Keine bestehende Installation gefunden. "
+            "Es wird der Standardpfad verwendet:\n{install_dir}"
+        ),
+        "update.install_path.source.explicit": "Manuelle Auswahl",
+        "update.install_path.source.registry": "Windows-Registry",
+        "update.install_path.source.manifest": "Installations-Manifest",
+        "update.install_path.source.running_exe": "Laufende Anwendung",
+        "update.install_path.source.default": "Standardpfad",
+        "update.download.install_path": (
+            "Installationsordner: {install_dir} ({source_label})"
         ),
         "update.manager.download.title": "Download",
         "update.manager.download.failed": (

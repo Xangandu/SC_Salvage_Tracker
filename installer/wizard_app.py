@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import argparse
+import shutil
 import sys
+import tempfile
 from pathlib import Path
 
 _ROOT = Path(__file__).resolve().parent.parent
@@ -46,8 +48,11 @@ from installer.install_engine import (
     has_existing_user_data,
     launch_application,
     prepare_user_data_for_install,
+    replace_install_tree,
+    resolve_installed_dir,
     resolve_payload_zip,
     user_data_dir,
+    _desktop_shortcut_paths,
 )
 
 _INSTALLER_DIR = Path(__file__).resolve().parent
@@ -332,19 +337,30 @@ class InstallerWizardDialog(QDialog):
     _PAGE_INSTALL = 5
     _PAGE_FINISHED = 6
 
-    def __init__(self, edition: str = "solo", *, demo_mode: bool = False):
+    def __init__(
+        self,
+        edition: str = "solo",
+        *,
+        demo_mode: bool = False,
+        update_mode: bool = False,
+        prefilled_install_dir: Path | None = None,
+    ):
         super().__init__()
         self._edition = edition
         self._demo_mode = demo_mode
+        self._update_mode = update_mode
         self._app_name = _edition_app_name(edition)
         self._page_index = 0
         self._install_target: Path | None = None
         self._has_existing_data = (
-            not demo_mode and has_existing_user_data()
+            not demo_mode and not update_mode and has_existing_user_data()
         )
         self._backup_path: Path | None = None
+        self._prefilled_install_dir = prefilled_install_dir
 
-        title_prefix = "Setup-Demo" if demo_mode else "Setup"
+        title_prefix = "Setup-Demo" if demo_mode else (
+            "Update" if update_mode else "Setup"
+        )
         window_title = f"{title_prefix} — {self._app_name}"
         self.setWindowTitle(window_title)
         self.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
@@ -417,7 +433,26 @@ class InstallerWizardDialog(QDialog):
         bar_layout.addWidget(self._cancel_btn)
 
         self._build_pages()
+        if self._update_mode:
+            self._configure_update_mode()
         self._sync_buttons()
+
+    def _configure_update_mode(self) -> None:
+        install_dir = self._prefilled_install_dir
+        if install_dir is None:
+            install_dir, _ = resolve_installed_dir(self._edition)
+        self._dir_edit.setText(str(install_dir))
+        self._dir_edit.setReadOnly(True)
+        self._browse_btn.setEnabled(False)
+        self._desktop_cb.setChecked(
+            any(path.exists() for path in _desktop_shortcut_paths(self._app_name))
+        )
+        self._launch_cb.setChecked(True)
+        self._data_keep_radio.setChecked(True)
+        self._data_fresh_radio.setEnabled(False)
+        self._page_index = self._PAGE_READY
+        self._update_summary()
+        self._stack.setCurrentIndex(self._PAGE_READY)
 
     def _build_pages(self):
         welcome = _WizardPage(
@@ -460,14 +495,15 @@ class InstallerWizardDialog(QDialog):
         dir_page.body.addWidget(dir_hint)
 
         dir_row = QHBoxLayout()
-        default_dir = Path.home() / "AppData" / "Local" / "Programs" / self._app_name
+        install_dir, _ = resolve_installed_dir(self._edition)
+        default_dir = install_dir
         self._dir_edit = QLineEdit(str(default_dir))
         self._dir_edit.setObjectName("installerDemoDirEdit")
-        browse = QPushButton("DURCHSUCHEN …")
-        browse.setObjectName("installerDemoBrowse")
-        browse.clicked.connect(self._browse_dir)
+        self._browse_btn = QPushButton("DURCHSUCHEN …")
+        self._browse_btn.setObjectName("installerDemoBrowse")
+        self._browse_btn.clicked.connect(self._browse_dir)
         dir_row.addWidget(self._dir_edit, 1)
-        dir_row.addWidget(browse)
+        dir_row.addWidget(self._browse_btn)
         dir_page.body.addLayout(dir_row)
 
         space = QLabel("Mindestens 120 MB freier Speicherplatz erforderlich.")
@@ -529,7 +565,11 @@ class InstallerWizardDialog(QDialog):
 
         ready = _WizardPage(
             "Bereit zur Installation",
-            "Prüfe die Einstellungen und starte die Installation.",
+            (
+                "Prüfe den Installationsordner und starte das Update."
+                if self._update_mode
+                else "Prüfe die Einstellungen und starte die Installation."
+            ),
         )
         self._summary = _SummaryBlock()
         ready.body.addWidget(self._summary)
@@ -625,6 +665,8 @@ class InstallerWizardDialog(QDialog):
             ("Version", f"{APP_VERSION} · Build {APP_BUILD}"),
             ("Optionen", ", ".join(tasks)),
         ]
+        if self._update_mode:
+            rows.insert(0, ("Modus", "Update (bestehende Installation)"))
         if self._has_existing_data:
             if self._data_mode() == DATA_MODE_FRESH:
                 rows.append(("Benutzerdaten", "Backup + Neu beginnen"))
@@ -672,6 +714,16 @@ class InstallerWizardDialog(QDialog):
             return
 
         if self._page_index == self._PAGE_FINISHED:
+            if (
+                not self._demo_mode
+                and self._launch_cb.isChecked()
+            ):
+                target = self._install_target or Path(
+                    self._dir_edit.text().strip()
+                )
+                exe_path = target / _EXE_NAME
+                if exe_path.exists():
+                    launch_application(exe_path)
             self.accept()
             return
 
@@ -747,12 +799,27 @@ class InstallerWizardDialog(QDialog):
                 if self._backup_path is not None:
                     self._file_label.setText(self._backup_path.name)
 
-            extract_payload(
-                payload,
-                target,
-                on_file=on_file,
-                on_progress=on_progress,
-            )
+            if self._update_mode:
+                staging = Path(tempfile.mkdtemp(prefix="sst_update_"))
+                try:
+                    extract_payload(
+                        payload,
+                        staging,
+                        on_file=on_file,
+                        on_progress=on_progress,
+                    )
+                    self._status.setText("Übernehme Dateien …")
+                    self._progress.setValue(90)
+                    replace_install_tree(staging, target)
+                finally:
+                    shutil.rmtree(staging, ignore_errors=True)
+            else:
+                extract_payload(
+                    payload,
+                    target,
+                    on_file=on_file,
+                    on_progress=on_progress,
+                )
             self._install_target = target
             exe_path = target / _EXE_NAME
 
@@ -770,11 +837,19 @@ class InstallerWizardDialog(QDialog):
             self._status.setText("Finalisiere Installation …")
             self._progress.setValue(98)
 
+            self._progress.setValue(100)
+            self._file_label.setText("")
+
+            if self._update_mode:
+                self._status.setText("Starte aktualisierte Anwendung …")
+                if exe_path.exists():
+                    launch_application(exe_path)
+                self.accept()
+                return
+
             if self._launch_cb.isChecked() and exe_path.exists():
                 launch_application(exe_path)
 
-            self._progress.setValue(100)
-            self._file_label.setText("")
             if self._backup_path is not None:
                 self._finish_label.setText(
                     "Die Installation wurde erfolgreich abgeschlossen.\n\n"
@@ -804,9 +879,12 @@ class InstallerWizardDialog(QDialog):
 
     def _sync_buttons(self):
         self._steps.set_current(self._step_index_for_page(self._page_index))
-        self._back_btn.setEnabled(
+        back_enabled = (
             self._PAGE_WELCOME < self._page_index < self._PAGE_FINISHED
         )
+        if self._update_mode and self._page_index == self._PAGE_READY:
+            back_enabled = False
+        self._back_btn.setEnabled(back_enabled)
 
         if self._page_index == self._PAGE_READY:
             self._next_btn.setText("INSTALLIEREN ▸")
@@ -977,6 +1055,7 @@ def run_wizard(
     demo_mode: bool,
     edition: str = "solo",
     argv: list[str] | None = None,
+    update_mode: bool = False,
 ) -> int:
     if argv is None:
         argv = sys.argv[1:]
@@ -994,7 +1073,28 @@ def run_wizard(
         default=edition,
         help="Edition (Standard: solo)",
     )
-    args = parser.parse_args(argv)
+    parser.add_argument(
+        "--update-mode",
+        action="store_true",
+        help="Update-Modus (bestehende Installation aktualisieren)",
+    )
+    parser.add_argument(
+        "--install-dir",
+        dest="install_dir",
+        default=None,
+        help="Zielordner für Installation/Update",
+    )
+    args, _unknown = parser.parse_known_args(argv)
+
+    update_mode = update_mode or args.update_mode
+    prefilled_install_dir: Path | None = None
+    if args.install_dir:
+        prefilled_install_dir = Path(args.install_dir)
+    elif update_mode:
+        prefilled_install_dir, _ = resolve_installed_dir(
+            args.edition,
+            argv=argv,
+        )
 
     app = QApplication(sys.argv)
     app.setFont(QFont("Segoe UI", _fs(10)))
@@ -1005,7 +1105,12 @@ def run_wizard(
         app_icon = QIcon(str(icon_path))
         app.setWindowIcon(app_icon)
 
-    dialog = InstallerWizardDialog(edition=args.edition, demo_mode=demo_mode)
+    dialog = InstallerWizardDialog(
+        edition=args.edition,
+        demo_mode=demo_mode,
+        update_mode=update_mode,
+        prefilled_install_dir=prefilled_install_dir,
+    )
     if icon_path is not None:
         dialog.setWindowIcon(app_icon)
     result = dialog.exec()

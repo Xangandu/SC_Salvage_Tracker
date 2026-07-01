@@ -116,6 +116,78 @@ class RefineryRepository:
             for row in self.cursor.fetchall()
         ]
 
+    def get_material_pools(self):
+        if (
+            hasattr(self.db, "stockpiles")
+            and self.db._table_exists("material_stockpiles")
+        ):
+            return self.db.stockpiles.list_material_pools(
+                raw_cm_only=True,
+            )
+        return []
+
+    def create_job_from_pool(
+        self,
+        refinery_name,
+        end_time,
+        *,
+        pool: dict,
+        input_quantity: float,
+        created_by=None,
+        notes=None,
+        refinery_method="",
+        cost=0.0,
+        cost_paid_by="",
+    ):
+        material_code = pool.get("material_code")
+        if material_code not in RAW_CM_MATERIAL_CODES:
+            raise ValueError(
+                tr(
+                    "error.refinery.pool_not_raw",
+                    material=material_label(material_code or "—"),
+                )
+            )
+
+        if input_quantity <= 0:
+            raise ValueError(
+                tr("error.refinery.input_must_be_positive")
+            )
+
+        available = self.db.stockpiles._pool_quantity(pool)
+        if input_quantity > available + 1e-9:
+            label = material_label(material_code)
+            raise ValueError(
+                tr(
+                    "error.refinery.insufficient_pool",
+                    material=label,
+                    available=f"{available:g}",
+                    requested=f"{input_quantity:g}",
+                )
+            )
+
+        ship_id = (
+            pool.get("ship_id")
+            if pool.get("pool_kind") == "SHIP"
+            else None
+        )
+        batch_lines = self.materials.allocate_batches_fifo(
+            material_code,
+            input_quantity,
+            ship_id=ship_id,
+        )
+
+        return self.create_job(
+            refinery_name,
+            end_time,
+            batch_lines,
+            created_by=created_by,
+            notes=notes,
+            refinery_method=refinery_method,
+            cost=cost,
+            cost_paid_by=cost_paid_by,
+            refinery_pool=pool,
+        )
+
     def create_job(
         self,
         refinery_name,
@@ -126,6 +198,7 @@ class RefineryRepository:
         refinery_method="",
         cost=0.0,
         cost_paid_by="",
+        refinery_pool: dict | None = None,
     ):
         if created_by is None:
             created_by = user_session.get_user_id()
@@ -314,6 +387,16 @@ class RefineryRepository:
                 "refinery_job_items"
             )
 
+            total_input = sum(
+                float(line["input_quantity"])
+                for line in validated_lines
+            )
+            pool_material = (
+                refinery_pool.get("material_code")
+                if refinery_pool
+                else None
+            )
+
             for line in validated_lines:
                 self.materials.reserve_batch_for_refinery(
                     line["batch_id"],
@@ -321,18 +404,41 @@ class RefineryRepository:
                     updated_by=created_by,
                 )
 
-                if (
-                    hasattr(self.db, "stockpiles")
-                    and self.db._table_exists("material_stockpiles")
-                ):
-                    self.db.stockpiles.reserve_ship_stockpile_for_refinery(
-                        material_code=line["input_material"],
-                        quantity_scu=line["input_quantity"],
-                        refinery_job_id=job_id,
-                        station_label=refinery_name,
-                        created_by=created_by,
-                    )
+            if (
+                hasattr(self.db, "stockpiles")
+                and self.db._table_exists("material_stockpiles")
+            ):
+                if refinery_pool and pool_material:
+                    if refinery_pool.get("pool_kind") == "SHIP":
+                        self.db.stockpiles.reserve_ship_stockpile_for_refinery(
+                            material_code=pool_material,
+                            quantity_scu=total_input,
+                            refinery_job_id=job_id,
+                            station_label=refinery_name,
+                            created_by=created_by,
+                            ship_id=refinery_pool.get("ship_id"),
+                        )
+                    else:
+                        self.db.stockpiles.reserve_stored_stockpile_for_refinery(
+                            material_code=pool_material,
+                            quantity_scu=total_input,
+                            refinery_job_id=job_id,
+                            station_label=refinery_name,
+                            location_kind=refinery_pool.get("location_kind"),
+                            location_key=refinery_pool.get("location_key"),
+                            created_by=created_by,
+                        )
+                else:
+                    for line in validated_lines:
+                        self.db.stockpiles.reserve_ship_stockpile_for_refinery(
+                            material_code=line["input_material"],
+                            quantity_scu=line["input_quantity"],
+                            refinery_job_id=job_id,
+                            station_label=refinery_name,
+                            created_by=created_by,
+                        )
 
+            for line in validated_lines:
                 if (
                     "input_material" in item_columns
                     and "output_material" in item_columns
