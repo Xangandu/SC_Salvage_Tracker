@@ -870,6 +870,26 @@ class MaterialRepository:
         exclude_refinery_source: bool = False,
         global_pool_only: bool = False,
     ):
+        if (
+            self.db._table_exists("material_stockpiles")
+            and not global_pool_only
+        ):
+            inventory: list[dict] = []
+            for material_code in REFINED_SELLABLE_CODES:
+                quantity = self.db.stockpiles.sellable_quantity(
+                    material_code
+                )
+                legacy = self.global_pool_quantity(material_code)
+                total = quantity + legacy
+                if total <= 0:
+                    continue
+                inventory.append({
+                    "material_code": material_code,
+                    "material_name": material_label(material_code),
+                    "quantity": total,
+                })
+            return inventory
+
         placeholders = ",".join(
             "?" * len(REFINED_SELLABLE_CODES)
         )
@@ -1202,11 +1222,34 @@ class MaterialRepository:
 
                 remaining = quantity
 
+                if self.db._table_exists("material_stockpiles"):
+                    pool_records, remaining = (
+                        self.db.stockpiles.withdraw_material_for_sale(
+                            material_code,
+                            remaining,
+                            sale_location=location,
+                            created_by=created_by,
+                        )
+                    )
+                    for pool_item in pool_records:
+                        take = pool_item["quantity"]
+                        sale_item_records.append({
+                            "storage_item_id": pool_item[
+                                "storage_item_id"
+                            ],
+                            "quantity": take,
+                            "unit_price": unit_price,
+                            "total_price": take * unit_price,
+                        })
+
                 for (
                     storage_id,
                     available,
                 ) in self._storage_rows_for_material(
-                    material_code
+                    material_code,
+                    global_pool_only=bool(
+                        self.db._table_exists("material_stockpiles")
+                    ),
                 ):
                     if remaining <= 0:
                         break

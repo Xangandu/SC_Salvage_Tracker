@@ -1,4 +1,26 @@
 {
+  "0.16.5": {
+    "de": {
+      "title": "SC Salvage Tracker 0.16.5 Beta — Physische SCU",
+      "summary": "Verkäufe entnehmen Material direkt aus dem Lager. Ein SCU existiert nur an einem Ort — nicht gleichzeitig verkauft und im Lager.",
+      "highlights": [
+        "Verkauf reduziert Lager-Pools (Schiff/Station) per FIFO",
+        "Verkäufe und Lager zeigen dieselbe verkaufbare Menge",
+        "Verkauf-Storno stellt Bestand am Lagerort wieder her",
+        "Geister-Bestände von früher: einmalig unter Lager bereinigen"
+      ]
+    },
+    "en": {
+      "title": "SC Salvage Tracker 0.16.5 Beta — Physical SCU",
+      "summary": "Sales withdraw material directly from storage. One SCU exists in one place only — not sold and still in the warehouse.",
+      "highlights": [
+        "Sales reduce storage pools (ship/station) using FIFO",
+        "Sales and storage show the same sellable quantity",
+        "Voiding a sale restores stock at the storage location",
+        "Legacy ghost stock: clean up once under Storage"
+      ]
+    }
+  },
   "0.16.4": {
     "de": {
       "title": "SC Salvage Tracker 0.16.4 Beta — Logistik-Pooling",

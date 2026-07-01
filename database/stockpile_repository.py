@@ -8,7 +8,7 @@ from datetime import datetime
 import auth.session as user_session
 
 from config.i18n import tr
-from config.materials import material_label, ship_sort_key
+from config.materials import REFINED_SELLABLE_CODES, material_label, ship_sort_key
 from config.storage_idle import (
     DEFAULT_RESERVE_TAG,
     IDLE_WARNING_DAYS,
@@ -430,6 +430,271 @@ class StockpileRepository:
             payload={
                 "reason": "transfer_out",
                 **(payload or {}),
+            },
+        )
+
+    def _deduct_linked_storage_item(
+        self,
+        stockpile_id: int,
+        quantity_scu: float,
+        *,
+        updated_by=None,
+    ) -> None:
+        if "storage_item_id" not in self.db._table_columns(
+            "material_stockpiles"
+        ):
+            return
+
+        self.cursor.execute("""
+        SELECT storage_item_id
+        FROM material_stockpiles
+        WHERE id = ?
+        AND is_deleted = 0
+        """, (stockpile_id,))
+        row = self.cursor.fetchone()
+        storage_item_id = row[0] if row else None
+        if storage_item_id:
+            self.materials._deduct_storage_row(
+                storage_item_id,
+                quantity_scu,
+                updated_by=updated_by,
+            )
+
+    def _ensure_storage_quantity_for_sale(
+        self,
+        storage_item_id: int,
+        quantity_scu: float,
+        *,
+        updated_by=None,
+    ) -> None:
+        """Legacy-Bestand an Lagerzeile anpassen (nur beim Verkauf)."""
+        self.cursor.execute("""
+        SELECT quantity
+        FROM storage_items
+        WHERE id = ?
+        AND is_deleted = 0
+        """, (storage_item_id,))
+
+        row = self.cursor.fetchone()
+        if not row:
+            raise ValueError(tr("error.material.storage_changed"))
+
+        available = float(row[0])
+        if available + 1e-9 < quantity_scu:
+            self.materials.increase_stockpile_storage_item(
+                storage_item_id,
+                quantity_scu - available,
+                updated_by=updated_by,
+            )
+
+    def _sellable_stockpile_filter_sql(self) -> str:
+        return """
+        AND (
+            (
+                material_stockpiles.status = 'STORED'
+                AND material_stockpiles.location_kind IN (
+                    'STATION', 'CITY'
+                )
+            )
+            OR (
+                material_stockpiles.status = 'IN_SHIP'
+                AND material_stockpiles.location_kind = 'SHIP'
+            )
+        )
+        """
+
+    def sellable_quantity(self, material_code: str) -> float:
+        """Verkaufbare SCU aus physischen Lager-Pools (Schiff + Station)."""
+        if (
+            not self._table_exists()
+            or material_code not in REFINED_SELLABLE_CODES
+        ):
+            return 0.0
+
+        sellable_filter = self._sellable_stockpile_filter_sql()
+        self.cursor.execute(f"""
+        SELECT COALESCE(SUM(material_stockpiles.quantity_scu), 0)
+        FROM material_stockpiles
+        INNER JOIN material_types
+            ON material_types.id =
+                material_stockpiles.material_type_id
+        WHERE material_stockpiles.is_deleted = 0
+        AND material_stockpiles.quantity_scu > 0
+        AND material_types.material_code = ?
+        {sellable_filter}
+        """, (material_code,))
+
+        row = self.cursor.fetchone()
+        return float(row[0] if row else 0)
+
+    def withdraw_material_for_sale(
+        self,
+        material_code: str,
+        quantity_scu: float,
+        *,
+        sale_location: str,
+        created_by=None,
+    ) -> tuple[list[dict], float]:
+        """
+        Entnimmt verkaufbare SCU FIFO aus material_stockpiles.
+        Gibt (sale_item-Zeilen, Restmenge) zurück.
+        """
+        if not self._table_exists():
+            return [], float(quantity_scu)
+
+        if material_code not in REFINED_SELLABLE_CODES:
+            return [], float(quantity_scu)
+
+        remaining = float(quantity_scu)
+        if remaining <= 0:
+            return [], 0.0
+
+        user_id = created_by or self._current_user_id()
+        sale_item_records: list[dict] = []
+        sellable_filter = self._sellable_stockpile_filter_sql()
+
+        while remaining > 1e-9:
+            self.cursor.execute(f"""
+            SELECT
+                material_stockpiles.id,
+                material_stockpiles.quantity_scu,
+                material_stockpiles.storage_item_id,
+                material_stockpiles.location_label
+            FROM material_stockpiles
+            INNER JOIN material_types
+                ON material_types.id =
+                    material_stockpiles.material_type_id
+            WHERE material_stockpiles.is_deleted = 0
+            AND material_stockpiles.quantity_scu > 0
+            AND material_types.material_code = ?
+            {sellable_filter}
+            ORDER BY material_stockpiles.last_activity_at ASC
+            LIMIT 1
+            """, (material_code,))
+
+            row = self.cursor.fetchone()
+            if not row:
+                break
+
+            stockpile_id = int(row[0])
+            take = min(remaining, float(row[1]))
+            storage_item_id = row[2]
+
+            if not storage_item_id:
+                material_type_id = self.materials.get_material_type_id(
+                    material_code
+                )
+                storage_item_id = (
+                    self.materials.create_stockpile_storage_item(
+                        material_type_id,
+                        take,
+                        source_type="STOCKPILE",
+                        source_id=stockpile_id,
+                        created_by=user_id,
+                    )
+                )
+                self.cursor.execute("""
+                UPDATE material_stockpiles
+                SET storage_item_id = ?
+                WHERE id = ?
+                AND is_deleted = 0
+                """, (storage_item_id, stockpile_id))
+            else:
+                self._ensure_storage_quantity_for_sale(
+                    int(storage_item_id),
+                    take,
+                    updated_by=user_id,
+                )
+
+            self._reduce_stockpile_quantity(
+                stockpile_id,
+                take,
+                user_id,
+                to_label=sale_location,
+                payload={
+                    "reason": "sale",
+                    "material_code": material_code,
+                    "sale_location": sale_location,
+                },
+            )
+            self._deduct_linked_storage_item(
+                stockpile_id,
+                take,
+                updated_by=user_id,
+            )
+
+            sale_item_records.append({
+                "storage_item_id": int(storage_item_id),
+                "quantity": take,
+            })
+            remaining -= take
+
+        return sale_item_records, remaining
+
+    def restore_stockpile_for_storage_item(
+        self,
+        storage_item_id: int,
+        quantity_scu: float,
+        *,
+        updated_by=None,
+    ) -> None:
+        """Stellt physischen Lagerbestand nach Verkaufs-Storno wieder her."""
+        if (
+            not self._table_exists()
+            or quantity_scu <= 0
+            or "storage_item_id" not in self.db._table_columns(
+                "material_stockpiles"
+            )
+        ):
+            return
+
+        self.cursor.execute("""
+        SELECT
+            material_stockpiles.id,
+            material_stockpiles.quantity_scu,
+            material_stockpiles.location_label,
+            material_types.material_code
+        FROM material_stockpiles
+        INNER JOIN material_types
+            ON material_types.id =
+                material_stockpiles.material_type_id
+        WHERE material_stockpiles.storage_item_id = ?
+        AND material_stockpiles.is_deleted = 0
+        ORDER BY material_stockpiles.id ASC
+        LIMIT 1
+        """, (storage_item_id,))
+
+        row = self.cursor.fetchone()
+        if not row:
+            return
+
+        stockpile_id = int(row[0])
+        new_qty = float(row[1]) + quantity_scu
+        location_label = row[2] or "—"
+        material_code = row[3]
+        user_id = updated_by or self._current_user_id()
+        now = self._now()
+
+        self.cursor.execute("""
+        UPDATE material_stockpiles
+        SET
+            quantity_scu = ?,
+            last_activity_at = ?,
+            updated_at = datetime('now', 'localtime'),
+            updated_by = ?
+        WHERE id = ?
+        AND is_deleted = 0
+        """, (new_qty, now, user_id, stockpile_id))
+
+        self._add_event(
+            stockpile_id=stockpile_id,
+            event_type="DEPOSIT",
+            quantity_delta=quantity_scu,
+            from_label=location_label,
+            to_label=location_label,
+            payload={
+                "reason": "sale_void",
+                "material_code": material_code,
             },
         )
 

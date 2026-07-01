@@ -1,6 +1,19 @@
 SC SALVAGE TRACKER – PATCHNOTES
 ================================
 
+VERSION 0.16.5 Beta | Build 2026.16 | Codename: LOGISTICS POOLING
+--------------------------------------------------------------------
+
+FIX — PHYSISCHE SCU (EIN SCU = EIN ORT)
+• Verkauf entnimmt Material direkt aus dem Lager (Schiff/Station, FIFO)
+• Lager-Bestand und Verkaufs-Anzeige bleiben synchron — kein „verkauft und trotzdem im Lager“
+• Verkauf-Storno stellt SCU am Lagerort wieder her
+• Verfügbares Material unter Verkäufe = physische Pools + Legacy-Restbestand
+
+HINWEIS
+• Alte Geister-Bestände (vor 0.16.5): einmalig unter Lager → „Als bewegt markieren“
+
+
 VERSION 0.16.4 Beta | Build 2026.15 | Codename: LOGISTICS POOLING
 --------------------------------------------------------------------
 

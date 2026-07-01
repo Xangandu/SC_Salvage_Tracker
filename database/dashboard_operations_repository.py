@@ -82,6 +82,14 @@ class DashboardOperationsRepository:
                 )
 
         def sellable_total(code: str) -> float:
+            if self.db._table_exists("material_stockpiles"):
+                from config.materials import REFINED_SELLABLE_CODES
+
+                if code in REFINED_SELLABLE_CODES:
+                    return (
+                        self.db.stockpiles.sellable_quantity(code)
+                        + self.db.materials.global_pool_quantity(code)
+                    )
             legacy = float(self.db.get_storage_balance(code) or 0)
             stock = stockpile_map.get(code, 0.0)
             return legacy + stock

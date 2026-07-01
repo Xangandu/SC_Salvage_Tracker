@@ -4,6 +4,7 @@ Zentrale Versionsinformation — einzige Quelle für Programm und Splash.
 Alle UI-Anzeigen (Splash, Navigation, Changelog) nutzen die format_*-Helfer
 aus diesem Modul, damit Version, Build und Codename immer synchron sind.
 
+Beta 0.16.5: Physische SCU beim Verkauf (Lager ↔ Verkäufe synchron) — siehe Changelogs/PATCHNOTES.txt.
 Beta 0.16.4: Logistik-Pooling + sichtbares In-App-Update — siehe Changelogs/PATCHNOTES.txt.
 Beta 0.16.3: In-App-Update ohne Inno (PySide-only, robuster Installer) — siehe Changelogs/PATCHNOTES.txt.
 Beta 0.16.2: Update-Test-Release (Verifikation In-App-Update) — siehe Changelogs/PATCHNOTES.txt.
@@ -53,8 +54,8 @@ EDITION_TITLES = {
     "orga": "ORGA Version",
 }
 
-APP_VERSION = "0.16.4 Beta"
-APP_BUILD = "2026.15"
+APP_VERSION = "0.16.5 Beta"
+APP_BUILD = "2026.16"
 APP_CODENAME = "LOGISTICS POOLING"
 
 DEVELOPER_NAME = "Christian"

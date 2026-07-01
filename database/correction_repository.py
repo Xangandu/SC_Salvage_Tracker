@@ -739,6 +739,12 @@ class CorrectionRepository:
                     float(quantity),
                     updated_by=updated_by,
                 )
+                if hasattr(self.db, "stockpiles"):
+                    self.db.stockpiles.restore_stockpile_for_storage_item(
+                        storage_item_id,
+                        float(quantity),
+                        updated_by=updated_by,
+                    )
 
             self._mark_deleted("sales", sale_id)
 
