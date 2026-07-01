@@ -63,10 +63,8 @@ class MaterialRepository:
             material_code
         )
 
-        use_stockpile = (
-            hasattr(self.db, "stockpiles")
-            and self.db._table_exists("material_stockpiles")
-        )
+        if not self.db._table_exists("material_stockpiles"):
+            raise ValueError(tr("error.storage.not_available"))
 
         try:
             self.connection.execute("BEGIN IMMEDIATE")
@@ -166,28 +164,19 @@ class MaterialRepository:
 
             storage_id = None
 
-            if use_stockpile:
-                ship = self.db.get_session_ship(session_id)
-                if not ship:
-                    raise ValueError(tr("error.session.ship_not_found"))
+            ship = self.db.get_session_ship(session_id)
+            if not ship:
+                raise ValueError(tr("error.session.ship_not_found"))
 
-                storage_id = self.db.stockpiles.deposit_session_capture(
-                    material_code=material_code,
-                    quantity_scu=quantity,
-                    session_id=session_id,
-                    batch_id=batch_id,
-                    ship_id=ship["ship_id"],
-                    ship_name=ship["ship_name"],
-                    created_by=created_by,
-                )
-            else:
-                storage_id = self.add_to_storage(
-                    material_type_id,
-                    quantity,
-                    source_type="SESSION",
-                    source_id=batch_id,
-                    created_by=created_by,
-                )
+            storage_id = self.db.stockpiles.deposit_session_capture(
+                material_code=material_code,
+                quantity_scu=quantity,
+                session_id=session_id,
+                batch_id=batch_id,
+                ship_id=ship["ship_id"],
+                ship_name=ship["ship_name"],
+                created_by=created_by,
+            )
 
             self.connection.commit()
         except Exception:
@@ -718,36 +707,36 @@ class MaterialRepository:
                 storage_id,
             ))
 
-    def add_to_storage(
+    def _deduct_storage_row(
         self,
-        material_type_id,
+        storage_item_id,
         quantity,
-        source_type,
-        source_id,
-        created_by=None,
-        notes=None,
+        updated_by=None,
     ):
         self.cursor.execute("""
-        INSERT INTO storage_items (
-            material_type_id,
-            quantity,
-            source_type,
-            source_id,
-            notes,
-            created_at,
-            created_by
-        )
-        VALUES (?, ?, ?, ?, ?, datetime('now', 'localtime'), ?)
-        """, (
-            material_type_id,
-            quantity,
-            source_type,
-            source_id,
-            notes,
-            created_by,
-        ))
+        SELECT quantity
+        FROM storage_items
+        WHERE id = ?
+        AND is_deleted = 0
+        """, (storage_item_id,))
 
-        return self.cursor.lastrowid
+        row = self.cursor.fetchone()
+
+        if not row or row[0] < quantity:
+            raise ValueError(tr("error.material.storage_changed"))
+
+        self.cursor.execute("""
+        UPDATE storage_items
+        SET
+            quantity = quantity - ?,
+            updated_at = datetime('now', 'localtime'),
+            updated_by = ?
+        WHERE id = ?
+        """, (
+            quantity,
+            updated_by,
+            storage_item_id,
+        ))
 
     def get_storage_by_source(
         self,
@@ -864,230 +853,24 @@ class MaterialRepository:
 
         return self.cursor.fetchall()
 
-    def get_available_inventory(
-        self,
-        *,
-        exclude_refinery_source: bool = False,
-        global_pool_only: bool = False,
-    ):
-        if (
-            self.db._table_exists("material_stockpiles")
-            and not global_pool_only
-        ):
-            inventory: list[dict] = []
-            for material_code in REFINED_SELLABLE_CODES:
-                quantity = self.db.stockpiles.sellable_quantity(
-                    material_code
-                )
-                legacy = self.global_pool_quantity(material_code)
-                total = quantity + legacy
-                if total <= 0:
-                    continue
-                inventory.append({
-                    "material_code": material_code,
-                    "material_name": material_label(material_code),
-                    "quantity": total,
-                })
-            return inventory
+    def get_available_inventory(self):
+        """Verkaufbares Inventar — ausschließlich physische Stockpiles."""
+        if not self.db._table_exists("material_stockpiles"):
+            return []
 
-        placeholders = ",".join(
-            "?" * len(REFINED_SELLABLE_CODES)
-        )
-        refinery_filter = ""
-        if exclude_refinery_source:
-            refinery_filter = """
-            AND (
-                storage_items.source_type IS NULL
-                OR storage_items.source_type != 'REFINERY'
+        inventory: list[dict] = []
+        for material_code in REFINED_SELLABLE_CODES:
+            quantity = self.db.stockpiles.sellable_quantity(
+                material_code
             )
-            """
-        global_filter = ""
-        if global_pool_only:
-            if self.db._table_exists("material_stockpiles"):
-                global_filter = """
-                AND storage_items.id NOT IN (
-                    SELECT material_stockpiles.storage_item_id
-                    FROM material_stockpiles
-                    WHERE material_stockpiles.storage_item_id IS NOT NULL
-                    AND material_stockpiles.is_deleted = 0
-                )
-                AND NOT (
-                    storage_items.source_type = 'SESSION'
-                    AND EXISTS (
-                        SELECT 1
-                        FROM material_batches mb
-                        INNER JOIN material_stockpiles sp
-                            ON sp.session_id = mb.session_id
-                        INNER JOIN material_types mt_sp
-                            ON mt_sp.id = sp.material_type_id
-                        WHERE mb.id = storage_items.source_id
-                        AND mt_sp.id = mb.material_type_id
-                        AND sp.is_deleted = 0
-                        AND sp.location_kind = 'SHIP'
-                        AND sp.status = 'IN_SHIP'
-                    )
-                )
-                """
-            else:
-                global_filter = """
-                AND (
-                    storage_items.source_type IS NULL
-                    OR storage_items.source_type != 'STOCKPILE'
-                )
-                """
-
-        self.cursor.execute(f"""
-        SELECT
-            material_types.material_code,
-            material_types.material_name,
-            COALESCE(SUM(storage_items.quantity), 0)
-        FROM storage_items
-        INNER JOIN material_types
-            ON material_types.id =
-                storage_items.material_type_id
-        WHERE storage_items.is_deleted = 0
-        AND storage_items.quantity > 0
-        AND material_types.material_code IN ({placeholders})
-        {refinery_filter}
-        {global_filter}
-        GROUP BY
-            material_types.material_code,
-            material_types.material_name
-        HAVING SUM(storage_items.quantity) > 0
-        ORDER BY material_types.material_code
-        """, list(REFINED_SELLABLE_CODES))
-
-        return [
-            {
-                "material_code": row[0],
-                "material_name": row[1],
-                "quantity": row[2],
-            }
-            for row in self.cursor.fetchall()
-        ]
-
-    def _storage_rows_for_material(
-        self,
-        material_code,
-        *,
-        global_pool_only: bool = False,
-    ):
-        global_filter = ""
-        if global_pool_only:
-            if self.db._table_exists("material_stockpiles"):
-                global_filter = """
-                AND storage_items.id NOT IN (
-                    SELECT material_stockpiles.storage_item_id
-                    FROM material_stockpiles
-                    WHERE material_stockpiles.storage_item_id IS NOT NULL
-                    AND material_stockpiles.is_deleted = 0
-                )
-                AND NOT (
-                    storage_items.source_type = 'SESSION'
-                    AND EXISTS (
-                        SELECT 1
-                        FROM material_batches mb
-                        INNER JOIN material_stockpiles sp
-                            ON sp.session_id = mb.session_id
-                        INNER JOIN material_types mt_sp
-                            ON mt_sp.id = sp.material_type_id
-                        WHERE mb.id = storage_items.source_id
-                        AND mt_sp.id = mb.material_type_id
-                        AND sp.is_deleted = 0
-                        AND sp.location_kind = 'SHIP'
-                        AND sp.status = 'IN_SHIP'
-                    )
-                )
-                """
-            else:
-                global_filter = """
-                AND (
-                    storage_items.source_type IS NULL
-                    OR storage_items.source_type != 'STOCKPILE'
-                )
-                """
-
-        self.cursor.execute(f"""
-        SELECT
-            storage_items.id,
-            storage_items.quantity
-        FROM storage_items
-        INNER JOIN material_types
-            ON material_types.id =
-                storage_items.material_type_id
-        WHERE material_types.material_code = ?
-        AND storage_items.is_deleted = 0
-        AND storage_items.quantity > 0
-        {global_filter}
-        ORDER BY storage_items.id ASC
-        """, (material_code,))
-
-        return self.cursor.fetchall()
-
-    def global_pool_quantity(
-        self,
-        material_code: str,
-    ) -> float:
-        return sum(
-            qty
-            for _, qty in self._storage_rows_for_material(
-                material_code,
-                global_pool_only=True,
-            )
-        )
-
-    def transfer_global_to_stockpile(
-        self,
-        material_code: str,
-        quantity_scu: float,
-        created_by=None,
-    ) -> tuple[str, int | None]:
-        if quantity_scu <= 0:
-            return ("SESSION", None)
-
-        remaining = float(quantity_scu)
-        rows = self._storage_rows_for_material(
-            material_code,
-            global_pool_only=True,
-        )
-        available = sum(qty for _, qty in rows)
-
-        if available + 1e-9 < remaining:
-            raise ValueError(
-                tr(
-                    "error.storage.insufficient_global",
-                    available=f"{available:g}",
-                    material=material_label(material_code),
-                )
-            )
-
-        primary_source_type = "SESSION"
-        primary_source_id = None
-
-        for storage_id, available_qty in rows:
-            if remaining <= 0:
-                break
-
-            if primary_source_id is None:
-                self.cursor.execute("""
-                SELECT source_type, source_id
-                FROM storage_items
-                WHERE id = ?
-                """, (storage_id,))
-                source_row = self.cursor.fetchone()
-                if source_row:
-                    primary_source_type = source_row[0] or "SESSION"
-                    primary_source_id = source_row[1]
-
-            take = min(remaining, float(available_qty))
-            self._deduct_storage_row(
-                storage_id,
-                take,
-                created_by,
-            )
-            remaining -= take
-
-        return (primary_source_type, primary_source_id)
+            if quantity <= 0:
+                continue
+            inventory.append({
+                "material_code": material_code,
+                "material_name": material_label(material_code),
+                "quantity": quantity,
+            })
+        return inventory
 
     def create_stockpile_storage_item(
         self,
@@ -1222,59 +1005,27 @@ class MaterialRepository:
 
                 remaining = quantity
 
-                if self.db._table_exists("material_stockpiles"):
-                    pool_records, remaining = (
-                        self.db.stockpiles.withdraw_material_for_sale(
-                            material_code,
-                            remaining,
-                            sale_location=location,
-                            created_by=created_by,
-                        )
-                    )
-                    for pool_item in pool_records:
-                        take = pool_item["quantity"]
-                        sale_item_records.append({
-                            "storage_item_id": pool_item[
-                                "storage_item_id"
-                            ],
-                            "quantity": take,
-                            "unit_price": unit_price,
-                            "total_price": take * unit_price,
-                        })
+                if not self.db._table_exists("material_stockpiles"):
+                    raise ValueError(tr("error.storage.not_available"))
 
-                for (
-                    storage_id,
-                    available,
-                ) in self._storage_rows_for_material(
-                    material_code,
-                    global_pool_only=bool(
-                        self.db._table_exists("material_stockpiles")
-                    ),
-                ):
-                    if remaining <= 0:
-                        break
-
-                    take = min(
+                pool_records, remaining = (
+                    self.db.stockpiles.withdraw_material_for_sale(
+                        material_code,
                         remaining,
-                        available,
+                        sale_location=location,
+                        created_by=created_by,
                     )
-
-                    self._deduct_storage_row(
-                        storage_id,
-                        take,
-                        created_by,
-                    )
-
+                )
+                for pool_item in pool_records:
+                    take = pool_item["quantity"]
                     sale_item_records.append({
-                        "storage_item_id": storage_id,
+                        "storage_item_id": pool_item[
+                            "storage_item_id"
+                        ],
                         "quantity": take,
                         "unit_price": unit_price,
-                        "total_price": (
-                            take * unit_price
-                        ),
+                        "total_price": take * unit_price,
                     })
-
-                    remaining -= take
 
                 if remaining > 0:
                     raise ValueError(
@@ -1336,47 +1087,6 @@ class MaterialRepository:
         except Exception:
             self.connection.rollback()
             raise
-
-    def complete_refinery_job(
-        self,
-        job_id,
-        output_quantity,
-        output_material_code,
-        updated_by=None,
-    ):
-        self.cursor.execute("""
-        UPDATE refinery_jobs
-        SET
-            status = 'READY',
-            end_time = datetime('now', 'localtime'),
-            updated_at = datetime('now', 'localtime'),
-            updated_by = ?
-        WHERE id = ?
-        """, (updated_by, job_id))
-
-        self.cursor.execute("""
-        UPDATE refinery_job_items
-        SET
-            output_quantity = ?,
-            updated_at = datetime('now', 'localtime')
-        WHERE job_id = ?
-        """, (output_quantity, job_id))
-
-        material_type_id = self.get_material_type_id(
-            output_material_code
-        )
-
-        storage_id = self.add_to_storage(
-            material_type_id,
-            output_quantity,
-            source_type="REFINERY",
-            source_id=job_id,
-            created_by=updated_by,
-        )
-
-        self.connection.commit()
-
-        return storage_id
 
     def create_payout(
         self,

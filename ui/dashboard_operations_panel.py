@@ -496,7 +496,11 @@ class DashboardOperationsPanel(QWidget):
 
     def _refresh_session_panel(self, session: dict):
         active = bool(session.get("active"))
-        name = session.get("name") or tr("dashboard.session.none")
+        name = (
+            (session.get("name") or tr("dashboard.session.none"))
+            if active
+            else tr("dashboard.session.none")
+        )
         self.session_label.setText(name)
         self.session_label.setObjectName(
             "displayValue" if active else "mutedLabel"
@@ -504,10 +508,14 @@ class DashboardOperationsPanel(QWidget):
         self.session_label.style().unpolish(self.session_label)
         self.session_label.style().polish(self.session_label)
 
-        status_code = session.get("status") or "IDLE"
-        status_text = session.get("status_label") or status_label(
-            status_code
-        )
+        if active:
+            status_code = session.get("status") or "IDLE"
+            status_text = session.get("status_label") or status_label(
+                status_code
+            )
+        else:
+            status_code = "IDLE"
+            status_text = status_label("IDLE")
         self._update_status_display(status_code, status_text)
 
         crew_count = session.get("crew_count") or 0

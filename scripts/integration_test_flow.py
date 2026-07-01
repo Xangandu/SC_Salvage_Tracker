@@ -74,7 +74,10 @@ def main():
     )
     assert_close(
         "storage CM_RUBBLE (warehouse)",
-        db.materials.get_storage_balance("CM_RUBBLE"),
+        sum(
+            float(r["quantity_scu"])
+            for r in db.list_material_stockpiles(material_code="CM_RUBBLE")
+        ),
         80,
     )
 
@@ -98,8 +101,9 @@ def main():
         30,
     )
 
-    inv_after_ref = db.materials.get_storage_balance(
-        "CM_RUBBLE"
+    inv_after_ref = sum(
+        float(r["quantity_scu"])
+        for r in db.list_material_stockpiles(material_code="CM_RUBBLE")
     )
     assert_close(
         "storage CM_RUBBLE after reserve",

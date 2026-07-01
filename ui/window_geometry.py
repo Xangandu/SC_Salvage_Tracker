@@ -126,12 +126,41 @@ def _clamp_to_screen(
     return QRect(left, top, width, height)
 
 
+def _clear_maximized_state(window) -> None:
+    title_bar = getattr(window, "_mobiglas_title_bar", None)
+    if title_bar is not None:
+        title_bar._custom_maximized = False
+
+    if window.isMaximized():
+        window.showNormal()
+
+
+def _apply_normal_geometry(window, rect: QRect) -> None:
+    _clear_maximized_state(window)
+    if window.geometry() != rect:
+        window.setGeometry(rect)
+
+
+def _apply_maximized_geometry(window, screen) -> None:
+    title_bar = getattr(window, "_mobiglas_title_bar", None)
+    target = screen.availableGeometry() if screen is not None else None
+
+    if target is not None and window.geometry() != target:
+        window.setGeometry(target)
+
+    if title_bar is not None:
+        title_bar._custom_maximized = True
+        title_bar._sync_maximize_button()
+
+
 def fit_window_to_screen(window) -> None:
     """Fenster an den verfügbaren Bildschirmbereich anpassen (nach Restore/Layout)."""
     if hasattr(window, "mobiglas_is_maximized") and window.mobiglas_is_maximized():
         screen = window.screen() or QApplication.primaryScreen()
         if screen is not None:
-            window.setGeometry(screen.availableGeometry())
+            target = screen.availableGeometry()
+            if window.geometry() != target:
+                window.setGeometry(target)
         return
 
     screen = window.screen() or QApplication.primaryScreen()
@@ -143,7 +172,10 @@ def fit_window_to_screen(window) -> None:
         screen,
         window=window,
     )
-    window.setGeometry(rect)
+    if window.geometry() == rect:
+        return
+
+    _apply_normal_geometry(window, rect)
 
 
 def _restore_window_geometry(
@@ -202,15 +234,10 @@ def _restore_window_geometry(
     title_bar = getattr(window, "_mobiglas_title_bar", None)
     if maximized and title_bar is not None:
         title_bar._normal_geometry = rect
-        if screen is not None:
-            window.setGeometry(screen.availableGeometry())
-        else:
-            window.setGeometry(rect)
-        title_bar._custom_maximized = True
-        title_bar._sync_maximize_button()
+        _apply_maximized_geometry(window, screen)
         return
 
-    window.setGeometry(rect)
+    _apply_normal_geometry(window, rect)
 
 
 def _resolve_screen(screen_name: str, center: QPoint):
@@ -251,7 +278,10 @@ def _center_on_primary(
     )
     left = available.left() + (available.width() - rect.width()) // 2
     top = available.top() + (available.height() - rect.height()) // 2
-    window.setGeometry(left, top, rect.width(), rect.height())
+    _apply_normal_geometry(
+        window,
+        QRect(left, top, rect.width(), rect.height()),
+    )
 
 
 def restore_window_geometry(
@@ -261,6 +291,7 @@ def restore_window_geometry(
     default_width: int | None = None,
     default_height: int | None = None,
 ) -> None:
+    data = _load_geometry_from_db(db, _SETTING_KEY)
     _restore_window_geometry(
         window,
         db,
@@ -269,7 +300,7 @@ def restore_window_geometry(
         default_height=default_height,
         min_size=MAIN_WINDOW_MIN_SIZE,
     )
-    if _load_geometry_from_db(db, _SETTING_KEY):
+    if data and not bool(data.get("maximized")):
         fit_window_to_screen(window)
 
 
@@ -284,6 +315,7 @@ def restore_dashboard_window_geometry(
     default_width: int | None = None,
     default_height: int | None = None,
 ) -> None:
+    data = _load_geometry_from_db(db, _DASHBOARD_GEOMETRY_KEY)
     _restore_window_geometry(
         window,
         db,
@@ -292,7 +324,7 @@ def restore_dashboard_window_geometry(
         default_height=default_height,
         min_size=DASHBOARD_WINDOW_MIN_SIZE,
     )
-    if _load_geometry_from_db(db, _DASHBOARD_GEOMETRY_KEY):
+    if data and not bool(data.get("maximized")):
         fit_window_to_screen(window)
 
 

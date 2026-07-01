@@ -68,6 +68,16 @@ class OverviewView(_BaseContextView):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+
+        self.readiness_status = DashboardFitLabel("—", max_lines=4)
+        self.readiness_status.setObjectName("cardValue")
+        self._layout.addWidget(
+            kpi_card(
+                tr("dashboard.widget.status"),
+                self.readiness_status,
+            )
+        )
+
         card, card_layout = dashboard_card()
         card_layout.addWidget(subsection_title(tr("dashboard.operations.title")))
 
@@ -108,6 +118,11 @@ class OverviewView(_BaseContextView):
         self._layout.addStretch()
 
     def apply_data(self, data: dict):
+        self.readiness_status.setText(
+            data.get("readiness_summary")
+            or tr("dashboard.readiness.none")
+        )
+
         rows = data.get("actions") or []
         has_rows = len(rows) > 0
         self.table.setVisible(has_rows)
@@ -140,7 +155,7 @@ class SessionView(_BaseContextView):
         top = QHBoxLayout()
         top.setSpacing(10)
 
-        self.status_kpi_value = DashboardFitLabel(status_label("IDLE"), max_lines=2)
+        self.status_kpi_value = DashboardFitLabel(status_label("IDLE"), max_lines=4)
         self.status_kpi_value.setObjectName("cardValue")
         self.crew_value = AnimatedDashboardValue("0")
         self.session_scu = animated_scu()
@@ -266,7 +281,11 @@ class SessionView(_BaseContextView):
 
     def apply_data(self, data: dict):
         active = bool(data.get("active"))
-        name = data.get("name") or tr("dashboard.session.none")
+        name = (
+            (data.get("name") or tr("dashboard.session.none"))
+            if active
+            else tr("dashboard.session.none")
+        )
         self.session_label.setText(name)
         self.session_label.setObjectName(
             "displayValue" if active else "mutedLabel"
@@ -274,9 +293,18 @@ class SessionView(_BaseContextView):
         self.session_label.style().unpolish(self.session_label)
         self.session_label.style().polish(self.session_label)
 
-        status_text = data.get("status_label") or status_label("IDLE")
-        self.status_kpi_value.setText(status_text)
-        self.session_status_label.setText(status_text)
+        readiness_text = (
+            data.get("readiness_summary")
+            or tr("dashboard.readiness.none")
+        )
+        self.status_kpi_value.setText(readiness_text)
+
+        workflow_status = (
+            data.get("status_label") or status_label("IDLE")
+            if active
+            else status_label("IDLE")
+        )
+        self.session_status_label.setText(workflow_status)
 
         animate_int(self.crew_value, data.get("crew_count"))
         animate_scu(self.session_scu, data.get("session_scu_total"))
@@ -396,6 +424,26 @@ class RefineryView(_BaseContextView):
             top.addWidget(kpi_card(title, widget))
         self._layout.addLayout(top)
 
+        input_card, input_layout = dashboard_card()
+        input_layout.addWidget(
+            subsection_title(tr("refinery.section.batches"))
+        )
+        self.input_table = QTableWidget()
+        self.input_table.setColumnCount(3)
+        self.input_table.setHorizontalHeaderLabels([
+            tr("dashboard.operations.col.material"),
+            tr("dashboard.operations.col.context"),
+            tr("dashboard.operations.col.quantity"),
+        ])
+        configure_mobiglas_table(
+            self.input_table,
+            "dataTable",
+            selectable=False,
+        )
+        self.input_table.setMinimumHeight(120)
+        input_layout.addWidget(self.input_table)
+        self._layout.addWidget(input_card)
+
         jobs_card, jobs_layout = dashboard_card()
         jobs_layout.addWidget(subsection_title(tr("dashboard.context.active_jobs")))
         self.jobs_host = QWidget()
@@ -426,6 +474,31 @@ class RefineryView(_BaseContextView):
         self.efficiency.animate_to(avg, suffix=" %", decimals=1, duration=1000)
         animate_scu(self.io_in, data.get("total_input"))
         animate_scu(self.io_out, data.get("total_output"))
+
+        input_rows = data.get("input_items") or []
+        self.input_table.setRowCount(len(input_rows))
+        for row_index, (material, location, qty) in enumerate(input_rows):
+            self.input_table.setItem(
+                row_index,
+                0,
+                QTableWidgetItem(material),
+            )
+            self.input_table.setItem(
+                row_index,
+                1,
+                QTableWidgetItem(location),
+            )
+            qty_item = QTableWidgetItem(format_scu(qty))
+            qty_item.setTextAlignment(
+                Qt.AlignmentFlag.AlignRight
+                | Qt.AlignmentFlag.AlignVCenter
+            )
+            self.input_table.setItem(row_index, 2, qty_item)
+        if input_rows:
+            finalize_table_columns(
+                self.input_table,
+                stretch_column=1,
+            )
 
         while self.jobs_layout.count():
             item = self.jobs_layout.takeAt(0)
@@ -494,6 +567,15 @@ class StorageView(_BaseContextView):
         top.addWidget(kpi_card(tr("dashboard.context.inventory"), self.item_count))
         self._layout.addLayout(top)
 
+        self.readiness_status = DashboardFitLabel("—", max_lines=4)
+        self.readiness_status.setObjectName("cardValue")
+        self._layout.addWidget(
+            kpi_card(
+                tr("dashboard.widget.status"),
+                self.readiness_status,
+            )
+        )
+
         inv_card, inv_layout = dashboard_card()
         inv_layout.addWidget(subsection_title(tr("dashboard.context.inventory")))
         self.inv_host = QWidget()
@@ -518,6 +600,10 @@ class StorageView(_BaseContextView):
         animate_int(self.idle_warn, data.get("idle_warnings"))
         inventory = data.get("inventory") or []
         animate_int(self.item_count, len(inventory))
+        self.readiness_status.setText(
+            data.get("readiness_summary")
+            or tr("dashboard.readiness.none")
+        )
 
         while self.inv_layout.count():
             item = self.inv_layout.takeAt(0)
@@ -554,6 +640,15 @@ class SalesView(_BaseContextView):
         top.addWidget(kpi_card(tr("dashboard.context.pending_amount"), self.pending_amount))
         self._layout.addLayout(top)
 
+        self.readiness_status = DashboardFitLabel("—", max_lines=4)
+        self.readiness_status.setObjectName("cardValue")
+        self._layout.addWidget(
+            kpi_card(
+                tr("dashboard.widget.status"),
+                self.readiness_status,
+            )
+        )
+
         card, card_layout = dashboard_card()
         card_layout.addWidget(subsection_title(tr("dashboard.context.sale_items")))
         self.table = QTableWidget()
@@ -573,6 +668,10 @@ class SalesView(_BaseContextView):
         animate_scu(self.ready_scu, data.get("ready_total_scu"))
         animate_int(self.pending, data.get("pending_sales"))
         animate_currency(self.pending_amount, data.get("pending_amount"))
+        self.readiness_status.setText(
+            data.get("readiness_summary")
+            or tr("dashboard.readiness.none")
+        )
 
         rows = data.get("items") or []
         self.table.setRowCount(len(rows))

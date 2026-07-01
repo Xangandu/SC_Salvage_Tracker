@@ -753,30 +753,16 @@ class RefineryRepository:
             session_id = (
                 session_ids[0] if session_ids else None
             )
-            if (
-                hasattr(self.db, "stockpiles")
-                and self.db._table_exists("material_stockpiles")
-            ):
-                self.db.stockpiles.deposit_refinery_pickup(
-                    material_code=REFINERY_OUTPUT_CODE,
-                    quantity_scu=output_quantity,
-                    station_label=station_label,
-                    refinery_job_id=job_id,
-                    session_id=session_id,
-                )
-            else:
-                material_type_id = (
-                    self.materials.get_material_type_id(
-                        REFINERY_OUTPUT_CODE
-                    )
-                )
-                self.materials.add_to_storage(
-                    material_type_id,
-                    output_quantity,
-                    source_type="REFINERY",
-                    source_id=job_id,
-                    created_by=updated_by,
-                )
+            if not self.db._table_exists("material_stockpiles"):
+                raise ValueError(tr("error.storage.not_available"))
+
+            self.db.stockpiles.deposit_refinery_pickup(
+                material_code=REFINERY_OUTPUT_CODE,
+                quantity_scu=output_quantity,
+                station_label=station_label,
+                refinery_job_id=job_id,
+                session_id=session_id,
+            )
 
             for session_id in session_ids:
                 self._refresh_session_status_after_refinery(

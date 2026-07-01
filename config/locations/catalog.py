@@ -143,6 +143,25 @@ def station_by_id(station_id: str) -> dict[str, Any] | None:
     return None
 
 
+def lookup_location_by_label(
+    label: str,
+) -> tuple[str, str, str] | None:
+    """Standort-Name → (kind, key, label) für Station oder Stadt."""
+    label = (label or "").strip()
+    if not label:
+        return None
+
+    label_cf = label.casefold()
+    for system in _SYSTEM_ORDER:
+        for location_id, name in stations_for_system(system):
+            if name.casefold() == label_cf:
+                return ("STATION", location_id, name)
+        for location_id, name in cities_for_system(system):
+            if name.casefold() == label_cf:
+                return ("CITY", location_id, name)
+    return None
+
+
 def landing_zone_dropdown_groups() -> list[tuple[str, list[tuple[str, str]]]]:
     """Landeplätze / Städte für Verkauf (RMC/CM-Ankauf)."""
     catalog = landing_zones_catalog()

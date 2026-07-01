@@ -1,7 +1,7 @@
 SC SALVAGE TRACKER – VERSIONSHISTORIE
 ======================================
 
-Aktuelle Version: 0.16.2 Beta | Build 2026.13 | Codename: LOCATION FLOW
+Aktuelle Version: 0.16.6 Beta | Build 2026.17 | Codename: OPERATIONS HUD
 
 Detaillierte Patchnotes:  Changelogs/PATCHNOTES.txt
 Roadmap:                  Changelogs/ROADMAP.txt
@@ -14,6 +14,9 @@ Im Programm: Navigation → Link „Patchnotes & Roadmap“
 KURZÜBERSICHT DER ENTWICKLUNG
 -------------------------------
 
+0.16.6 Operations HUD: Dashboard-Sitzung/STATUS, Auszahlungs-Historie, Fenster-UI, Lager-Transfer-Fix
+0.16.5 Logistics Pooling: Physische SCU beim Verkauf (Lager ↔ Verkäufe synchron)
+0.16.4 Logistics Pooling: Material-Pools, sichtbares In-App-Update, granulare Korrekturen
 0.16.2 Location Flow: Update-Test-Release (Verifikation In-App-Update 0.16.1 → 0.16.2)
 0.16.1 Location Flow: In-App-Update-Fix — stille Setup-Installation, verzögerter Installer-Start
 0.16.0 Location Flow: Lager/Standorte, Schiff→Station-Materialfluss, Kontext-Dashboard, Hinweisleiste

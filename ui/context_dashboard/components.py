@@ -350,7 +350,7 @@ class SessionRefineryProcessRow(QWidget):
 
 
 def _timeline_when_width(text: str) -> int:
-    """Breite für Datum/Uhrzeit — max. über Theme-Schriften (Rajdhani + Segoe UI)."""
+    """Textbreite für Datum/Uhrzeit — max. über Theme-Schriften."""
     widths = []
     for family in ("Rajdhani", "Segoe UI"):
         font = QFont(family, 12)
@@ -358,6 +358,16 @@ def _timeline_when_width(text: str) -> int:
         metrics = QFontMetrics(font)
         widths.append(metrics.horizontalAdvance(text))
     return max(widths) + 14
+
+
+def _timeline_when_column_width() -> int:
+    """Feste Spaltenbreite — vertikale Trenner in allen Zeilen bündig."""
+    samples = (
+        "31.12.2026 23:59:59",
+        "31.12.2026 23:59",
+        "—",
+    )
+    return max(_timeline_when_width(sample) for sample in samples)
 
 
 def _timeline_divider() -> QWidget:
@@ -408,6 +418,8 @@ class _TimelineDividerWidget(QWidget):
 class TimelineRow(QWidget):
 
     ICON_COLUMN_PX = 20
+    TEXT_AFTER_DIVIDER_MARGIN = 12
+    COLUMN_SPACING = 8
 
     def __init__(
         self,
@@ -456,16 +468,16 @@ class TimelineRow(QWidget):
 
         grid = QGridLayout(self)
         grid.setContentsMargins(0, 1, 0, 1)
-        grid.setHorizontalSpacing(6)
+        grid.setHorizontalSpacing(self.COLUMN_SPACING)
         grid.setVerticalSpacing(0)
 
         when_label = QLabel(when)
         when_label.setObjectName("dashboardTimelineWhen")
         when_label.setWordWrap(False)
-        when_width = _timeline_when_width(when)
-        when_label.setMinimumWidth(when_width)
+        when_width = _timeline_when_column_width()
+        when_label.setFixedWidth(when_width)
         when_label.setSizePolicy(
-            QSizePolicy.Policy.Minimum,
+            QSizePolicy.Policy.Fixed,
             QSizePolicy.Policy.Preferred,
         )
         when_label.setAlignment(
@@ -485,8 +497,19 @@ class TimelineRow(QWidget):
             Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft,
         )
         grid.addWidget(divider, 0, 1, 2, 1)
-        grid.addWidget(title_label, 0, 2)
-        grid.addWidget(detail_label, 1, 2)
+
+        text_host = QWidget()
+        text_layout = QVBoxLayout(text_host)
+        text_layout.setContentsMargins(
+            self.TEXT_AFTER_DIVIDER_MARGIN,
+            0,
+            0,
+            0,
+        )
+        text_layout.setSpacing(0)
+        text_layout.addWidget(title_label)
+        text_layout.addWidget(detail_label)
+        grid.addWidget(text_host, 0, 2, 2, 1)
         grid.setColumnStretch(2, 1)
 
 

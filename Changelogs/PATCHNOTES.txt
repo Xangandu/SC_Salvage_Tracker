@@ -1,6 +1,44 @@
 SC SALVAGE TRACKER – PATCHNOTES
 ================================
 
+VERSION 0.16.6 Beta | Build 2026.17 | Codename: OPERATIONS HUD
+--------------------------------------------------------------------
+
+NEU — KONTEXT-DASHBOARD (SESSION & STATUS)
+• Nach Sitzungsende keine falsche „Aktive Sitzung“ mehr (Schiff/Status leer)
+• STATUS zeigt kombinierte Material-Bereitschaft (z. B. RMC · Verkaufsbereit | CM Salvage · Bereit für Raffinerie)
+• CM_Salvage aus Session-Batches fließt in die Bereitschafts-Anzeige ein
+• Übersicht, Verkauf und Lager: STATUS-KPI mit Material-Bereitschaft
+• Globale Hinweisleiste nutzt kombinierte Bereitschaft, wenn keine höhere Priorität
+
+FIX — DASHBOARD & VERKAUF
+• VERKÄUFE-Zähler im Dashboard korrigiert (echte Verkaufsanzahl statt SOLD-Sitzungen)
+• Offene Verkäufe nach Storno: gelöschte Auszahlungen werden nicht mehr mitgezählt
+
+FIX — SITZUNGSSEITE
+• Ohne ACTIVE-Sitzung: laufende Sitzung, Missionskosten und Beute ausgeblendet
+• Crew geleert; keine Fallback-Ladung aus Korrektur-Combo
+
+FIX — LAGER & TRANSFER
+• Verschieben aus Material-Pool: TypeError bei Positions-Argument behoben
+• Stockpile-only Inventar: keine verwaisten storage_items mehr
+
+UI — AUSZAHLUNGEN & HISTORIE
+• CREW-Gesamtauszahlungen: aufklappbare Zeilen pro Auszahlung (Datum · Ort · Summe)
+• ALLE AUSZAHLUNGEN von Auszahlungen → Historie verschoben
+• Lager-Dashboard „Letzte Bewegungen“: Trenner und Textausrichtung korrigiert
+
+UI — FENSTER (HAUPTFENSTER & DASHBOARD)
+• Titelleiste: Verschieben ohne versehentliches Maximieren/Minimieren
+• Skalieren an allen Ecken und Rändern (Breite/Höhe) wieder zuverlässig
+• Minimieren und Wiederherstellen aus Maximiert korrigiert
+• Fenster-Symbole in Titelleisten-Buttons mittig zentriert
+• Gespeicherte Fenstergröße beim Start ohne setGeometry-Warnungen
+
+UI — DIALOGE
+• MobiGlas-Eingabedialoge: Größe nach Titelleisten-Einbau korrekt berechnet
+
+
 VERSION 0.16.5 Beta | Build 2026.16 | Codename: LOGISTICS POOLING
 --------------------------------------------------------------------
 

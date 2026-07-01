@@ -8,6 +8,7 @@ from datetime import datetime
 import auth.session as user_session
 
 from config.i18n import tr
+from config.locations.catalog import lookup_location_by_label
 from config.materials import REFINED_SELLABLE_CODES, material_label, ship_sort_key
 from config.storage_idle import (
     DEFAULT_RESERVE_TAG,
@@ -310,14 +311,8 @@ class StockpileRepository:
 
         row = self.cursor.fetchone()
         storage_item_id = row[0] if row else None
-        linked_source_type = row[1] if row else None
-        linked_source_id = row[2] if row else None
 
-        if (
-            storage_item_id
-            and linked_source_type == source_type
-            and linked_source_id == source_id
-        ):
+        if storage_item_id:
             self.materials.increase_stockpile_storage_item(
                 storage_item_id,
                 quantity_scu,
@@ -333,13 +328,12 @@ class StockpileRepository:
             created_by=user_id,
         )
 
-        if not row or row[0] is None:
-            self.cursor.execute("""
-            UPDATE material_stockpiles
-            SET storage_item_id = ?
-            WHERE id = ?
-            AND is_deleted = 0
-            """, (storage_item_id, stockpile_id))
+        self.cursor.execute("""
+        UPDATE material_stockpiles
+        SET storage_item_id = ?
+        WHERE id = ?
+        AND is_deleted = 0
+        """, (storage_item_id, stockpile_id))
 
     def _find_ship_stockpile(
         self,
@@ -467,7 +461,7 @@ class StockpileRepository:
         *,
         updated_by=None,
     ) -> None:
-        """Legacy-Bestand an Lagerzeile anpassen (nur beim Verkauf)."""
+        """Verknüpftes storage_item auf Verkaufsmenge synchronisieren."""
         self.cursor.execute("""
         SELECT quantity
         FROM storage_items
@@ -630,6 +624,43 @@ class StockpileRepository:
             remaining -= take
 
         return sale_item_records, remaining
+
+    def session_sellable_quantity(self, session_id: int) -> float:
+        """Verkaufbare SCU einer Session (physische Stockpiles)."""
+        if not self._table_exists():
+            return 0.0
+
+        placeholders = ", ".join(
+            "?" for _ in REFINED_SELLABLE_CODES
+        )
+        sellable_filter = self._sellable_stockpile_filter_sql()
+
+        self.cursor.execute(f"""
+        SELECT COALESCE(SUM(material_stockpiles.quantity_scu), 0)
+        FROM material_stockpiles
+        INNER JOIN material_types
+            ON material_types.id =
+                material_stockpiles.material_type_id
+        WHERE material_stockpiles.is_deleted = 0
+        AND material_stockpiles.quantity_scu > 0
+        AND material_types.material_code IN ({placeholders})
+        {sellable_filter}
+        AND (
+            material_stockpiles.session_id = ?
+            OR material_stockpiles.refinery_job_id IN (
+                SELECT DISTINCT refinery_job_items.job_id
+                FROM refinery_job_items
+                INNER JOIN material_batches
+                    ON material_batches.id =
+                        refinery_job_items.batch_id
+                WHERE material_batches.session_id = ?
+                AND material_batches.is_deleted = 0
+            )
+        )
+        """, [*REFINED_SELLABLE_CODES, session_id, session_id])
+
+        row = self.cursor.fetchone()
+        return float(row[0] if row else 0)
 
     def restore_stockpile_for_storage_item(
         self,
@@ -1175,15 +1206,6 @@ class StockpileRepository:
                     tr("storage.event.from_location"),
                     "LOCATION_TRANSFER",
                 ),
-                (
-                    lambda: self.materials.transfer_global_to_stockpile(
-                        material_code,
-                        quantity_scu,
-                        created_by=user_id,
-                    ),
-                    tr("dashboard.action.legacy_storage"),
-                    "GLOBAL_TRANSFER",
-                ),
             )
         else:
             attempts = (
@@ -1205,15 +1227,6 @@ class StockpileRepository:
                     ),
                     tr("storage.event.from_location"),
                     "LOCATION_TRANSFER",
-                ),
-                (
-                    lambda: self.materials.transfer_global_to_stockpile(
-                        material_code,
-                        quantity_scu,
-                        created_by=user_id,
-                    ),
-                    tr("dashboard.action.legacy_storage"),
-                    "GLOBAL_TRANSFER",
                 ),
             )
 
@@ -1274,6 +1287,40 @@ class StockpileRepository:
             location_key,
             location_label,
         ))
+
+        row = self.cursor.fetchone()
+        if not row:
+            return None
+        return int(row[0]), float(row[1])
+
+    def _find_stored_stockpile_by_label(
+        self,
+        *,
+        material_code: str,
+        location_label: str,
+    ) -> tuple[int, float] | None:
+        """STORED-Pool an Station/Stadt per Anzeigename (kind-unabhängig)."""
+        location_label = (location_label or "").strip()
+        if not location_label:
+            return None
+
+        self.cursor.execute("""
+        SELECT
+            material_stockpiles.id,
+            material_stockpiles.quantity_scu
+        FROM material_stockpiles
+        INNER JOIN material_types
+            ON material_types.id =
+                material_stockpiles.material_type_id
+        WHERE material_stockpiles.is_deleted = 0
+        AND material_types.material_code = ?
+        AND material_stockpiles.location_kind IN ('STATION', 'CITY')
+        AND material_stockpiles.status = 'STORED'
+        AND material_stockpiles.quantity_scu > 0
+        AND material_stockpiles.location_label = ?
+        ORDER BY material_stockpiles.last_activity_at ASC
+        LIMIT 1
+        """, (material_code, location_label))
 
         row = self.cursor.fetchone()
         if not row:
@@ -1785,42 +1832,66 @@ class StockpileRepository:
         now = self._now()
         user_id = self._current_user_id()
 
-        self.cursor.execute("""
-        SELECT
-            material_stockpiles.id,
-            material_stockpiles.quantity_scu
-        FROM material_stockpiles
-        INNER JOIN material_types
-            ON material_types.id =
-                material_stockpiles.material_type_id
-        WHERE material_stockpiles.is_deleted = 0
-        AND material_types.material_code = ?
-        AND material_stockpiles.location_kind = 'STATION'
-        AND material_stockpiles.location_label = ?
-        AND material_stockpiles.status = 'STORED'
-        AND material_stockpiles.quantity_scu > 0
-        LIMIT 1
-        """, (material_code, station_label))
+        resolved = lookup_location_by_label(station_label)
+        if resolved:
+            location_kind, location_key, location_label = resolved
+        else:
+            location_kind = "STATION"
+            location_key = None
+            location_label = station_label
 
-        existing = self.cursor.fetchone()
+        existing = self._find_location_stockpile(
+            material_code=material_code,
+            location_kind=location_kind,
+            location_key=location_key,
+            location_label=location_label,
+            status="STORED",
+        )
+        if not existing:
+            existing = self._find_stored_stockpile_by_label(
+                material_code=material_code,
+                location_label=location_label,
+            )
+
+        stockpile_columns = self.db._table_columns(
+            "material_stockpiles"
+        )
+
         if existing:
             stockpile_id = existing[0]
             new_qty = float(existing[1]) + quantity_scu
-            self.cursor.execute("""
+            updates = [
+                "quantity_scu = ?",
+                "location_kind = ?",
+                "location_key = ?",
+                "location_label = ?",
+                "last_activity_at = ?",
+                "idle_reminded_at = NULL",
+                "updated_at = datetime('now', 'localtime')",
+                "updated_by = ?",
+            ]
+            params: list = [
+                new_qty,
+                location_kind,
+                location_key,
+                location_label,
+                now,
+                user_id,
+            ]
+            if "refinery_job_id" in stockpile_columns:
+                updates.append("refinery_job_id = ?")
+                params.append(refinery_job_id)
+            if session_id is not None:
+                updates.append("session_id = ?")
+                params.append(session_id)
+            params.append(stockpile_id)
+            self.cursor.execute(f"""
             UPDATE material_stockpiles
-            SET
-                quantity_scu = ?,
-                last_activity_at = ?,
-                idle_reminded_at = NULL,
-                updated_at = datetime('now', 'localtime'),
-                updated_by = ?
+            SET {", ".join(updates)}
             WHERE id = ?
             AND is_deleted = 0
-            """, (new_qty, now, user_id, stockpile_id))
+            """, params)
         else:
-            stockpile_columns = self.db._table_columns(
-                "material_stockpiles"
-            )
             if "refinery_job_id" in stockpile_columns:
                 self.cursor.execute("""
                 INSERT INTO material_stockpiles (
@@ -1843,9 +1914,9 @@ class StockpileRepository:
                 """, (
                     material_type_id,
                     quantity_scu,
-                    "STATION",
-                    None,
-                    station_label,
+                    location_kind,
+                    location_key,
+                    location_label,
                     "STORED",
                     None,
                     session_id,
@@ -1876,9 +1947,9 @@ class StockpileRepository:
                 """, (
                     material_type_id,
                     quantity_scu,
-                    "STATION",
-                    None,
-                    station_label,
+                    location_kind,
+                    location_key,
+                    location_label,
                     "STORED",
                     None,
                     session_id,
@@ -1895,7 +1966,7 @@ class StockpileRepository:
             event_type="DEPOSIT",
             quantity_delta=quantity_scu,
             from_label=station_label,
-            to_label=station_label,
+            to_label=location_label,
             payload={
                 "material_code": material_code,
                 "refinery_job_id": refinery_job_id,
@@ -3157,6 +3228,202 @@ class StockpileRepository:
         except Exception:
             self.connection.rollback()
             raise
+
+    def migrate_orphan_storage_into_stockpiles(self) -> int:
+        """
+        Verwaiste storage_items (ohne Stockpile-Verknüpfung) bereinigen:
+        - Phantome (Stockpile existiert bereits) → storage auf 0
+        - Echte Waisen → Stockpile-Zeile mit Verknüpfung anlegen
+        """
+        if not self._table_exists():
+            return 0
+
+        if "storage_item_id" not in self.db._table_columns(
+            "material_stockpiles"
+        ):
+            return 0
+
+        self.cursor.execute("""
+        SELECT
+            storage_items.id,
+            storage_items.material_type_id,
+            material_types.material_code,
+            storage_items.quantity,
+            storage_items.source_type,
+            storage_items.source_id
+        FROM storage_items
+        INNER JOIN material_types
+            ON material_types.id =
+                storage_items.material_type_id
+        WHERE storage_items.is_deleted = 0
+        AND storage_items.quantity > 0
+        AND storage_items.id NOT IN (
+            SELECT material_stockpiles.storage_item_id
+            FROM material_stockpiles
+            WHERE material_stockpiles.storage_item_id IS NOT NULL
+            AND material_stockpiles.is_deleted = 0
+        )
+        ORDER BY storage_items.id ASC
+        """)
+
+        orphans = self.cursor.fetchall()
+        if not orphans:
+            return 0
+
+        migrated = 0
+        now = self._now()
+
+        for (
+            storage_id,
+            material_type_id,
+            material_code,
+            quantity,
+            source_type,
+            source_id,
+        ) in orphans:
+            qty = float(quantity or 0)
+            if qty <= 0:
+                continue
+
+            self.cursor.execute("""
+            SELECT COALESCE(SUM(material_stockpiles.quantity_scu), 0)
+            FROM material_stockpiles
+            INNER JOIN material_types
+                ON material_types.id =
+                    material_stockpiles.material_type_id
+            WHERE material_stockpiles.is_deleted = 0
+            AND material_stockpiles.quantity_scu > 0
+            AND material_types.material_code = ?
+            """, (material_code,))
+
+            stockpile_total = float(self.cursor.fetchone()[0] or 0)
+
+            if stockpile_total > 1e-9:
+                self.materials._deduct_storage_row(
+                    storage_id,
+                    qty,
+                )
+                migrated += 1
+                continue
+
+            location_kind = "STATION"
+            location_key = None
+            location_label = "Legacy Import"
+            status = "STORED"
+            ship_id = None
+            session_id = None
+
+            if source_type == "SESSION" and source_id:
+                self.cursor.execute("""
+                SELECT session_id
+                FROM material_batches
+                WHERE id = ?
+                AND is_deleted = 0
+                """, (source_id,))
+                batch_row = self.cursor.fetchone()
+                if batch_row and batch_row[0]:
+                    session_id = batch_row[0]
+                    ship = self.db.get_session_ship(session_id)
+                    if ship:
+                        location_kind = "SHIP"
+                        location_key = str(ship["ship_id"])
+                        location_label = ship["ship_name"]
+                        status = "IN_SHIP"
+                        ship_id = ship["ship_id"]
+
+            elif source_type == "REFINERY" and source_id:
+                self.cursor.execute("""
+                SELECT station
+                FROM refinery_jobs
+                WHERE id = ?
+                """, (source_id,))
+                job_row = self.cursor.fetchone()
+                if job_row and job_row[0]:
+                    location_label = (job_row[0] or "").strip() or location_label
+                    resolved = lookup_location_by_label(location_label)
+                    if resolved:
+                        location_kind, location_key, location_label = resolved
+
+            self.cursor.execute("""
+            INSERT INTO material_stockpiles (
+                material_type_id,
+                quantity_scu,
+                location_kind,
+                location_key,
+                location_label,
+                status,
+                ship_id,
+                session_id,
+                storage_item_id,
+                last_activity_at,
+                created_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'))
+            """, (
+                material_type_id,
+                qty,
+                location_kind,
+                location_key,
+                location_label,
+                status,
+                ship_id,
+                session_id,
+                storage_id,
+                now,
+            ))
+            migrated += 1
+
+        if migrated:
+            self.connection.commit()
+
+        return migrated
+
+    def sync_unlinked_stockpile_storage_ledgers(self) -> int:
+        """Stockpile-Zeilen ohne storage_item_id an verknüpftes Ledger anbinden."""
+        if not self._table_exists():
+            return 0
+
+        if "storage_item_id" not in self.db._table_columns(
+            "material_stockpiles"
+        ):
+            return 0
+
+        self.cursor.execute("""
+        SELECT
+            material_stockpiles.id,
+            material_stockpiles.material_type_id,
+            material_stockpiles.quantity_scu
+        FROM material_stockpiles
+        WHERE material_stockpiles.is_deleted = 0
+        AND material_stockpiles.quantity_scu > 0
+        AND (
+            material_stockpiles.storage_item_id IS NULL
+            OR material_stockpiles.storage_item_id = 0
+        )
+        """)
+
+        rows = self.cursor.fetchall()
+        if not rows:
+            return 0
+
+        user_id = self._current_user_id()
+        synced = 0
+
+        for stockpile_id, material_type_id, quantity_scu in rows:
+            self._ensure_stockpile_storage_item(
+                int(stockpile_id),
+                int(material_type_id),
+                float(quantity_scu),
+                user_id,
+                source_type="STOCKPILE",
+                source_id=int(stockpile_id),
+            )
+            synced += 1
+
+        if synced:
+            self.connection.commit()
+
+        return synced
 
     def totals_by_material(self) -> list[dict]:
         if not self._table_exists():

@@ -1460,6 +1460,7 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "payout.table.crew_member": "Crew member",
         "payout.table.amount": "Amount (aUEC)",
         "payout.table.total_received": "Total received (aUEC)",
+        "payout.table.date_or_crew": "Date / Crew member",
         "payout.unpaid.empty": (
             "No open sales — all sales have been paid out."
         ),
@@ -1674,6 +1675,9 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "dashboard.next_action.sale": (
             "Ready to sell — {material} · {location} · {when}"
         ),
+        "dashboard.next_action.refinery_input": (
+            "Ready for refinery — {material} · {location}"
+        ),
         "dashboard.next_action.storage_idle": (
             "Stock idle for more than {days} days"
         ),
@@ -1682,6 +1686,10 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "dashboard.action.refinery_running": "Refinery running",
         "dashboard.action.refinery_material": "Refinery input",
         "dashboard.action.sale_ready": "Ready to sell",
+        "dashboard.action.refinery_input_ready": "Ready for refinery",
+        "dashboard.readiness.line": "{material} · {status}",
+        "dashboard.readiness.none": "No material ready for sale or refinery.",
+        "dashboard.readiness.separator": "  |  ",
         "dashboard.action.storage_idle": "Idle stock",
         "dashboard.action.session": "Active session",
         "dashboard.action.legacy_storage": "Global storage",
@@ -1772,6 +1780,7 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "history.title": "HISTORY",
         "history.section.sessions": "◆ COMPLETED SESSIONS",
         "history.section.sales": "◆ ALL SALES",
+        "history.section.all_payouts": "◆ ALL PAYOUTS",
         "history.empty": "No sales recorded yet.",
         "history.sessions.empty": (
             "No completed sessions yet. "
@@ -3817,6 +3826,7 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "payout.table.crew_member": "Crew-Mitglied",
         "payout.table.amount": "Betrag (aUEC)",
         "payout.table.total_received": "Gesamt erhalten (aUEC)",
+        "payout.table.date_or_crew": "Datum / Crew-Mitglied",
         "payout.unpaid.empty": (
             "Keine offenen Verkäufe — alle Verkäufe sind ausgezahlt."
         ),
@@ -4043,6 +4053,9 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "dashboard.next_action.sale": (
             "Verkaufsbereit — {material} · {location} · {when}"
         ),
+        "dashboard.next_action.refinery_input": (
+            "Bereit für Raffinerie — {material} · {location}"
+        ),
         "dashboard.next_action.storage_idle": (
             "Bestand seit über {days} Tagen ohne Bewegung"
         ),
@@ -4051,6 +4064,12 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "dashboard.action.refinery_running": "Raffinerie läuft",
         "dashboard.action.refinery_material": "Raffinerie-Input",
         "dashboard.action.sale_ready": "Verkaufsbereit",
+        "dashboard.action.refinery_input_ready": "Bereit für Raffinerie",
+        "dashboard.readiness.line": "{material} · {status}",
+        "dashboard.readiness.none": (
+            "Kein Material verkaufs- oder raffineriebereit."
+        ),
+        "dashboard.readiness.separator": "  |  ",
         "dashboard.action.storage_idle": "Inaktiver Bestand",
         "dashboard.action.session": "Aktive Session",
         "dashboard.action.legacy_storage": "Globales Lager",
@@ -4155,6 +4174,7 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "history.title": "HISTORIE",
         "history.section.sessions": "◆ ABGESCHLOSSENE SITZUNGEN",
         "history.section.sales": "◆ ALLE VERKÄUFE",
+        "history.section.all_payouts": "◆ ALLE AUSZAHLUNGEN",
         "history.empty": "Noch keine Verkäufe erfasst.",
         "history.sessions.empty": (
             "Noch keine abgeschlossenen Sitzungen. "

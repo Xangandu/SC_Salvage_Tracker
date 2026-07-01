@@ -623,57 +623,16 @@ class PayoutRepository:
         self,
         session_id,
     ):
-        placeholders = ", ".join(
-            "?" for _ in REFINED_SELLABLE_CODES
+        if (
+            not self.db._table_exists("material_stockpiles")
+            or not hasattr(self.db, "stockpiles")
+        ):
+            return False
+
+        return (
+            self.db.stockpiles.session_sellable_quantity(session_id)
+            > 1e-9
         )
-        params_tail = list(REFINED_SELLABLE_CODES)
-
-        self.cursor.execute(f"""
-        SELECT COALESCE(SUM(storage_items.quantity), 0)
-        FROM storage_items
-        INNER JOIN material_types
-            ON material_types.id =
-                storage_items.material_type_id
-        INNER JOIN material_batches
-            ON storage_items.source_type = 'SESSION'
-            AND storage_items.source_id =
-                material_batches.id
-        WHERE material_batches.session_id = ?
-        AND storage_items.is_deleted = 0
-        AND storage_items.quantity > 0
-        AND material_types.material_code IN (
-            {placeholders}
-        )
-        """, [session_id, *params_tail])
-
-        if self.cursor.fetchone()[0] > 0:
-            return True
-
-        self.cursor.execute(f"""
-        SELECT COALESCE(SUM(storage_items.quantity), 0)
-        FROM storage_items
-        INNER JOIN material_types
-            ON material_types.id =
-                storage_items.material_type_id
-        INNER JOIN refinery_jobs
-            ON storage_items.source_type = 'REFINERY'
-            AND storage_items.source_id =
-                refinery_jobs.id
-        INNER JOIN refinery_job_items
-            ON refinery_job_items.job_id =
-                refinery_jobs.id
-        INNER JOIN material_batches
-            ON material_batches.id =
-                refinery_job_items.batch_id
-        WHERE material_batches.session_id = ?
-        AND storage_items.is_deleted = 0
-        AND storage_items.quantity > 0
-        AND material_types.material_code IN (
-            {placeholders}
-        )
-        """, [session_id, *params_tail])
-
-        return self.cursor.fetchone()[0] > 0
 
     def session_has_unpaid_sales(self, session_id):
         if not self.db._table_exists("sales"):
@@ -746,6 +705,10 @@ class PayoutRepository:
         status = row[0]
 
         if status in ("SOLD", "CLOSED"):
+            return
+
+        if status == "ACTIVE":
+            # Laufende Sitzung — Status nur über „Sitzung beenden“ ändern.
             return
 
         if self.session_has_unpaid_sales(session_id):

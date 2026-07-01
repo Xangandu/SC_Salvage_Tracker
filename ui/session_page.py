@@ -208,6 +208,7 @@ class SessionPage(QWidget):
         start_layout.addWidget(self.archived_hint)
 
         layout.addWidget(self.start_panel)
+        layout.addWidget(self.delete_session_panel)
 
         self.client_session_panel, client_layout = info_panel()
         client_layout.addWidget(
@@ -228,6 +229,7 @@ class SessionPage(QWidget):
         self.client_session_panel.hide()
 
         active_panel, active_layout = page_panel()
+        self.active_panel = active_panel
         active_layout.setContentsMargins(16, 16, 16, 16)
         active_layout.addWidget(
             subsection_title(tr("session.section.active"))
@@ -292,6 +294,7 @@ class SessionPage(QWidget):
         self.mission_costs_panel.hide()
 
         material_panel, material_layout = info_panel()
+        self.material_panel = material_panel
         material_layout.addWidget(
             subsection_title(tr("session.section.materials"))
         )
@@ -357,7 +360,6 @@ class SessionPage(QWidget):
         capture_actions.addStretch()
         material_layout.addLayout(capture_actions)
 
-        material_layout.addWidget(self.delete_session_panel)
         layout.addWidget(material_panel)
 
         outer = QVBoxLayout(self)
@@ -387,18 +389,9 @@ class SessionPage(QWidget):
             return session.get("id") if session else None
 
         active = self.db.get_active_session()
-        if active:
-            return active[0]
-
-        return self.delete_session_combo.currentData()
+        return active[0] if active else None
 
     def _on_correction_session_changed(self, _index=-1):
-        session_id = self.delete_session_combo.currentData()
-        if self.db.get_active_session():
-            return
-
-        self._refresh_mission_costs(session_id)
-        self._refresh_captures(session_id)
         self._update_reopen_button()
 
     def _update_reopen_button(self):
@@ -660,8 +653,36 @@ class SessionPage(QWidget):
         self.refresh_session()
 
     def _on_host_ship_changed(self, ship_name):
-        if not self.is_network_client:
+        if self.is_network_client:
+            return
+
+        if self.db.get_active_session():
             self._apply_material_fields_for_ship(ship_name)
+
+    def _show_idle_session_panels(self):
+        self.start_panel.show()
+        self.active_panel.hide()
+        self.mission_costs_panel.hide()
+        self.material_panel.hide()
+        self.archived_hint.setVisible(
+            bool(self.db.get_archived_sessions(limit=1))
+        )
+        self.active_ship_label.setText("—")
+        self.active_status_label.setText(
+            tr("session.label.not_started")
+        )
+        self.finish_button.setEnabled(False)
+        self.end_session_button.setEnabled(False)
+        self.crew_input.clear()
+        for field in self._material_inputs.values():
+            field.clear()
+        self._apply_material_fields_for_ship("")
+
+    def _show_running_session_panels(self):
+        self.start_panel.hide()
+        self.archived_hint.hide()
+        self.active_panel.show()
+        self.material_panel.show()
 
     def _on_client_session_changed(self, _index=-1):
         if not self.is_network_client:
@@ -848,8 +869,19 @@ class SessionPage(QWidget):
                 if selected:
                     status = selected.get("status")
 
-        if status not in ("ACTIVE", "WAITING_FOR_REFINERY"):
+        if status != "ACTIVE":
             self.mission_costs_panel.hide()
+            self.mission_cost_input.clear()
+            self.mission_cost_paid_by.clear()
+            self.mission_costs_table.setRowCount(0)
+            self.delete_mission_button.setEnabled(False)
+            self.mission_costs_total_label.setText(
+                tr(
+                    "session.mission.costs_total",
+                    mission_total=format_number(0),
+                    session_total=format_number(0),
+                )
+            )
             return
 
         self.mission_costs_panel.show()
@@ -974,24 +1006,13 @@ class SessionPage(QWidget):
         session = self.db.get_active_session()
 
         if not session:
-            self.start_panel.show()
-            self.archived_hint.setVisible(
-                bool(self.db.get_archived_sessions(limit=1))
-            )
-            self.active_ship_label.setText("—")
-            self.active_status_label.setText(tr("session.label.not_started"))
-            self.finish_button.setEnabled(False)
-            self.end_session_button.setEnabled(False)
-            self._apply_material_fields_for_ship(
-                self.ship_combo.currentText()
-            )
+            self._show_idle_session_panels()
             self._refresh_delete_sessions()
             self._refresh_mission_costs()
             self._refresh_captures()
             return
 
-        self.start_panel.hide()
-        self.archived_hint.hide()
+        self._show_running_session_panels()
         self.active_ship_label.setText(session[1])
         self.active_status_label.setText(
             status_label(session[2])
@@ -1032,12 +1053,6 @@ class SessionPage(QWidget):
 
         self.delete_session_combo.blockSignals(False)
         self._update_reopen_button()
-
-        if not self.db.get_active_session():
-            session_id = self.delete_session_combo.currentData()
-            if session_id:
-                self._refresh_mission_costs(session_id)
-                self._refresh_captures(session_id)
 
     def delete_selected_session(self):
         session_id = self.delete_session_combo.currentData()

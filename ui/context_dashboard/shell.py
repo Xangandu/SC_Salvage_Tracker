@@ -203,6 +203,10 @@ class ContextDashboardShell(QWidget):
             self.context_help.show()
 
     def _sync_session_status_animation(self, data: dict):
+        if not data.get("active"):
+            self._last_session_status = "IDLE"
+            return
+
         status_code = data.get("status") or "IDLE"
         status_text = data.get("status_label") or status_code
         previous = self._last_session_status

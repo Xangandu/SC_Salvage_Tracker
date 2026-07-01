@@ -7,12 +7,18 @@ Salvage**\
 Sitzungen, Materialfluss, Raffinerie, Verkäufe, Kosten und
 Crew-Auszahlungen.
 
-## Highlights (Beta)
+## Highlights (Beta 0.16.6)
 
-- **In-App-Update verbessert** — Der In-App-Update-Prozess wurde optimiert, um eine reibungslosere Installation zu gewährleisten.
-- **PowerShell-Skript für Updates** — Updates werden jetzt über ein PowerShell-Skript verwaltet, das für Logs und Auto-Neustart sorgt.
-- **Backup bei gesperrten Dateien** — Bei gesperrten Dateien wird eine EXE-Ersetzung mit Backup-Option durchgeführt, um Installationsprobleme zu vermeiden.
-- **Manuelle Installation erforderlich** — Bei fehlgeschlagenem In-App-Update auf Version 0.16.1/0.16.2 ist eine manuelle Installation von 0.16.3 notwendig.
+- **Dashboard SESSION & STATUS** — Keine falsche „Aktive Sitzung“ nach Sitzungsende; kombinierte Material-Bereitschaft (RMC, CM Salvage)
+- **Auszahlungen & Historie** — Aufklappbare Crew-Auszahlungen; alle Auszahlungen unter Historie
+- **Fenster** — Titelleiste verschieben, Ecken/Ränder skalieren, Min/Max/Restore; Symbole zentriert
+- **Fixes** — Lager-Transfer, Verkaufs-Zähler, gespeicherte Fenstergröße beim Start
+
+## Highlights (frühere Versionen)
+
+- **Physische SCU (0.16.5)** — Verkauf entnimmt direkt aus dem Lager; ein SCU = ein Ort
+- **Logistik-Pooling (0.16.4)** — Material-Pools nach Standort; sichtbares In-App-Update
+- **In-App-Update (0.16.3)** — PySide-Setup ohne Inno; Auto-Neustart nach Installation
 
 ![SC Salvage Tracker](grafik.png)
 ![SC Salvage Tracker](grafik2.png)

@@ -31,7 +31,7 @@ from database.access import get_database
 from database.payout_repository import (
     UNASSIGNED_COST_PAYERS,
 )
-from config.dates import format_date
+from config.dates import format_date, format_datetime
 from config.i18n import tr, format_number
 from config.strings_de import parse_number_de
 
@@ -398,9 +398,9 @@ class StatisticsPage(QWidget):
 
         self.crew_totals_table.setHorizontalHeaderLabels([
 
-            tr("payout.table.crew_member"),
+            tr("payout.table.date_or_crew"),
 
-            tr("payout.table.total_received"),
+            tr("payout.table.amount"),
 
         ])
 
@@ -434,101 +434,15 @@ class StatisticsPage(QWidget):
 
         self.crew_empty_panel.hide()
 
+        self._expanded_crew_payout_ids = set()
+
+        self.crew_totals_table.cellClicked.connect(
+
+            self.on_crew_totals_cell_clicked
+
+        )
+
         layout.addWidget(crew_panel)
-
-
-
-        layout.addWidget(
-
-            section_accent(tr("payout.section.history"))
-
-        )
-
-        layout.addLayout(hud_divider())
-
-
-
-        history_panel, history_layout = page_panel()
-
-        history_layout.setContentsMargins(12, 12, 12, 12)
-
-
-
-        self.history_table = QTableWidget()
-
-        self.history_table.setColumnCount(6)
-
-        self.history_table.setHorizontalHeaderLabels([
-
-            tr("payout.table.no"),
-
-            tr("payout.table.sale"),
-
-            tr("payout.table.date"),
-
-            tr("payout.table.location"),
-
-            tr("payout.table.paid_out"),
-
-            tr("payout.table.created_by"),
-
-        ])
-
-        configure_mobiglas_table(
-
-            self.history_table,
-
-            "historyTable",
-
-        )
-
-        self.history_table.setMinimumHeight(180)
-
-
-
-        self.payout_history_empty_panel = empty_info_panel(
-
-            tr("payout.history.empty"),
-
-            "assets/images/icons/info.svg",
-
-        )
-
-
-
-        self.void_payout_button = _secondary_button(
-
-            tr("payout.button.void")
-
-        )
-
-        self.void_payout_button.clicked.connect(
-
-            self.void_selected_payout
-
-        )
-
-
-
-        history_actions = QHBoxLayout()
-
-        history_actions.setSpacing(12)
-
-        history_actions.addWidget(self.void_payout_button)
-
-        history_actions.addStretch()
-
-
-
-        history_layout.addWidget(self.history_table)
-
-        history_layout.addLayout(history_actions)
-
-        history_layout.addWidget(self.payout_history_empty_panel)
-
-        self.payout_history_empty_panel.hide()
-
-        layout.addWidget(history_panel)
 
 
 
@@ -580,8 +494,6 @@ class StatisticsPage(QWidget):
         self.load_unpaid_sales()
 
         self.load_crew_totals()
-
-        self.load_history()
 
         self.update_summary()
 
@@ -727,44 +639,66 @@ class StatisticsPage(QWidget):
 
     def load_crew_totals(self):
 
-        totals = self.db.get_crew_payout_totals()
-        has_totals = len(totals) > 0
+        history = self.db.get_payout_history()
+        has_totals = len(history) > 0
 
         self.crew_totals_table.setVisible(has_totals)
         self.crew_empty_panel.setVisible(not has_totals)
-        self.crew_totals_table.setRowCount(len(totals))
 
+        rows = []
 
+        for payout in history:
+            rows.append(("parent", payout, None))
 
-        for row, entry in enumerate(totals):
+            if payout["id"] in self._expanded_crew_payout_ids:
+                for item in payout["items"]:
+                    rows.append(("child", payout, item))
 
-            self.crew_totals_table.setItem(
+        self.crew_totals_table.setRowCount(len(rows))
 
-                row,
+        for row, (kind, payout, item) in enumerate(rows):
+            if kind == "parent":
+                expanded = (
+                    payout["id"]
+                    in self._expanded_crew_payout_ids
+                )
+                indicator = "▼" if expanded else "▶"
+                location = payout.get("location") or "—"
+                label = (
+                    f"{indicator}  "
+                    f"{format_datetime(payout['created_at'], with_seconds=True)}"
+                    f" · {location}"
+                )
+                amount_text = (
+                    f"{format_number(payout['payout_total'])} aUEC"
+                )
+                meta = {
+                    "kind": "parent",
+                    "payout_id": payout["id"],
+                }
+            else:
+                label = f"    {item['crew_member']}"
+                amount_text = (
+                    f"{format_number(item['amount'])} aUEC"
+                )
+                meta = {
+                    "kind": "child",
+                    "payout_id": payout["id"],
+                }
 
-                0,
-
-                QTableWidgetItem(
-
-                    entry["crew_member"]
-
-                ),
-
+            label_item = QTableWidgetItem(label)
+            label_item.setData(
+                Qt.ItemDataRole.UserRole,
+                meta,
+            )
+            amount_item = QTableWidgetItem(amount_text)
+            amount_item.setData(
+                Qt.ItemDataRole.UserRole,
+                meta,
             )
 
-            self.crew_totals_table.setItem(
-
-                row,
-
-                1,
-
-                QTableWidgetItem(
-
-                    f"{format_number(entry['total'])} aUEC"
-
-                ),
-
-            )
+            self.crew_totals_table.setItem(row, 0, label_item)
+            self.crew_totals_table.setItem(row, 1, amount_item)
 
         finalize_table_columns(
             self.crew_totals_table,
@@ -773,105 +707,26 @@ class StatisticsPage(QWidget):
 
 
 
-    def load_history(self):
+    def on_crew_totals_cell_clicked(self, row, _column):
 
-        history = self.db.get_payout_history()
-        has_history = len(history) > 0
+        item = self.crew_totals_table.item(row, 0)
 
-        self.history_table.setVisible(has_history)
-        self.payout_history_empty_panel.setVisible(
-            not has_history
-        )
-        self.history_table.setRowCount(len(history))
+        if item is None:
+            return
 
+        meta = item.data(Qt.ItemDataRole.UserRole)
 
+        if not meta or meta.get("kind") != "parent":
+            return
 
-        for row, payout in enumerate(history):
+        payout_id = meta["payout_id"]
 
-            self.history_table.setItem(
+        if payout_id in self._expanded_crew_payout_ids:
+            self._expanded_crew_payout_ids.discard(payout_id)
+        else:
+            self._expanded_crew_payout_ids.add(payout_id)
 
-                row,
-
-                0,
-
-                QTableWidgetItem(f"#{payout['id']}"),
-
-            )
-
-            self.history_table.setItem(
-
-                row,
-
-                1,
-
-                QTableWidgetItem(
-
-                    f"#{payout['sale_id']}"
-
-                ),
-
-            )
-
-            self.history_table.setItem(
-
-                row,
-
-                2,
-
-                QTableWidgetItem(
-                    format_date(payout["sale_date"])
-                ),
-
-            )
-
-            self.history_table.setItem(
-
-                row,
-
-                3,
-
-                QTableWidgetItem(
-
-                    payout["location"]
-
-                ),
-
-            )
-
-            self.history_table.setItem(
-
-                row,
-
-                4,
-
-                QTableWidgetItem(
-
-                    f"{format_number(payout['payout_total'])} aUEC"
-
-                ),
-
-            )
-
-            self.history_table.setItem(
-
-                row,
-
-                5,
-
-                QTableWidgetItem(
-
-                    payout["created_by"]
-
-                ),
-
-            )
-
-
-
-        finalize_table_columns(
-            self.history_table,
-            stretch_column=3,
-        )
+        self.load_crew_totals()
 
 
 
@@ -1589,120 +1444,6 @@ class StatisticsPage(QWidget):
 
         if hasattr(main_window, "history_page"):
             main_window.history_page.refresh_history()
-
-    def _selected_payout_id(self):
-
-        row = self.history_table.currentRow()
-
-        if row < 0:
-
-            return None
-
-        item = self.history_table.item(row, 0)
-
-        if not item:
-
-            return None
-
-        return int(item.text().lstrip("#"))
-
-    def void_selected_payout(self):
-
-        payout_id = self._selected_payout_id()
-
-        if payout_id is None:
-
-            QMessageBox.warning(
-
-                self,
-
-                tr("common.hint"),
-
-                tr("payout.msg.no_selection"),
-
-            )
-
-            return
-
-        answer = QMessageBox.question(
-
-            self,
-
-            tr("payout.msg.void_confirm.title"),
-
-            tr(
-                "payout.msg.void_confirm.message",
-                payout_id=payout_id,
-            ),
-
-            QMessageBox.Yes | QMessageBox.No,
-
-            QMessageBox.No,
-
-        )
-
-        if answer != QMessageBox.Yes:
-
-            return
-
-        try:
-
-            self.db.void_payout(payout_id)
-
-        except ValueError as error:
-
-            QMessageBox.warning(
-
-                self,
-
-                tr("common.not_possible"),
-
-                str(error),
-
-            )
-
-            return
-
-        except Exception as error:
-
-            QMessageBox.critical(
-
-                self,
-
-                tr("common.error"),
-
-                tr("payout.msg.void_failed", error=error),
-
-            )
-
-            return
-
-        self.load_data()
-
-        main_window = self.window()
-
-        if hasattr(main_window, "refresh_all"):
-
-            main_window.refresh_all()
-
-        elif hasattr(main_window, "dashboard_page"):
-
-            main_window.dashboard_page.refresh_dashboard()
-
-        QMessageBox.information(
-
-            self,
-
-            tr("payout.msg.voided.title"),
-
-            tr(
-                "payout.msg.voided.message",
-                payout_id=payout_id,
-            ),
-
-        )
-
-
 
     def refresh_data(self):
 

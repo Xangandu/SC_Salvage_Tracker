@@ -18,15 +18,18 @@ from PySide6.QtWidgets import (
     QDialog,
     QSizePolicy,
     QFrame,
+    QStyle,
+    QStyleOptionButton,
+    QStylePainter,
 )
 
 from config.paths import asset_path
 
-_CONTROL_SIZE = QSize(40, 32)
 _ICON_SIZE = QSize(14, 14)
 _TITLE_BAR_HEIGHT = 40
 _BEVEL_TOP_HEIGHT = 2
 _ROW_HEIGHT = _TITLE_BAR_HEIGHT - _BEVEL_TOP_HEIGHT
+_CONTROL_SIZE = QSize(40, 32)
 _CONTROLS_H_MARGIN = 0
 _CONTROLS_V_MARGIN = 0
 _CONTROLS_BUTTON_SPACING = 0
@@ -51,26 +54,66 @@ def _window_icon(name: str) -> QIcon:
     return QIcon(str(path))
 
 
+class _TitleBarControlButton(QPushButton):
+    """Titelleisten-Button mit manuell zentriertem Icon (Windows-Style-Offset vermeiden)."""
+
+    def __init__(
+        self,
+        object_name: str,
+        icon_name: str,
+        tooltip: str,
+    ):
+        super().__init__()
+        self.setObjectName(object_name)
+        self.setToolTip(tooltip)
+        self.setFixedSize(_CONTROL_SIZE)
+        self._button_icon = _window_icon(icon_name)
+        self._icon_size = _ICON_SIZE
+        self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setAutoFillBackground(True)
+        self.setSizePolicy(
+            QSizePolicy.Policy.Fixed,
+            QSizePolicy.Policy.Fixed,
+        )
+        _enable_styled_background(self)
+
+    def set_icon_name(self, icon_name: str) -> None:
+        self._button_icon = _window_icon(icon_name)
+        self.update()
+
+    def setIcon(self, icon: QIcon) -> None:  # noqa: N802 — Qt-API
+        self._button_icon = icon
+        self.update()
+
+    def paintEvent(self, event):
+        option = QStyleOptionButton()
+        self.initStyleOption(option)
+        option.icon = QIcon()
+        option.text = ""
+
+        painter = QStylePainter(self)
+        painter.drawControl(QStyle.ControlElement.CE_PushButton, option)
+
+        x = (self.width() - self._icon_size.width()) // 2
+        y = (self.height() - self._icon_size.height()) // 2
+        self._button_icon.paint(
+            painter,
+            QRect(
+                x,
+                y,
+                self._icon_size.width(),
+                self._icon_size.height(),
+            ),
+        )
+
+
 def _make_control_button(
     object_name: str,
     icon_name: str,
     tooltip: str,
 ) -> QPushButton:
-    button = QPushButton()
-    button.setObjectName(object_name)
-    button.setToolTip(tooltip)
-    button.setFixedSize(_CONTROL_SIZE)
-    button.setIcon(_window_icon(icon_name))
-    button.setIconSize(_ICON_SIZE)
-    button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-    button.setCursor(Qt.CursorShape.PointingHandCursor)
-    button.setAutoFillBackground(True)
-    button.setSizePolicy(
-        QSizePolicy.Policy.Fixed,
-        QSizePolicy.Policy.Fixed,
-    )
-    _enable_styled_background(button)
-    return button
+    return _TitleBarControlButton(object_name, icon_name, tooltip)
 
 
 def _controls_panel_outer_size(button_count: int) -> QSize:
@@ -93,6 +136,7 @@ def _controls_panel_outer_size(button_count: int) -> QSize:
 
 _GRIP_SIZE = 8
 _RESIZE_BORDER = _GRIP_SIZE
+_HTCAPTION = 2
 _HTLEFT = 10
 _HTRIGHT = 11
 _HTTOP = 12
@@ -123,6 +167,35 @@ _RESIZE_HIT_CODES = frozenset(
         _HTBOTTOMRIGHT,
     }
 )
+_DRAG_THRESHOLD = 4
+
+
+def _title_bar_caption_hit(
+    window,
+    global_x: int,
+    global_y: int,
+) -> bool:
+    title_bar = getattr(window, "_mobiglas_title_bar", None)
+    if title_bar is None or not title_bar.isVisible():
+        return False
+
+    title_local = title_bar.mapFromGlobal(QPoint(global_x, global_y))
+    if not title_bar.rect().contains(title_local):
+        return False
+
+    controls = title_bar._controls_host
+    if controls.isVisible():
+        control_local = controls.mapFromGlobal(QPoint(global_x, global_y))
+        if controls.rect().contains(control_local):
+            return False
+
+    actions = title_bar._actions_host
+    if actions.isVisible():
+        actions_local = actions.mapFromGlobal(QPoint(global_x, global_y))
+        if actions.rect().contains(actions_local):
+            return False
+
+    return True
 
 
 def _resize_border(window) -> int:
@@ -132,22 +205,24 @@ def _resize_border(window) -> int:
     return max(_GRIP_SIZE, int(round(_GRIP_SIZE * ratio)))
 
 
+def _qt_edges_from_ht(ht: int) -> Qt.Edge | None:
+    mapping = {
+        _HTLEFT: Qt.Edge.LeftEdge,
+        _HTRIGHT: Qt.Edge.RightEdge,
+        _HTTOP: Qt.Edge.TopEdge,
+        _HTBOTTOM: Qt.Edge.BottomEdge,
+        _HTTOPLEFT: Qt.Edge.LeftEdge | Qt.Edge.TopEdge,
+        _HTTOPRIGHT: Qt.Edge.RightEdge | Qt.Edge.TopEdge,
+        _HTBOTTOMLEFT: Qt.Edge.LeftEdge | Qt.Edge.BottomEdge,
+        _HTBOTTOMRIGHT: Qt.Edge.RightEdge | Qt.Edge.BottomEdge,
+    }
+    return mapping.get(ht)
+
+
 def _resize_hit_test(window, global_x: int, global_y: int) -> int | None:
     pos = window.mapFromGlobal(QPoint(global_x, global_y))
     rect = window.rect()
     border = _resize_border(window)
-
-    title_bar = getattr(window, "_mobiglas_title_bar", None)
-    if title_bar is not None and title_bar.isVisible():
-        title_local = title_bar.mapFromGlobal(QPoint(global_x, global_y))
-        if title_bar.rect().contains(title_local):
-            controls = title_bar._controls_host
-            if controls.isVisible():
-                control_local = controls.mapFromGlobal(
-                    QPoint(global_x, global_y)
-                )
-                if controls.rect().contains(control_local):
-                    return None
 
     on_left = 0 <= pos.x() < border
     on_right = rect.width() - border <= pos.x() <= rect.width()
@@ -170,6 +245,10 @@ def _resize_hit_test(window, global_x: int, global_y: int) -> int | None:
         return _HTTOP
     if on_bottom:
         return _HTBOTTOM
+
+    if _title_bar_caption_hit(window, global_x, global_y):
+        return _HTCAPTION
+
     return None
 
 
@@ -345,26 +424,19 @@ class _MobiglasResizeGrips(QObject):
             return
 
         border = _resize_border(window)
-        title_h = _TITLE_BAR_HEIGHT
 
         left, right, top, bottom, tl, tr, bl, br = self._grips
-
-        controls_w = 0
-        title_bar = getattr(window, "_mobiglas_title_bar", None)
-        if title_bar is not None and title_bar._controls_host.isVisible():
-            controls_w = title_bar._controls_host.width()
-
-        left.setGeometry(0, title_h, border, max(height - title_h, border))
+        left.setGeometry(0, 0, border, height)
         right.setGeometry(
             width - border,
-            title_h,
+            0,
             border,
-            max(height - title_h, border),
+            height,
         )
         top.setGeometry(
             border,
             0,
-            max(width - (2 * border) - controls_w, border),
+            max(width - 2 * border, border),
             border,
         )
         bottom.setGeometry(
@@ -374,14 +446,11 @@ class _MobiglasResizeGrips(QObject):
             border,
         )
         tl.setGeometry(0, 0, border, border)
-        tr.setGeometry(0, 0, 0, 0)
-        tr.hide()
+        tr.setGeometry(width - border, 0, border, border)
         bl.setGeometry(0, height - border, border, border)
         br.setGeometry(width - border, height - border, border, border)
 
         for grip in self._grips:
-            if grip is tr:
-                continue
             grip.show()
             grip.raise_()
 
@@ -495,6 +564,8 @@ class MobiglasFramelessMixin:
 
     def showEvent(self, event):
         _ensure_win32_thick_frame(self)
+        if isinstance(self, QDialog):
+            _finalize_mobiglas_dialog_size(self)
         self._sync_custom_maximized_state()
         self._relayout_resize_grips()
         super().showEvent(event)
@@ -562,6 +633,9 @@ class MobiglasTitleBar(QWidget):
         super().__init__(window)
         self._window = window
         self._drag_start = None
+        self._drag_press_global = None
+        self._pending_restore_press = None
+        self._drag_moved = False
         self._custom_maximized = False
         self._normal_geometry = None
         self.setObjectName("mobiglasTitleBar")
@@ -651,7 +725,7 @@ class MobiglasTitleBar(QWidget):
                 tr("common.minimize"),
             )
             self._min_button.clicked.connect(
-                self._window.showMinimized
+                self._minimize_window
             )
             controls.addWidget(self._min_button)
 
@@ -731,7 +805,39 @@ class MobiglasTitleBar(QWidget):
             return True
         if self._controls_host.isAncestorOf(widget):
             return True
+        if self._actions_host.isVisible() and self._actions_host.isAncestorOf(
+            widget
+        ):
+            return True
         return widget.objectName() == "mobiglasTitleAction"
+
+    def _global_pos_from_event(self, event) -> QPoint:
+        if hasattr(event, "globalPosition"):
+            return event.globalPosition().toPoint()
+        return event.globalPos()
+
+    def _try_begin_window_resize(self, event) -> bool:
+        global_pos = self._global_pos_from_event(event)
+        ht = _resize_hit_test(
+            self._window,
+            global_pos.x(),
+            global_pos.y(),
+        )
+        if ht is None or ht == _HTCAPTION:
+            return False
+
+        if self._is_window_maximized():
+            self._restore_for_edge_resize(global_pos, ht)
+
+        edges = _qt_edges_from_ht(ht)
+        if edges is None:
+            return False
+
+        handle = self._window.windowHandle()
+        if handle is not None and handle.startSystemResize(edges):
+            event.accept()
+            return True
+        return False
 
     def eventFilter(self, obj, event):
         if self._is_drag_excluded_widget(obj):
@@ -739,12 +845,22 @@ class MobiglasTitleBar(QWidget):
 
         if event.type() == QEvent.Type.MouseButtonPress:
             if event.button() == Qt.MouseButton.LeftButton:
+                if self._try_begin_window_resize(event):
+                    return True
                 self._begin_window_drag(event)
                 return True
+        if event.type() == QEvent.Type.MouseMove:
+            if event.buttons() & Qt.MouseButton.LeftButton:
+                self._continue_window_drag(event)
+                return True
+        if event.type() == QEvent.Type.MouseButtonRelease:
+            if event.button() == Qt.MouseButton.LeftButton:
+                self._end_window_drag()
         if event.type() == QEvent.Type.MouseButtonDblClick:
             if (
                 event.button() == Qt.MouseButton.LeftButton
                 and self._show_maximize
+                and not self._drag_moved
             ):
                 self._toggle_maximize()
                 return True
@@ -829,11 +945,27 @@ class MobiglasTitleBar(QWidget):
             self._max_button.setIcon(_window_icon("maximize"))
             self._max_button.setToolTip(tr("common.maximize"))
 
+    def _minimize_window(self):
+        window = self._window
+        self._end_window_drag()
+
+        if not self._is_full_screen_geometry():
+            self._normal_geometry = window.geometry()
+
+        self._custom_maximized = False
+        if window.isMaximized():
+            window.showNormal()
+
+        window.setWindowState(
+            window.windowState() | Qt.WindowState.WindowMinimized
+        )
+
     def _toggle_maximize(self):
         if self._max_button is None:
             return
 
         window = self._window
+        self._end_window_drag()
 
         if self._is_window_maximized():
             target = self._fallback_normal_geometry()
@@ -978,28 +1110,62 @@ class MobiglasTitleBar(QWidget):
         self._sync_maximize_button()
 
     def _begin_window_drag(self, event):
+        self._drag_moved = False
+        self._drag_press_global = self._global_pos_from_event(event)
+
         if self._is_window_maximized():
-            self._restore_window_for_drag(event)
-
-        if sys.platform == "win32":
-            handle = self._window.windowHandle()
-            if handle is not None:
-                handle.startSystemMove()
-                event.accept()
-                return True
-
-        if hasattr(event, "globalPosition"):
-            global_pos = event.globalPosition().toPoint()
+            self._pending_restore_press = event
+            self._drag_start = None
         else:
-            global_pos = event.globalPos()
-        self._drag_start = global_pos - self._window.frameGeometry().topLeft()
+            self._pending_restore_press = None
+            self._drag_start = (
+                self._drag_press_global
+                - self._window.frameGeometry().topLeft()
+            )
+
+        self.grabMouse()
         event.accept()
         return True
+
+    def _continue_window_drag(self, event):
+        if self._drag_press_global is None:
+            return False
+
+        global_pos = self._global_pos_from_event(event)
+        if not self._drag_moved:
+            delta = global_pos - self._drag_press_global
+            if delta.manhattanLength() < _DRAG_THRESHOLD:
+                return False
+            self._drag_moved = True
+
+            if self._pending_restore_press is not None:
+                self._restore_window_for_drag(self._pending_restore_press)
+                self._pending_restore_press = None
+                self._drag_start = (
+                    global_pos - self._window.frameGeometry().topLeft()
+                )
+
+        if self._drag_start is not None:
+            self._window.move(global_pos - self._drag_start)
+
+        event.accept()
+        return True
+
+    def _end_window_drag(self):
+        if self.mouseGrabber() is self:
+            self.releaseMouse()
+        self._drag_start = None
+        self._drag_press_global = None
+        self._pending_restore_press = None
+        self._drag_moved = False
 
     def mousePressEvent(self, event):
         if (
             event.button() == Qt.MouseButton.LeftButton
-            and self._begin_window_drag(event)
+            and (
+                self._try_begin_window_resize(event)
+                or self._begin_window_drag(event)
+            )
         ):
             return
         super().mousePressEvent(event)
@@ -1007,25 +1173,21 @@ class MobiglasTitleBar(QWidget):
     def mouseMoveEvent(self, event):
         if (
             event.buttons() & Qt.MouseButton.LeftButton
-            and self._drag_start is not None
+            and self._continue_window_drag(event)
         ):
-            if hasattr(event, "globalPosition"):
-                global_pos = event.globalPosition().toPoint()
-            else:
-                global_pos = event.globalPos()
-            self._window.move(global_pos - self._drag_start)
-            event.accept()
             return
         super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event):
-        self._drag_start = None
+        if event.button() == Qt.MouseButton.LeftButton:
+            self._end_window_drag()
         super().mouseReleaseEvent(event)
 
     def mouseDoubleClickEvent(self, event):
         if (
             event.button() == Qt.MouseButton.LeftButton
             and self._show_maximize
+            and not self._drag_moved
         ):
             self._toggle_maximize()
             event.accept()
@@ -1060,6 +1222,21 @@ def _polish_title_bar(title_bar: MobiglasTitleBar):
         style.unpolish(button)
         style.polish(button)
         button.update()
+
+
+def _finalize_mobiglas_dialog_size(window: QDialog) -> None:
+    """Größe/Mindestgröße nach Titelleisten-Wrapper und Win32-Rahmen synchronisieren."""
+    window.adjustSize()
+    hint = window.minimumSizeHint()
+    min_w = max(window.minimumWidth(), hint.width())
+    min_h = hint.height()
+    if min_w > 0 or min_h > 0:
+        window.setMinimumSize(min_w, max(min_h, 0))
+
+    target_w = max(window.width(), min_w)
+    target_h = max(window.height(), min_h)
+    if target_w != window.width() or target_h != window.height():
+        window.resize(target_w, target_h)
 
 
 def apply_mobiglas_window_frame(
@@ -1101,6 +1278,8 @@ def apply_mobiglas_window_frame(
 
     _polish_title_bar(title_bar)
     window._mobiglas_title_bar = title_bar
+    if isinstance(window, QDialog):
+        _finalize_mobiglas_dialog_size(window)
     if sys.platform == "win32":
         window._mobiglas_resize_grips = _MobiglasResizeGrips(window)
         if window.isVisible():

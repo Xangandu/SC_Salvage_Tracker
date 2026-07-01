@@ -1,4 +1,28 @@
 {
+  "0.16.6": {
+    "de": {
+      "title": "SC Salvage Tracker 0.16.6 Beta — Operations HUD",
+      "summary": "Dashboard-Sitzung und Material-Status korrigiert, Auszahlungs-Historie verbessert, Fenster-UI repariert.",
+      "highlights": [
+        "Keine falsche Aktive Sitzung nach Sitzungsende",
+        "STATUS: RMC verkaufsbereit und CM Salvage raffineriebereit kombiniert",
+        "Crew-Auszahlungen aufklappbar; Alle Auszahlungen unter Historie",
+        "Fenster: Verschieben, Skalieren, Min/Max und zentrierte Symbole",
+        "Lager-Transfer und Fenster-Geometrie beim Start behoben"
+      ]
+    },
+    "en": {
+      "title": "SC Salvage Tracker 0.16.6 Beta — Operations HUD",
+      "summary": "Dashboard session and material status fixed, payout history improved, window UI repaired.",
+      "highlights": [
+        "No false active session after ending a run",
+        "STATUS: combined RMC sale-ready and CM Salvage refinery-ready",
+        "Expandable crew payouts; all payouts under History",
+        "Windows: move, resize, min/max and centered title bar icons",
+        "Storage transfer and window geometry on startup fixed"
+      ]
+    }
+  },
   "0.16.5": {
     "de": {
       "title": "SC Salvage Tracker 0.16.5 Beta — Physische SCU",

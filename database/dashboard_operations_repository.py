@@ -17,6 +17,7 @@ class DashboardOperationsRepository:
     PRIORITY_PAYOUT = 10
     PRIORITY_REFINERY_READY = 20
     PRIORITY_SALE_READY = 30
+    PRIORITY_REFINERY_INPUT = 35
     PRIORITY_REFINERY_RUNNING = 40
     PRIORITY_STORAGE_IDLE = 50
     PRIORITY_SESSION_ACTIVE = 60
@@ -54,7 +55,7 @@ class DashboardOperationsRepository:
             "open_refinery_jobs": self.db.get_open_refinery_jobs(),
             "active_sessions": self.db.get_active_session_count(),
             "total_sessions": self.db.get_total_session_count(),
-            "sold_sessions": self._count_sessions_by_status("SOLD"),
+            "sold_sessions": self.db.get_sales_count(),
             "idle_warnings": self.db.count_stockpile_idle_warnings(),
             "sellable_scu": self.db.get_sellable_storage_total_scu(),
         }
@@ -74,25 +75,13 @@ class DashboardOperationsRepository:
         return int(self.cursor.fetchone()[0] or 0)
 
     def _build_materials(self) -> dict:
-        stockpile_map: dict[str, float] = {}
-        if self.db._table_exists("material_stockpiles"):
-            for entry in self.db.get_stockpile_totals():
-                stockpile_map[entry["material_code"]] = float(
-                    entry.get("quantity_scu") or 0
-                )
-
         def sellable_total(code: str) -> float:
-            if self.db._table_exists("material_stockpiles"):
-                from config.materials import REFINED_SELLABLE_CODES
-
-                if code in REFINED_SELLABLE_CODES:
-                    return (
-                        self.db.stockpiles.sellable_quantity(code)
-                        + self.db.materials.global_pool_quantity(code)
-                    )
-            legacy = float(self.db.get_storage_balance(code) or 0)
-            stock = stockpile_map.get(code, 0.0)
-            return legacy + stock
+            if (
+                self.db._table_exists("material_stockpiles")
+                and code in REFINED_SELLABLE_CODES
+            ):
+                return self.db.stockpiles.sellable_quantity(code)
+            return 0.0
 
         return {
             "RMC": sellable_total("RMC"),
@@ -109,7 +98,7 @@ class DashboardOperationsRepository:
         }
 
     def _build_session_snapshot(self) -> dict:
-        session = self.db.get_dashboard_session()
+        session = self.db.get_active_session()
         if not session:
             return {
                 "active": False,
@@ -180,6 +169,12 @@ class DashboardOperationsRepository:
             }
 
         top = rows[0]
+        top_priority = top.get("priority", 999)
+        if top_priority >= self.PRIORITY_SALE_READY:
+            readiness = self._build_material_readiness_summary()
+            if readiness and readiness != tr("dashboard.readiness.none"):
+                return {"message": readiness}
+
         return {
             "message": top.get("headline") or top["status_label"],
         }
@@ -324,20 +319,6 @@ class DashboardOperationsRepository:
             when=when,
         )
 
-    def _sellable_stockpile_material_codes(self) -> set[str]:
-        if not self.db._table_exists("material_stockpiles"):
-            return set()
-
-        codes: set[str] = set()
-        for entry in self.db.list_material_stockpiles():
-            code = entry.get("material_code")
-            if code not in REFINED_SELLABLE_CODES:
-                continue
-            if float(entry.get("quantity_scu") or 0) <= 0:
-                continue
-            codes.add(code)
-        return codes
-
     def _resolve_storage_source_location(
         self,
         source_type: str | None,
@@ -362,31 +343,6 @@ class DashboardOperationsRepository:
                     )
 
         return "—"
-
-    def _legacy_sale_context(self, material_code: str) -> tuple[str, str]:
-        rows = self.db.materials._storage_rows_for_material(
-            material_code,
-            global_pool_only=True,
-        )
-        if not rows:
-            return ("—", "—")
-
-        storage_item_id = rows[0][0]
-        self.cursor.execute("""
-        SELECT source_type, source_id, created_at
-        FROM storage_items
-        WHERE id = ?
-        """, (storage_item_id,))
-        row = self.cursor.fetchone()
-        if not row:
-            return ("—", "—")
-
-        location = self._resolve_storage_source_location(
-            row[0],
-            row[1],
-        )
-        when = format_relative_activity(row[2])
-        return (location, when)
 
     def _sellable_stockpile_rows(self) -> list[dict]:
         if not self.db._table_exists("material_stockpiles"):
@@ -436,37 +392,129 @@ class DashboardOperationsRepository:
 
         return rows
 
-    def _sellable_legacy_storage_rows(self) -> list[dict]:
-        stockpile_codes = self._sellable_stockpile_material_codes()
-        inventory = self.db.get_dashboard_storage_inventory()
+    def _refinery_input_rows(self) -> list[dict]:
+        pools: list[dict] = []
+        if hasattr(self.db, "refinery"):
+            pools = self.db.refinery.get_material_pools()
+        elif hasattr(self.db, "stockpiles"):
+            pools = self.db.stockpiles.list_material_pools(
+                raw_cm_only=True,
+            )
+
+        grouped: dict[tuple, dict] = {}
+        for pool in pools:
+            code = pool.get("material_code")
+            if code not in RAW_CM_MATERIAL_CODES:
+                continue
+
+            qty = float(pool.get("quantity_scu") or 0)
+            if qty <= 0:
+                continue
+
+            if pool.get("pool_kind") == "SHIP" or pool.get("ship_name"):
+                location = tr(
+                    "storage.location.ship",
+                    ship=pool.get("ship_name")
+                    or pool.get("location_label")
+                    or "—",
+                )
+            else:
+                location = pool.get("location_label") or "—"
+
+            key = (code, location)
+            if key not in grouped:
+                grouped[key] = {
+                    "material_code": code,
+                    "location": location,
+                    "quantity_scu": 0.0,
+                }
+            grouped[key]["quantity_scu"] += qty
+
         rows = []
-
-        for entry in inventory:
-            code = entry.get("material_code")
-            if code not in REFINED_SELLABLE_CODES:
+        for entry in grouped.values():
+            code = entry["material_code"]
+            location = entry["location"] or "—"
+            qty = float(entry["quantity_scu"] or 0)
+            if qty <= 0:
                 continue
-            if code in stockpile_codes:
-                continue
 
-            location, when = self._legacy_sale_context(code)
             rows.append({
-                "priority": self.PRIORITY_SALE_READY,
-                "kind": "sale_legacy",
-                "status_label": tr("dashboard.action.sale_ready"),
-                "headline": self._sale_ready_headline(
-                    code,
-                    location,
-                    when,
+                "priority": self.PRIORITY_REFINERY_INPUT,
+                "kind": "refinery_input",
+                "status_label": tr(
+                    "dashboard.action.refinery_input_ready"
+                ),
+                "headline": tr(
+                    "dashboard.next_action.refinery_input",
+                    material=material_label(code),
+                    location=location,
                 ),
                 "material_code": code,
                 "material_label": material_label(code),
-                "quantity_scu": float(entry.get("quantity") or 0),
+                "quantity_scu": qty,
                 "context_label": location,
-                "detail_label": tr("dashboard.action.detail.legacy"),
-                "sort_key": f"1-legacy-{code}",
+                "detail_label": "",
+                "sort_key": f"refinery-input-{code}-{location}",
             })
 
         return rows
+
+    def _build_material_readiness_summary(self) -> str:
+        parts: list[str] = []
+
+        sellable: dict[str, float] = {}
+        for row in self._sellable_stockpile_rows():
+            code = row.get("material_code")
+            if not code:
+                continue
+            sellable[code] = sellable.get(code, 0.0) + float(
+                row.get("quantity_scu") or 0
+            )
+
+        for code in sorted(sellable):
+            if sellable[code] <= 0:
+                continue
+            parts.append(
+                tr(
+                    "dashboard.readiness.line",
+                    material=material_label(code),
+                    status=tr("dashboard.action.sale_ready"),
+                )
+            )
+
+        refinery: dict[str, float] = {}
+        for row in self._refinery_input_rows():
+            code = row.get("material_code")
+            if not code:
+                continue
+            refinery[code] = refinery.get(code, 0.0) + float(
+                row.get("quantity_scu") or 0
+            )
+
+        for code in RAW_CM_MATERIAL_CODES:
+            if code == "CM":
+                continue
+            batch_qty = float(
+                self.db.get_global_batch_available(code) or 0
+            )
+            if batch_qty > 0:
+                refinery[code] = refinery.get(code, 0.0) + batch_qty
+
+        for code in sorted(refinery):
+            if refinery[code] <= 0:
+                continue
+            parts.append(
+                tr(
+                    "dashboard.readiness.line",
+                    material=material_label(code),
+                    status=tr("dashboard.action.refinery_input_ready"),
+                )
+            )
+
+        if not parts:
+            return tr("dashboard.readiness.none")
+
+        return tr("dashboard.readiness.separator").join(parts)
 
     def _idle_stockpile_rows(self) -> list[dict]:
         if not self.db._table_exists("material_stockpiles"):
@@ -555,8 +603,8 @@ class DashboardOperationsRepository:
     _KIND_TO_CONTEXT = {
         "payout": "payout",
         "refinery": "refinery",
+        "refinery_input": "refinery",
         "sale_stockpile": "sales",
-        "sale_legacy": "sales",
         "storage_idle": "storage",
         "session_active": "session",
     }
@@ -566,7 +614,7 @@ class DashboardOperationsRepository:
         rows.extend(self._unpaid_sale_rows())
         rows.extend(self._refinery_rows())
         rows.extend(self._sellable_stockpile_rows())
-        rows.extend(self._sellable_legacy_storage_rows())
+        rows.extend(self._refinery_input_rows())
         rows.extend(self._idle_stockpile_rows())
         rows.extend(self._active_session_rows())
         rows.sort(
@@ -584,6 +632,17 @@ class DashboardOperationsRepository:
 
         top = rows[0]
         kind = top.get("kind") or ""
+        top_priority = top.get("priority", 999)
+
+        if top_priority >= self.PRIORITY_SALE_READY:
+            readiness = self._build_material_readiness_summary()
+            if readiness and readiness != tr("dashboard.readiness.none"):
+                return {
+                    "message": readiness,
+                    "target_context": "overview",
+                    "action_label": tr("dashboard.alert.show"),
+                }
+
         return {
             "message": top.get("headline") or top.get("status_label") or "",
             "target_context": self._KIND_TO_CONTEXT.get(
@@ -623,26 +682,27 @@ class DashboardOperationsRepository:
         return {
             "actions": table_rows,
             "summary": summary,
+            "readiness_summary": self._build_material_readiness_summary(),
         }
 
     def build_session_context(self) -> dict:
         snapshot = self._build_session_snapshot()
-        materials = snapshot.get("materials") or {}
-        snapshot["session_scu_total"] = sum(materials.values())
+        active = bool(snapshot.get("active"))
+        session_id = snapshot.get("session_id") if active else None
+        materials = snapshot.get("materials") or {} if active else {}
+        snapshot["materials"] = materials
+        snapshot["session_scu_total"] = sum(materials.values()) if active else 0
+        snapshot["readiness_summary"] = self._build_material_readiness_summary()
         snapshot["locations"] = self._build_session_locations(
-            snapshot.get("session_id"),
+            session_id,
             materials,
         )
         snapshot["processes"] = self._build_session_processes(
-            snapshot.get("session_id"),
-            snapshot.get("status"),
+            session_id,
+            snapshot.get("status") if active else "IDLE",
         )
-        mission_costs = self._build_session_mission_costs(
-            snapshot.get("session_id"),
-        )
-        refinery_costs = self._build_session_refinery_costs(
-            snapshot.get("session_id"),
-        )
+        mission_costs = self._build_session_mission_costs(session_id)
+        refinery_costs = self._build_session_refinery_costs(session_id)
         combined_session_costs = (
             float(mission_costs.get("session_costs_table_total") or 0)
             + float(refinery_costs.get("refinery_costs_total") or 0)
@@ -959,6 +1019,14 @@ class DashboardOperationsRepository:
             "total_output": total_output,
             "jobs": jobs,
             "by_material": by_material,
+            "input_items": [
+                (
+                    row.get("material_label") or "—",
+                    row.get("context_label") or "—",
+                    float(row.get("quantity_scu") or 0),
+                )
+                for row in self._refinery_input_rows()
+            ],
         }
 
     def _storage_event_type_label(self, event_type: str) -> str:
@@ -1075,27 +1143,6 @@ class DashboardOperationsRepository:
                     detail,
                 ))
 
-        for entry in self.db.get_dashboard_storage_inventory():
-            qty = float(entry.get("quantity") or 0)
-            if qty <= 0:
-                continue
-
-            code = entry.get("material_code") or "—"
-            detail = tr(
-                "dashboard.context.storage_inventory_detail",
-                material=material_label(code),
-                quantity=format_scu(qty),
-                source=tr("dashboard.action.legacy_storage"),
-                location=tr("dashboard.action.legacy_storage"),
-                stored_since="—",
-            )
-            inventory.append((
-                "",
-                "—",
-                tr("dashboard.action.legacy_storage"),
-                detail,
-            ))
-
         inventory.sort(key=lambda row: row[0], reverse=True)
         return [(when, title, detail) for _, when, title, detail in inventory]
 
@@ -1108,13 +1155,6 @@ class DashboardOperationsRepository:
                 if qty <= 0:
                     continue
                 total_scu += qty
-
-        for entry in self.db.get_dashboard_storage_inventory():
-            code = entry.get("material_code")
-            qty = float(entry.get("quantity") or 0)
-            if qty <= 0:
-                continue
-            total_scu += qty
 
         inventory = self._build_storage_inventory()
 
@@ -1153,6 +1193,7 @@ class DashboardOperationsRepository:
             "idle_warnings": self.db.count_stockpile_idle_warnings(),
             "inventory": inventory,
             "recent_events": events,
+            "readiness_summary": self._build_material_readiness_summary(),
         }
 
     def build_sales_context(self) -> dict:
@@ -1169,28 +1210,26 @@ class DashboardOperationsRepository:
                 0.0,
             ))
 
-        for row in self._sellable_legacy_storage_rows():
-            qty = float(row.get("quantity_scu") or 0)
-            total_scu += qty
-            items.append((
-                row.get("material_label") or "—",
-                row.get("context_label") or "—",
-                qty,
-                0.0,
-            ))
-
         pending_count = 0
         pending_amount = 0.0
         if self.db._table_exists("sales"):
-            deleted = ""
+            payout_deleted = ""
+            if self.db._table_exists("payouts"):
+                if "is_deleted" in self.db._table_columns("payouts"):
+                    payout_deleted = "AND p.is_deleted = 0"
+
+            sales_deleted = ""
             if "is_deleted" in self.db._table_columns("sales"):
-                deleted = "AND s.is_deleted = 0"
+                sales_deleted = "AND s.is_deleted = 0"
+
             self.cursor.execute(f"""
             SELECT COUNT(*), COALESCE(SUM(s.total_amount), 0)
             FROM sales s
-            LEFT JOIN payouts p ON p.sale_id = s.id
+            LEFT JOIN payouts p
+                ON p.sale_id = s.id
+                {payout_deleted}
             WHERE p.id IS NULL
-            {deleted}
+            {sales_deleted}
             """)
             row = self.cursor.fetchone()
             if row:
@@ -1203,6 +1242,7 @@ class DashboardOperationsRepository:
             "items": items,
             "pending_sales": pending_count,
             "pending_amount": pending_amount,
+            "readiness_summary": self._build_material_readiness_summary(),
         }
 
     def build_payout_context(self) -> dict:

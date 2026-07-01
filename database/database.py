@@ -275,6 +275,7 @@ class Database(UserAuthMixin, InitialSetupMixin):
         self.corrections = CorrectionRepository(self)
         self.backups = BackupRepository(self)
         self.migrations = MigrationManager(self)
+        self._upgrade_physical_stockpile_model()
         self.migrations.ensure_backup_defaults()
         self.migrations.finalize_version_metadata()
         self.finalize_initial_setup_state()
@@ -439,6 +440,17 @@ class Database(UserAuthMixin, InitialSetupMixin):
             """)
 
         self.connection.commit()
+
+    def _upgrade_physical_stockpile_model(self):
+        """Legacy storage_items in Stockpiles überführen / Ledger verknüpfen."""
+        if not self._table_exists("material_stockpiles"):
+            return
+
+        if not hasattr(self, "stockpiles"):
+            return
+
+        self.stockpiles.migrate_orphan_storage_into_stockpiles()
+        self.stockpiles.sync_unlinked_stockpile_storage_ledgers()
 
     def _upgrade_solo_user_login(self):
         from config.editions import EDITION_SOLO, build_edition
@@ -737,8 +749,26 @@ class Database(UserAuthMixin, InitialSetupMixin):
                     crew.append(name)
         return crew
 
-    def transfer_from_material_pool(self, **kwargs):
-        return self.stockpiles.transfer_from_material_pool(**kwargs)
+    def transfer_from_material_pool(
+        self,
+        pool,
+        quantity_scu,
+        *,
+        location_kind,
+        location_key,
+        location_label,
+        ship_id=None,
+        created_by=None,
+    ):
+        return self.stockpiles.transfer_from_material_pool(
+            pool,
+            quantity_scu,
+            location_kind=location_kind,
+            location_key=location_key,
+            location_label=location_label,
+            ship_id=ship_id,
+            created_by=created_by,
+        )
 
     def withdraw_from_material_pool(self, pool, quantity_scu, **kwargs):
         return self.stockpiles.withdraw_from_material_pool(
@@ -1874,13 +1904,7 @@ class Database(UserAuthMixin, InitialSetupMixin):
         return self.materials.get_available_inventory()
 
     def get_dashboard_storage_inventory(self):
-        exclude_refinery = self._table_exists(
-            "material_stockpiles"
-        )
-        return self.materials.get_available_inventory(
-            exclude_refinery_source=exclude_refinery,
-            global_pool_only=True,
-        )
+        return self.get_available_storage_inventory()
 
     def get_sales_count(self):
         if not self._table_exists("sales"):
