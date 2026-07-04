@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import json
+import sys
 
-from PySide6.QtCore import QPoint, QRect, QSize
+from PySide6.QtCore import QPoint, QRect, QSize, QTimer, Qt
 from PySide6.QtWidgets import QApplication
 from PySide6.QtGui import QGuiApplication
 
@@ -131,19 +132,39 @@ def _clear_maximized_state(window) -> None:
     if title_bar is not None:
         title_bar._custom_maximized = False
 
-    if window.isMaximized():
-        window.showNormal()
+    state = window.windowState()
+    if state & Qt.WindowState.WindowMaximized:
+        window.setWindowState(state & ~Qt.WindowState.WindowMaximized)
+
+
+def _apply_window_rect(window, rect: QRect) -> None:
+    if window.geometry() == rect:
+        return
+
+    window.setGeometry(rect)
+    if window.geometry() == rect:
+        return
+
+    if sys.platform != "win32":
+        return
+
+    _clear_maximized_state(window)
+    window.resize(rect.size())
+    window.move(rect.topLeft())
 
 
 def _apply_normal_geometry(window, rect: QRect) -> None:
     _clear_maximized_state(window)
-    if window.geometry() != rect:
-        window.setGeometry(rect)
+    _apply_window_rect(window, rect)
 
 
 def _apply_maximized_geometry(window, screen) -> None:
     title_bar = getattr(window, "_mobiglas_title_bar", None)
     target = screen.availableGeometry() if screen is not None else None
+
+    state = window.windowState()
+    if state & Qt.WindowState.WindowMaximized:
+        window.setWindowState(state & ~Qt.WindowState.WindowMaximized)
 
     if target is not None and window.geometry() != target:
         window.setGeometry(target)
@@ -291,6 +312,18 @@ def restore_window_geometry(
     default_width: int | None = None,
     default_height: int | None = None,
 ) -> None:
+    if not window.isVisible():
+        QTimer.singleShot(
+            0,
+            lambda: restore_window_geometry(
+                window,
+                db,
+                default_width=default_width,
+                default_height=default_height,
+            ),
+        )
+        return
+
     data = _load_geometry_from_db(db, _SETTING_KEY)
     _restore_window_geometry(
         window,
@@ -315,6 +348,18 @@ def restore_dashboard_window_geometry(
     default_width: int | None = None,
     default_height: int | None = None,
 ) -> None:
+    if not window.isVisible():
+        QTimer.singleShot(
+            0,
+            lambda: restore_dashboard_window_geometry(
+                window,
+                db,
+                default_width=default_width,
+                default_height=default_height,
+            ),
+        )
+        return
+
     data = _load_geometry_from_db(db, _DASHBOARD_GEOMETRY_KEY)
     _restore_window_geometry(
         window,

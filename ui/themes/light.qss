@@ -89,6 +89,13 @@ QLabel#navTitleSecondary {
     margin: 0;
 }
 
+QLabel#navBrandLogo {
+    background: transparent;
+    border: none;
+    padding: 0;
+    margin: 0;
+}
+
 QLabel#navEditionBadge {
     color: #0E7490;
     font-family: "Segoe UI";
@@ -465,6 +472,40 @@ QWidget#pageContent {
    Refinery / Payout Status Panel
 ---------------------------------- */
 
+QWidget#designSubPage QFrame#typographyRoleRow {
+    background: qlineargradient(
+        x1: 0, y1: 0, x2: 0, y2: 1,
+        stop: 0 #1A2230,
+        stop: 1 #141B24
+    );
+    border: 1px solid #C0C8D0;
+    border-left: 3px solid #C45A12;
+    border-radius: 8px;
+}
+
+QWidget#designSubPage QFrame#typographyPreviewBox {
+    background-color: rgba(7, 10, 14, 0.55);
+    border: 1px solid #C0C8D0;
+    border-radius: 6px;
+}
+
+QWidget#designSubPage QScrollArea#typographySettingsScroll {
+    background: transparent;
+    border: none;
+}
+
+QWidget#designSubPage QScrollArea#typographySettingsScroll > QWidget {
+    background: transparent;
+}
+
+QWidget#designSubPage QWidget#typographySettingsPanel {
+    background: transparent;
+}
+
+QWidget#designSubPage QWidget#typographyRolesHost {
+    background: transparent;
+}
+
 QLabel#refineryStatusPanel,
 QLabel#payoutStatusPanel {
     background: qlineargradient(
@@ -687,33 +728,70 @@ QPlainTextEdit:focus {
     background: #E4E8ED;
 }
 
-QSpinBox {
+QSpinBox,
+QDoubleSpinBox {
     background: #E8EBF0;
     border: 1px solid #C4CAD2;
 
     border-radius: 12px;
 
-    padding: 6px 8px;
+    padding: 6px 22px 6px 8px;
 
     color: #E8ECF0;
 
     min-height: 24px;
 }
 
-QSpinBox:focus {
+QSpinBox:focus,
+QDoubleSpinBox:focus {
     border: 1px solid #0E7490;
 }
 
 QSpinBox::up-button,
-QSpinBox::down-button {
+QDoubleSpinBox::up-button {
+    subcontrol-origin: border;
+    subcontrol-position: top right;
+    width: 20px;
+    height: 19px;
     background-color: #F5F6F8;
     border: none;
-    width: 18px;
+    border-left: 1px solid #C4CAD2;
+    border-bottom: 1px solid #C4CAD2;
+    border-top-right-radius: 11px;
+}
+
+QSpinBox::down-button,
+QDoubleSpinBox::down-button {
+    subcontrol-origin: border;
+    subcontrol-position: bottom right;
+    width: 20px;
+    height: 19px;
+    background-color: #F5F6F8;
+    border: none;
+    border-left: 1px solid #C4CAD2;
+    border-top: 1px solid #C4CAD2;
+    border-bottom-right-radius: 11px;
 }
 
 QSpinBox::up-button:hover,
-QSpinBox::down-button:hover {
+QSpinBox::down-button:hover,
+QDoubleSpinBox::up-button:hover,
+QDoubleSpinBox::down-button:hover {
     background-color: #C4CAD2;
+}
+
+QSpinBox::up-arrow,
+QDoubleSpinBox::up-arrow {
+    image: url({{ASSET_SPIN_ARROW_UP}});
+    width: 10px;
+    height: 6px;
+}
+
+QSpinBox::down-arrow,
+QDoubleSpinBox::down-arrow {
+    image: url({{ASSET_SPIN_ARROW_DOWN}});
+    width: 10px;
+    height: 6px;
 }
 
 
@@ -833,7 +911,8 @@ QLineEdit:disabled {
     border: 1px solid #B0BCC8;
 }
 
-QSpinBox:disabled {
+QSpinBox:disabled,
+QDoubleSpinBox:disabled {
     background-color: #D4D8DE;
 
     color: #5C6773;

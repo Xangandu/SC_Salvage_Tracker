@@ -4,17 +4,17 @@
   "source": "Star Citizen Starmap / Spiel — Landeplätze für Verkauf (RMC, CM)",
   "systems": {
     "Stanton": [
-      { "id": "ORISON", "name": "Orison", "planet": "microTech", "buys": ["RMC", "CM"], "has_refinery": true },
-      { "id": "NEW-BABBAGE", "name": "New Babbage", "planet": "microTech", "buys": ["RMC", "CM"], "has_refinery": true },
-      { "id": "AREA18", "name": "Area18", "planet": "ArcCorp", "buys": ["RMC", "CM"], "has_refinery": true },
-      { "id": "LORVILLE", "name": "Lorville", "planet": "Hurston", "buys": ["RMC", "CM"], "has_refinery": true },
+      { "id": "ORISON", "name": "Orison", "planet": "microTech", "buys": ["RMC", "CM"] },
+      { "id": "NEW-BABBAGE", "name": "New Babbage", "planet": "microTech", "buys": ["RMC", "CM"] },
+      { "id": "AREA18", "name": "Area18", "planet": "ArcCorp", "buys": ["RMC", "CM"] },
+      { "id": "LORVILLE", "name": "Lorville", "planet": "Hurston", "buys": ["RMC", "CM"] },
       { "id": "L19", "name": "L19 (Pyro)", "planet": "Pyro I", "buys": ["RMC", "CM"] }
     ],
     "Pyro": [
       { "id": "CHECKMATE-CZ", "name": "Checkmate (Handel)", "planet": "Monox", "buys": ["RMC", "CM"], "note": "Station Checkmate — Handelskonsole" }
     ],
     "Nyx": [
-      { "id": "LEVSKI", "name": "Levski", "planet": "Delamar", "buys": ["RMC", "CM"], "has_refinery": true }
+      { "id": "LEVSKI", "name": "Levski", "planet": "Delamar", "buys": ["RMC", "CM"] }
     ]
   },
   "notes": [

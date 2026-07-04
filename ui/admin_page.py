@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QUrl, Signal
+from PySide6.QtCore import Qt, QUrl, Signal, QTimer
 from PySide6.QtGui import QColor, QDesktopServices
 from PySide6.QtWidgets import (
     QWidget,
@@ -34,6 +34,8 @@ from config.i18n import (
     tr,
 )
 from ui.language_settings_panel import LanguageSettingsPanel
+from ui.typography_settings_panel import TypographySettingsPanel
+from config.typography import TYPOGRAPHY_SETTINGS_KEY, TYPOGRAPHY_BASELINE_KEY
 from database.access import get_database
 from config.permissions import (
     has_permission,
@@ -431,6 +433,10 @@ class AdminPage(QWidget):
             tr("admin.design.tab.colors"),
         )
         self.design_sub_tabs.addTab(
+            self._build_design_typography_page(),
+            tr("admin.design.tab.typography"),
+        )
+        self.design_sub_tabs.addTab(
             self._build_design_dashboard_page(),
             tr("admin.design.tab.dashboard"),
         )
@@ -713,6 +719,35 @@ class AdminPage(QWidget):
         layout.addStretch()
         return page
 
+    def _build_design_typography_page(self):
+        page = QWidget()
+        page.setObjectName("designSubPage")
+        layout = QVBoxLayout(page)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+
+        panel, panel_layout = page_panel()
+        panel_layout.setContentsMargins(20, 20, 20, 20)
+        panel_layout.setSpacing(12)
+
+        panel_layout.addWidget(
+            subsection_title(tr("admin.design.section.typography"))
+        )
+        panel_layout.addLayout(hud_divider())
+
+        self.typography_panel = TypographySettingsPanel()
+        panel_layout.addWidget(self.typography_panel)
+
+        panel_layout.addLayout(
+            self._design_action_row(
+                self.preview_typography_settings,
+                self.save_typography_settings,
+            )
+        )
+        layout.addWidget(panel)
+        layout.addStretch()
+        return page
+
     def _build_design_dashboard_page(self):
         page = QWidget()
         page.setObjectName("designSubPage")
@@ -741,6 +776,9 @@ class AdminPage(QWidget):
         self.dashboard_font_scale_slider.valueChanged.connect(
             self._on_dashboard_widget_scale_changed
         )
+        self.dashboard_font_scale_slider.sliderReleased.connect(
+            self._finalize_dashboard_scale_preview
+        )
 
         (
             self.dashboard_title_font_scale_slider,
@@ -750,6 +788,9 @@ class AdminPage(QWidget):
         self.dashboard_title_font_scale_slider.valueChanged.connect(
             self._on_dashboard_title_scale_changed
         )
+        self.dashboard_title_font_scale_slider.sliderReleased.connect(
+            self._finalize_dashboard_scale_preview
+        )
 
         (
             self.dashboard_button_font_scale_slider,
@@ -758,6 +799,16 @@ class AdminPage(QWidget):
         ) = self._make_dashboard_scale_row()
         self.dashboard_button_font_scale_slider.valueChanged.connect(
             self._on_dashboard_button_scale_changed
+        )
+        self.dashboard_button_font_scale_slider.sliderReleased.connect(
+            self._finalize_dashboard_scale_preview
+        )
+
+        self._dashboard_scale_live_timer = QTimer(self)
+        self._dashboard_scale_live_timer.setSingleShot(True)
+        self._dashboard_scale_live_timer.setInterval(8)
+        self._dashboard_scale_live_timer.timeout.connect(
+            self._apply_dashboard_scale_live
         )
 
         dash_grid = QGridLayout()
@@ -1209,6 +1260,15 @@ class AdminPage(QWidget):
             app_settings.get("theme"),
         )
         self._refresh_design_color_swatches()
+        self.typography_panel.load_from_settings(
+            effective.get(TYPOGRAPHY_SETTINGS_KEY, ""),
+            typography_baseline_json=effective.get(
+                TYPOGRAPHY_BASELINE_KEY,
+                "",
+            ),
+            theme_id=effective.get("theme", "star_citizen"),
+            global_family_id=effective.get("font_family", "oxanium"),
+        )
 
     def _collect_theme_form(self):
         effective = (
@@ -1310,11 +1370,24 @@ class AdminPage(QWidget):
             ),
         }
 
-    def _refresh_dashboard_font_live(self):
-        settings = self._merge_effective_settings(
-            self._collect_dashboard_form()
+    def _schedule_dashboard_scale_live(self):
+        self._dashboard_scale_live_timer.start()
+
+    def _apply_dashboard_scale_live(self):
+        ThemeManager.refresh_dashboard_font_scale(
+            self._collect_dashboard_form(),
+            live_preview=True,
         )
-        ThemeManager.refresh_dashboard_font_scale(settings)
+
+    def _finalize_dashboard_scale_preview(self):
+        self._dashboard_scale_live_timer.stop()
+        ThemeManager.refresh_dashboard_font_scale(
+            self._collect_dashboard_form(),
+            live_preview=False,
+        )
+
+    def _refresh_dashboard_font_live(self):
+        self._schedule_dashboard_scale_live()
 
     def _merge_effective_settings(self, overrides):
         if not self.current_user:
@@ -1341,7 +1414,7 @@ class AdminPage(QWidget):
             scale,
         )
         self.dashboard_font_preview.set_scale(scale)
-        self._refresh_dashboard_font_live()
+        self._schedule_dashboard_scale_live()
 
     def _on_dashboard_title_scale_changed(self, scale):
         scale = ThemeManager.normalize_dashboard_font_scale(
@@ -1351,7 +1424,7 @@ class AdminPage(QWidget):
             self.dashboard_title_font_scale_value,
             scale,
         )
-        self._refresh_dashboard_font_live()
+        self._schedule_dashboard_scale_live()
 
     def _on_dashboard_button_scale_changed(self, scale):
         scale = ThemeManager.normalize_dashboard_font_scale(
@@ -1361,12 +1434,54 @@ class AdminPage(QWidget):
             self.dashboard_button_font_scale_value,
             scale,
         )
-        self._refresh_dashboard_font_live()
+        self._schedule_dashboard_scale_live()
 
     def _apply_dashboard_layout(self):
         window = self.window()
         if hasattr(window, "get_dashboard_page"):
             window.get_dashboard_page().apply_dashboard_layout()
+
+    def preview_typography_settings(self):
+        settings = self._merge_effective_settings({
+            TYPOGRAPHY_SETTINGS_KEY: (
+                self.typography_panel.collect_overrides_json()
+            ),
+        })
+        ThemeManager.apply_settings(settings)
+        QMessageBox.information(
+            self,
+            tr("admin.design.dialog.title"),
+            tr("admin.design.msg.preview"),
+        )
+
+    def save_typography_settings(self):
+        if not self.current_user:
+            return
+
+        typography_json = self.typography_panel.collect_overrides_json()
+        self.db.settings.save_user_settings(
+            self.current_user["id"],
+            {
+                TYPOGRAPHY_SETTINGS_KEY: typography_json,
+                TYPOGRAPHY_BASELINE_KEY: typography_json,
+            },
+        )
+        settings = self._merge_effective_settings({
+            TYPOGRAPHY_SETTINGS_KEY: typography_json,
+            TYPOGRAPHY_BASELINE_KEY: typography_json,
+        })
+        ThemeManager.apply_settings(settings)
+        self.typography_panel.load_from_settings(
+            typography_json,
+            typography_baseline_json=typography_json,
+            theme_id=settings.get("theme", "star_citizen"),
+            global_family_id=settings.get("font_family", "oxanium"),
+        )
+        QMessageBox.information(
+            self,
+            tr("admin.design.dialog.title"),
+            tr("admin.design.msg.saved"),
+        )
 
     def preview_design_settings(self):
         theme = self._collect_theme_form()

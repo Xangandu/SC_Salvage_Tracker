@@ -83,11 +83,6 @@ class DashboardWindow(MobiglasFramelessMixin, QMainWindow):
             title=tr("dashboard.window.title"),
         )
 
-        restore_dashboard_window_geometry(
-            self,
-            get_database(),
-        )
-
         self.hide()
 
     def _save_geometry(self):
@@ -112,11 +107,6 @@ class DashboardWindow(MobiglasFramelessMixin, QMainWindow):
         self._schedule_geometry_save()
 
     def show_dashboard(self):
-        restore_dashboard_window_geometry(
-            self,
-            get_database(),
-        )
-
         self.dashboard_page.reload_user_layout()
         self.dashboard_page.refresh_dashboard()
 
@@ -126,6 +116,11 @@ class DashboardWindow(MobiglasFramelessMixin, QMainWindow):
             self.showNormal()
 
         self.show()
+
+        restore_dashboard_window_geometry(
+            self,
+            get_database(),
+        )
 
         self.raise_()
 

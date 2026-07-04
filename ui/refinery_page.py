@@ -127,7 +127,6 @@ class RefineryPage(QWidget):
         self.refinery_location_picker = SystemLocationPicker(
             refinery_stations_only=True,
         )
-        self.refinery_location_picker.set_location("Orison")
 
         self.refinery_method_combo = QComboBox()
         self.refinery_method_combo.addItem(
@@ -356,7 +355,15 @@ class RefineryPage(QWidget):
             self._on_jobs_became_ready
         )
 
+    def showEvent(self, event):
+        super().showEvent(event)
+        if self._live_sync is not None:
+            self._on_jobs_updated()
+
     def _on_jobs_updated(self) -> None:
+        if not self.isVisible():
+            return
+
         jobs = self.db.get_active_refinery_jobs()
         self._sync_job_cards(jobs)
         for card in self._job_cards.values():
@@ -702,6 +709,8 @@ class RefineryPage(QWidget):
         for card in self._job_cards.values():
             card.tick()
         self._update_ready_banner(jobs)
+        if not jobs:
+            self.refinery_location_picker.clear_selection()
 
     def create_job(self):
         pool = self.pool_combo.currentData()
@@ -812,6 +821,7 @@ class RefineryPage(QWidget):
         self.notes_input.clear()
         self.refinery_cost_input.clear()
         self.refinery_cost_paid_by.setCurrentIndex(0)
+        self.refinery_location_picker.clear_selection()
         self.ready_info_label.setText(_status_panel())
 
         self.load_data()

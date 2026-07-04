@@ -78,7 +78,7 @@ class RefineryJobProgressBar(QWidget):
         self.setObjectName("refineryJobProgress")
 
         self._anim_timer = QTimer(self)
-        self._anim_timer.setInterval(16)
+        self._anim_timer.setInterval(33)
         self._anim_timer.timeout.connect(self._tick_animation)
 
     def showEvent(self, event):
@@ -163,6 +163,7 @@ class RefineryJobCard(QFrame):
         self._job = dict(job)
         self._job_id = job["id"]
         self._collect_button = None
+        self._card_ready_style = None
 
         self.setObjectName("jobCard")
 
@@ -358,5 +359,7 @@ class RefineryJobCard(QFrame):
             )
         )
         self._progress_bar.set_progress(progress)
-        self.style().unpolish(self)
-        self.style().polish(self)
+        if self._card_ready_style != is_ready:
+            self._card_ready_style = is_ready
+            self.style().unpolish(self)
+            self.style().polish(self)

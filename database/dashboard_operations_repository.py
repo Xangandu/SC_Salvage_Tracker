@@ -625,8 +625,16 @@ class DashboardOperationsRepository:
         )
         return rows
 
-    def build_global_alert(self) -> dict | None:
-        rows = self.collect_action_rows()
+    def build_global_alert(
+        self,
+        *,
+        action_rows: list[dict] | None = None,
+    ) -> dict | None:
+        rows = (
+            action_rows
+            if action_rows is not None
+            else self.collect_action_rows()
+        )
         if not rows:
             return None
 
@@ -652,9 +660,15 @@ class DashboardOperationsRepository:
             "action_label": tr("dashboard.alert.show"),
         }
 
-    def build_context(self, context_key: str) -> dict:
+    def build_context(
+        self,
+        context_key: str,
+        *,
+        action_rows: list[dict] | None = None,
+    ) -> dict:
+        if context_key == "overview":
+            return self.build_overview_context(action_rows=action_rows)
         builders = {
-            "overview": self.build_overview_context,
             "session": self.build_session_context,
             "refinery": self.build_refinery_context,
             "storage": self.build_storage_context,
@@ -663,10 +677,20 @@ class DashboardOperationsRepository:
             "history": self.build_history_context,
         }
         builder = builders.get(context_key, self.build_overview_context)
+        if builder is self.build_overview_context:
+            return builder(action_rows=action_rows)
         return builder()
 
-    def build_overview_context(self) -> dict:
-        rows = self.collect_action_rows()
+    def build_overview_context(
+        self,
+        *,
+        action_rows: list[dict] | None = None,
+    ) -> dict:
+        rows = (
+            action_rows
+            if action_rows is not None
+            else self.collect_action_rows()
+        )
         summary = self._build_summary()
         table_rows = []
         for row in rows[:12]:

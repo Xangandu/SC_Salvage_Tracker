@@ -86,9 +86,10 @@ class SystemLocationPicker(QWidget):
             system,
             refinery_only=self._refinery_stations_only,
         )
-        cities = cities_for_system(
-            system,
-            refinery_only=self._refinery_stations_only,
+        cities = (
+            []
+            if self._refinery_stations_only
+            else cities_for_system(system)
         )
 
         populate_station_city_location_combo(
@@ -124,6 +125,10 @@ class SystemLocationPicker(QWidget):
             return ""
         return selected.location_label
 
+    def clear_selection(self) -> None:
+        """Standort auf Platzhalter (— Standort wählen —) zurücksetzen."""
+        self.location_combo.setCurrentIndex(0)
+
     def set_location(
         self,
         location_label: str,
@@ -132,6 +137,7 @@ class SystemLocationPicker(QWidget):
     ) -> None:
         location_label = (location_label or "").strip()
         if not location_label:
+            self.clear_selection()
             return
 
         systems = [system] if system else list(SYSTEM_ORDER)
@@ -147,13 +153,11 @@ class SystemLocationPicker(QWidget):
                     self._select(sys_name, "STATION", loc_id)
                     return
 
-            for loc_id, name in cities_for_system(
-                sys_name,
-                refinery_only=self._refinery_stations_only,
-            ):
-                if name.casefold() == location_label.casefold():
-                    self._select(sys_name, "CITY", loc_id)
-                    return
+            if not self._refinery_stations_only:
+                for loc_id, name in cities_for_system(sys_name):
+                    if name.casefold() == location_label.casefold():
+                        self._select(sys_name, "CITY", loc_id)
+                        return
 
     def _select(
         self,

@@ -553,50 +553,57 @@ class RefineryRepository:
 
         jobs = []
 
-        for row in self.cursor.fetchall():
+        rows = self.cursor.fetchall()
+        if not rows:
+            return jobs
+
+        job_ids = [row[0] for row in rows]
+        placeholders = ",".join("?" * len(job_ids))
+        self.cursor.execute(f"""
+        SELECT
+            refinery_job_items.job_id,
+            refinery_job_items.id,
+            refinery_job_items.batch_id,
+            COALESCE(
+                refinery_job_items.input_material,
+                material_types.material_code
+            ),
+            refinery_job_items.input_quantity,
+            COALESCE(
+                refinery_job_items.output_material,
+                ?
+            ),
+            refinery_job_items.output_quantity,
+            COALESCE(
+                refinery_job_items.yield_percent,
+                0
+            )
+        FROM refinery_job_items
+        INNER JOIN material_batches
+            ON material_batches.id =
+                refinery_job_items.batch_id
+        LEFT JOIN material_types
+            ON material_types.id =
+                material_batches.material_type_id
+        WHERE refinery_job_items.job_id IN ({placeholders})
+        ORDER BY refinery_job_items.job_id, refinery_job_items.id
+        """, (REFINERY_OUTPUT_CODE, *job_ids))
+
+        items_by_job: dict[int, list] = {}
+        for item in self.cursor.fetchall():
+            job_id = item[0]
+            items_by_job.setdefault(job_id, []).append({
+                "item_id": item[1],
+                "batch_id": item[2],
+                "input_material": item[3],
+                "input_quantity": item[4],
+                "output_material": item[5],
+                "output_quantity": item[6],
+                "yield_percent": item[7],
+            })
+
+        for row in rows:
             job_id = row[0]
-
-            self.cursor.execute("""
-            SELECT
-                refinery_job_items.id,
-                refinery_job_items.batch_id,
-                COALESCE(
-                    refinery_job_items.input_material,
-                    material_types.material_code
-                ),
-                refinery_job_items.input_quantity,
-                COALESCE(
-                    refinery_job_items.output_material,
-                    ?
-                ),
-                refinery_job_items.output_quantity,
-                COALESCE(
-                    refinery_job_items.yield_percent,
-                    0
-                )
-            FROM refinery_job_items
-            INNER JOIN material_batches
-                ON material_batches.id =
-                    refinery_job_items.batch_id
-            LEFT JOIN material_types
-                ON material_types.id =
-                    material_batches.material_type_id
-            WHERE refinery_job_items.job_id = ?
-            ORDER BY refinery_job_items.id
-            """, (REFINERY_OUTPUT_CODE, job_id))
-
-            items = [
-                {
-                    "item_id": item[0],
-                    "batch_id": item[1],
-                    "input_material": item[2],
-                    "input_quantity": item[3],
-                    "output_material": item[4],
-                    "output_quantity": item[5],
-                    "yield_percent": item[6],
-                }
-                for item in self.cursor.fetchall()
-            ]
 
             jobs.append({
                 "id": job_id,
@@ -611,7 +618,7 @@ class RefineryRepository:
                 "refinery_method": row[9],
                 "cm_raf_output": row[10],
                 "cost_paid_by": row[11],
-                "items": items,
+                "items": items_by_job.get(job_id, []),
             })
 
         return jobs

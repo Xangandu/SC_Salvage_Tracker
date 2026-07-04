@@ -122,7 +122,7 @@ class ContextDashboardShell(QWidget):
         self.context_change_requested.emit(target)
         self.set_context(target, force=True)
 
-    def set_context(self, key: str, *, force: bool = False):
+    def set_context(self, key: str, *, force: bool = False, animated: bool = True):
         if key not in self._views:
             return
 
@@ -138,7 +138,7 @@ class ContextDashboardShell(QWidget):
             self._pinned_context = key
 
         self.stack.setCurrentWidget(self._views[key])
-        self.refresh()
+        self.refresh(animated=animated)
         self._update_header()
 
     def ensure_db(self, db=None):
@@ -149,18 +149,22 @@ class ContextDashboardShell(QWidget):
             self.db = current
             self._repo = DashboardOperationsRepository(current)
 
-    def refresh(self):
+    def refresh(self, *, animated: bool = True):
         self.ensure_db()
         display = self._display_context()
-        data = self._repo.build_context(display)
+        action_rows = self._repo.collect_action_rows()
+        data = self._repo.build_context(
+            display,
+            action_rows=action_rows,
+        )
         view = self._views.get(display)
         if view is not None:
-            view.apply_data(data)
+            view.apply_data(data, animated=animated)
 
         if display == "session":
             self._sync_session_status_animation(data)
 
-        alert = self._repo.build_global_alert()
+        alert = self._repo.build_global_alert(action_rows=action_rows)
         has_alert = bool(alert and alert.get("message"))
         self.context_header.alert_bell.set_has_alert(has_alert)
         self.alert_strip.set_alert(

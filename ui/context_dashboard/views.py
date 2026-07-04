@@ -28,6 +28,9 @@ from ui.context_dashboard.components import (
     animate_currency,
     animate_int,
     animate_scu,
+    update_currency,
+    update_int,
+    update_scu,
     animated_scu,
     dashboard_card,
     field_column,
@@ -59,7 +62,7 @@ class _BaseContextView(QScrollArea):
         self._layout.setSpacing(14)
         self.setWidget(host)
 
-    def apply_data(self, data: dict):
+    def apply_data(self, data: dict, *, animated: bool = True):
         raise NotImplementedError
 
 
@@ -117,7 +120,7 @@ class OverviewView(_BaseContextView):
         self._layout.addLayout(kpi_row)
         self._layout.addStretch()
 
-    def apply_data(self, data: dict):
+    def apply_data(self, data: dict, *, animated: bool = True):
         self.readiness_status.setText(
             data.get("readiness_summary")
             or tr("dashboard.readiness.none")
@@ -141,10 +144,26 @@ class OverviewView(_BaseContextView):
             finalize_table_columns(self.table, stretch_column=3)
 
         summary = data.get("summary") or {}
-        animate_currency(self.kpi_revenue, summary.get("total_sales"))
-        animate_currency(self.kpi_profit, summary.get("total_profit"))
-        animate_int(self.kpi_jobs, summary.get("open_refinery_jobs"))
-        animate_scu(self.kpi_storage, summary.get("sellable_scu"))
+        update_currency(
+            self.kpi_revenue,
+            summary.get("total_sales"),
+            animated=animated,
+        )
+        update_currency(
+            self.kpi_profit,
+            summary.get("total_profit"),
+            animated=animated,
+        )
+        update_int(
+            self.kpi_jobs,
+            summary.get("open_refinery_jobs"),
+            animated=animated,
+        )
+        update_scu(
+            self.kpi_storage,
+            summary.get("sellable_scu"),
+            animated=animated,
+        )
 
 
 class SessionView(_BaseContextView):
@@ -279,7 +298,7 @@ class SessionView(_BaseContextView):
         self._layout.addWidget(detail_card)
         self._layout.addStretch()
 
-    def apply_data(self, data: dict):
+    def apply_data(self, data: dict, *, animated: bool = True):
         active = bool(data.get("active"))
         name = (
             (data.get("name") or tr("dashboard.session.none"))
@@ -287,11 +306,11 @@ class SessionView(_BaseContextView):
             else tr("dashboard.session.none")
         )
         self.session_label.setText(name)
-        self.session_label.setObjectName(
-            "displayValue" if active else "mutedLabel"
-        )
-        self.session_label.style().unpolish(self.session_label)
-        self.session_label.style().polish(self.session_label)
+        object_name = "displayValue" if active else "mutedLabel"
+        if self.session_label.objectName() != object_name:
+            self.session_label.setObjectName(object_name)
+            self.session_label.style().unpolish(self.session_label)
+            self.session_label.style().polish(self.session_label)
 
         readiness_text = (
             data.get("readiness_summary")
@@ -306,12 +325,12 @@ class SessionView(_BaseContextView):
         )
         self.session_status_label.setText(workflow_status)
 
-        animate_int(self.crew_value, data.get("crew_count"))
-        animate_scu(self.session_scu, data.get("session_scu_total"))
+        update_int(self.crew_value, data.get("crew_count"), animated=animated)
+        update_scu(self.session_scu, data.get("session_scu_total"), animated=animated)
 
         materials = data.get("materials") or {}
         for code, widget in self.mat_widgets.items():
-            animate_scu(widget, materials.get(code))
+            update_scu(widget, materials.get(code), animated=animated)
 
         mission_total = data.get("mission_costs_total") or 0
         session_total = data.get("session_costs_total") or 0
@@ -456,7 +475,6 @@ class RefineryView(_BaseContextView):
         self._jobs_timer = QTimer(self)
         self._jobs_timer.setInterval(1000)
         self._jobs_timer.timeout.connect(self._tick_job_rows)
-        self._jobs_timer.start()
 
         mat_card, mat_layout = dashboard_card()
         mat_layout.addWidget(subsection_title(tr("dashboard.refinery_stats.by_material")))
@@ -467,13 +485,30 @@ class RefineryView(_BaseContextView):
         self._layout.addWidget(mat_card)
         self._layout.addStretch()
 
-    def apply_data(self, data: dict):
-        animate_int(self.jobs_open, data.get("open_jobs"))
-        animate_int(self.jobs_ready, data.get("ready_jobs"))
+    def showEvent(self, event):
+        super().showEvent(event)
+        if self._job_rows and not self._jobs_timer.isActive():
+            self._jobs_timer.start()
+
+    def hideEvent(self, event):
+        self._jobs_timer.stop()
+        super().hideEvent(event)
+
+    def apply_data(self, data: dict, *, animated: bool = True):
+        update_int(self.jobs_open, data.get("open_jobs"), animated=animated)
+        update_int(self.jobs_ready, data.get("ready_jobs"), animated=animated)
         avg = data.get("avg_efficiency") or 0
-        self.efficiency.animate_to(avg, suffix=" %", decimals=1, duration=1000)
-        animate_scu(self.io_in, data.get("total_input"))
-        animate_scu(self.io_out, data.get("total_output"))
+        if animated:
+            self.efficiency.animate_to(
+                avg,
+                suffix=" %",
+                decimals=1,
+                duration=1000,
+            )
+        else:
+            self.efficiency.set_immediate(avg, suffix=" %", decimals=1)
+        update_scu(self.io_in, data.get("total_input"), animated=animated)
+        update_scu(self.io_out, data.get("total_output"), animated=animated)
 
         input_rows = data.get("input_items") or []
         self.input_table.setRowCount(len(input_rows))
@@ -532,6 +567,10 @@ class RefineryView(_BaseContextView):
                 )
         if self._job_rows:
             self._tick_job_rows()
+            if self.isVisible() and not self._jobs_timer.isActive():
+                self._jobs_timer.start()
+        else:
+            self._jobs_timer.stop()
 
         while self.mat_layout.count():
             item = self.mat_layout.takeAt(0)
@@ -595,11 +634,11 @@ class StorageView(_BaseContextView):
         self._layout.addWidget(evt_card)
         self._layout.addStretch()
 
-    def apply_data(self, data: dict):
-        animate_scu(self.total_scu, data.get("total_scu"))
-        animate_int(self.idle_warn, data.get("idle_warnings"))
+    def apply_data(self, data: dict, *, animated: bool = True):
+        update_scu(self.total_scu, data.get("total_scu"), animated=animated)
+        update_int(self.idle_warn, data.get("idle_warnings"), animated=animated)
         inventory = data.get("inventory") or []
-        animate_int(self.item_count, len(inventory))
+        update_int(self.item_count, len(inventory), animated=animated)
         self.readiness_status.setText(
             data.get("readiness_summary")
             or tr("dashboard.readiness.none")
@@ -664,10 +703,14 @@ class SalesView(_BaseContextView):
         self._layout.addWidget(card)
         self._layout.addStretch()
 
-    def apply_data(self, data: dict):
-        animate_scu(self.ready_scu, data.get("ready_total_scu"))
-        animate_int(self.pending, data.get("pending_sales"))
-        animate_currency(self.pending_amount, data.get("pending_amount"))
+    def apply_data(self, data: dict, *, animated: bool = True):
+        update_scu(self.ready_scu, data.get("ready_total_scu"), animated=animated)
+        update_int(self.pending, data.get("pending_sales"), animated=animated)
+        update_currency(
+            self.pending_amount,
+            data.get("pending_amount"),
+            animated=animated,
+        )
         self.readiness_status.setText(
             data.get("readiness_summary")
             or tr("dashboard.readiness.none")
@@ -716,9 +759,9 @@ class PayoutView(_BaseContextView):
         self._layout.addWidget(card)
         self._layout.addStretch()
 
-    def apply_data(self, data: dict):
-        animate_int(self.open_count, data.get("open_count"))
-        animate_currency(self.open_total, data.get("open_total"))
+    def apply_data(self, data: dict, *, animated: bool = True):
+        update_int(self.open_count, data.get("open_count"), animated=animated)
+        update_currency(self.open_total, data.get("open_total"), animated=animated)
 
         rows = data.get("items") or []
         self.table.setRowCount(len(rows))
@@ -778,10 +821,10 @@ class HistoryView(_BaseContextView):
         self._layout.addWidget(evt_card)
         self._layout.addStretch()
 
-    def apply_data(self, data: dict):
-        animate_int(self.sold, data.get("sold_sessions"))
-        animate_int(self.total, data.get("total_sessions"))
-        animate_currency(self.revenue, data.get("total_revenue"))
+    def apply_data(self, data: dict, *, animated: bool = True):
+        update_int(self.sold, data.get("sold_sessions"), animated=animated)
+        update_int(self.total, data.get("total_sessions"), animated=animated)
+        update_currency(self.revenue, data.get("total_revenue"), animated=animated)
 
         while self.rev_layout.count():
             item = self.rev_layout.takeAt(0)

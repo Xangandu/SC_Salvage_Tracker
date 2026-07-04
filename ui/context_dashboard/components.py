@@ -349,31 +349,6 @@ class SessionRefineryProcessRow(QWidget):
         )
 
 
-def _timeline_when_width(text: str) -> int:
-    """Textbreite für Datum/Uhrzeit — max. über Theme-Schriften."""
-    widths = []
-    for family in ("Rajdhani", "Segoe UI"):
-        font = QFont(family, 12)
-        font.setWeight(QFont.Weight.DemiBold)
-        metrics = QFontMetrics(font)
-        widths.append(metrics.horizontalAdvance(text))
-    return max(widths) + 14
-
-
-def _timeline_when_column_width() -> int:
-    """Feste Spaltenbreite — vertikale Trenner in allen Zeilen bündig."""
-    samples = (
-        "31.12.2026 23:59:59",
-        "31.12.2026 23:59",
-        "—",
-    )
-    return max(_timeline_when_width(sample) for sample in samples)
-
-
-def _timeline_divider() -> QWidget:
-    return _TimelineDividerWidget()
-
-
 class _TimelineDividerWidget(QWidget):
     """Vertikaler HUD-Trenner — Linie und Punkt auf derselben Achse gezeichnet."""
 
@@ -415,11 +390,99 @@ class _TimelineDividerWidget(QWidget):
         painter.end()
 
 
+def _timeline_divider() -> QWidget:
+    return _TimelineDividerWidget()
+
+
 class TimelineRow(QWidget):
 
     ICON_COLUMN_PX = 20
     TEXT_AFTER_DIVIDER_MARGIN = 12
     COLUMN_SPACING = 8
+    WHEN_COLUMN_SAMPLES = (
+        "31.12.2026 23:59:59",
+        "31.12.2026 23:59",
+        "—",
+    )
+
+    @classmethod
+    def _timeline_when_font_metrics(cls, scales=None) -> QFontMetrics:
+        """Gleiche Schrift wie ThemeManager.apply_dashboard_fonts für Datum/Uhrzeit."""
+        from config.font_families import resolve_body_font
+        from ui.theme_manager import (
+            DASHBOARD_FONT_BASE_PX,
+            ThemeManager,
+        )
+
+        settings = (
+            scales
+            if scales is not None
+            else ThemeManager.current_settings()
+        )
+        resolved = ThemeManager.resolve_dashboard_scales(settings)
+        widget_px = ThemeManager._scaled_dashboard_px(
+            DASHBOARD_FONT_BASE_PX,
+            resolved["dashboard_font_scale"],
+        )
+        font = QFont(
+            resolve_body_font(ThemeManager._current_font_family_id()),
+            widget_px,
+        )
+        font.setBold(True)
+        return QFontMetrics(font)
+
+    @classmethod
+    def _timeline_when_column_width(
+        cls,
+        *,
+        extra_text: str = "",
+        scales=None,
+    ) -> int:
+        """Spaltenbreite inkl. Dashboard-Widget-Skalierung — Trenner bleiben bündig."""
+        metrics = cls._timeline_when_font_metrics(scales)
+        samples = cls.WHEN_COLUMN_SAMPLES
+        if extra_text:
+            samples = (*samples, extra_text)
+        return max(metrics.horizontalAdvance(sample) for sample in samples)
+
+    @classmethod
+    def refresh_when_columns(
+        cls,
+        root: QWidget,
+        scales=None,
+        *,
+        rows=None,
+    ) -> None:
+        """Nach Dashboard-Schrift-Slider Spaltenbreite aller Timeline-Zeilen anpassen."""
+        if rows is None:
+            rows = [
+                widget
+                for widget in root.findChildren(QWidget)
+                if widget.objectName() == "dashboardTimelineRow"
+                and getattr(widget, "_when_label", None) is not None
+            ]
+        if not rows:
+            return
+
+        metrics = cls._timeline_when_font_metrics(scales)
+        width = cls._timeline_when_column_width(scales=scales)
+        for row in rows:
+            width = max(
+                width,
+                metrics.horizontalAdvance(row._when_label.text()),
+            )
+
+        for row in rows:
+            row._apply_when_column_width(width)
+
+    def _apply_when_column_width(self, when_width: int) -> None:
+        when_label = getattr(self, "_when_label", None)
+        grid = getattr(self, "_grid", None)
+        if when_label is None:
+            return
+        when_label.setFixedWidth(when_width)
+        if grid is not None:
+            grid.setColumnMinimumWidth(0, when_width)
 
     def __init__(
         self,
@@ -474,8 +537,10 @@ class TimelineRow(QWidget):
         when_label = QLabel(when)
         when_label.setObjectName("dashboardTimelineWhen")
         when_label.setWordWrap(False)
-        when_width = _timeline_when_column_width()
-        when_label.setFixedWidth(when_width)
+        when_width = self._timeline_when_column_width(extra_text=when)
+        self._when_label = when_label
+        self._grid = grid
+        self._apply_when_column_width(when_width)
         when_label.setSizePolicy(
             QSizePolicy.Policy.Fixed,
             QSizePolicy.Policy.Preferred,
@@ -485,8 +550,6 @@ class TimelineRow(QWidget):
         )
 
         divider = _timeline_divider()
-
-        grid.setColumnMinimumWidth(0, when_width)
 
         grid.addWidget(
             when_label,
@@ -529,6 +592,34 @@ def animate_int(widget: AnimatedDashboardValue, value, *, suffix="", duration=80
 
 def animate_currency(widget: AnimatedDashboardValue, value):
     widget.animate_to(value or 0, suffix=" aUEC", decimals=0, duration=1400)
+
+
+def update_scu(widget: AnimatedDashboardValue, value, *, animated=True, duration=1200):
+    if animated:
+        animate_scu(widget, value, duration=duration)
+    else:
+        widget.set_immediate(value or 0, suffix=" SCU", decimals=0)
+
+
+def update_int(
+    widget: AnimatedDashboardValue,
+    value,
+    *,
+    suffix="",
+    animated=True,
+    duration=800,
+):
+    if animated:
+        animate_int(widget, value, suffix=suffix, duration=duration)
+    else:
+        widget.set_immediate(value or 0, suffix=suffix, decimals=0)
+
+
+def update_currency(widget: AnimatedDashboardValue, value, *, animated=True):
+    if animated:
+        animate_currency(widget, value)
+    else:
+        widget.set_immediate(value or 0, suffix=" aUEC", decimals=0)
 
 
 class DashboardAlertBell(QToolButton):

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import re
+import weakref
 from pathlib import Path
 
 from PySide6.QtGui import QFont
@@ -16,6 +17,7 @@ from PySide6.QtWidgets import (
 )
 
 from config.debug import debug_log
+from config.paths import asset_path
 from config.font_families import (
     DEFAULT_FONT_FAMILY,
     FONT_FAMILY_LABELS,
@@ -23,6 +25,15 @@ from config.font_families import (
     dashboard_label_fonts,
     resolve_body_font,
     resolve_heading_font,
+)
+from config.typography import (
+    TYPOGRAPHY_CATEGORIES,
+    TYPOGRAPHY_CATEGORY_BY_ID,
+    collect_effective_typography,
+    merge_category_style,
+    normalize_typography_settings,
+    resolve_category_family,
+    serialize_typography_form,
 )
 from ui.nav_metrics import NAV_WIDTH_PX
 
@@ -1285,6 +1296,121 @@ class ThemeManager:
     _current_palette: dict = {}
     _current_settings: dict = {}
     _base_qss_cache: str | None = None
+    _dashboard_pages: weakref.WeakSet = weakref.WeakSet()
+    _dashboard_font_qss_cache: dict[tuple[int, int, int], str] = {}
+    _dashboard_live_scale_keys: weakref.WeakKeyDictionary = (
+        weakref.WeakKeyDictionary()
+    )
+    _dashboard_widget_cache: weakref.WeakKeyDictionary = (
+        weakref.WeakKeyDictionary()
+    )
+    _dashboard_font_object_cache: dict[tuple[str, int], QFont] = {}
+
+    @classmethod
+    def register_dashboard_page(cls, page: QWidget) -> None:
+        if page is not None:
+            cls._dashboard_pages.add(page)
+
+    @classmethod
+    def unregister_dashboard_page(cls, page: QWidget) -> None:
+        cls._dashboard_pages.discard(page)
+        cls._dashboard_live_scale_keys.pop(page, None)
+        cls._dashboard_widget_cache.pop(page, None)
+
+    @classmethod
+    def _dashboard_font(cls, family: str, px: int) -> QFont:
+        key = (family, px)
+        cached = cls._dashboard_font_object_cache.get(key)
+        if cached is None:
+            cached = QFont(family, px)
+            cached.setBold(True)
+            cls._dashboard_font_object_cache[key] = cached
+        return cached
+
+    @classmethod
+    def _rebuild_dashboard_widget_cache(cls, root_widget: QWidget) -> dict:
+        from ui.context_dashboard.components import TimelineRow
+
+        labels = [
+            label
+            for label in root_widget.findChildren(QLabel)
+            if label.objectName() in DASHBOARD_FONT_LABEL_NAMES
+        ]
+        buttons = [
+            button
+            for button in root_widget.findChildren(QPushButton)
+            if button.objectName() in ("secondaryAction", "primaryAction")
+        ]
+        timeline_rows = [
+            widget
+            for widget in root_widget.findChildren(QWidget)
+            if widget.objectName() == "dashboardTimelineRow"
+            and getattr(widget, "_when_label", None) is not None
+        ]
+        cache = {
+            "labels": labels,
+            "buttons": buttons,
+            "timeline_rows": timeline_rows,
+        }
+        cls._dashboard_widget_cache[root_widget] = cache
+        return cache
+
+    @classmethod
+    def _dashboard_widget_cache_for(cls, root_widget: QWidget) -> dict:
+        cache = cls._dashboard_widget_cache.get(root_widget)
+        if cache is None:
+            cache = cls._rebuild_dashboard_widget_cache(root_widget)
+        return cache
+
+    @classmethod
+    def _dashboard_scale_key(cls, scales: dict | None) -> tuple[int, int, int]:
+        resolved = cls.resolve_dashboard_scales(scales)
+        return (
+            resolved["dashboard_font_scale"],
+            resolved["dashboard_title_font_scale"],
+            resolved["dashboard_button_font_scale"],
+        )
+
+    @classmethod
+    def _cached_dashboard_font_qss(
+        cls,
+        widget_scale: int,
+        title_scale: int,
+        button_scale: int,
+    ) -> str:
+        key = (widget_scale, title_scale, button_scale)
+        cached = cls._dashboard_font_qss_cache.get(key)
+        if cached is not None:
+            return cached
+        qss = cls.build_dashboard_font_qss(
+            widget_scale,
+            title_scale,
+            button_scale,
+        )
+        cls._dashboard_font_qss_cache[key] = qss
+        return qss
+
+    @classmethod
+    def _iter_dashboard_pages(cls):
+        pages = [
+            page
+            for page in cls._dashboard_pages
+            if page is not None
+        ]
+        if pages:
+            return pages
+
+        app = QApplication.instance()
+        if app is None:
+            return []
+
+        from ui.dashboard_page import DashboardPage
+
+        return [
+            widget
+            for widget in app.allWidgets()
+            if isinstance(widget, DashboardPage)
+        ]
 
     @classmethod
     def themes_dir(cls) -> Path:
@@ -1315,6 +1441,20 @@ class ThemeManager:
             )
         with open(path, "r", encoding="utf-8") as file:
             return json.load(file)
+
+    @classmethod
+    def _inject_qss_assets(cls, qss: str) -> str:
+        asset_urls = {
+            "{{ASSET_SPIN_ARROW_UP}}": asset_path(
+                "assets/images/icons/spin_arrow_up.svg"
+            ).resolve().as_posix(),
+            "{{ASSET_SPIN_ARROW_DOWN}}": asset_path(
+                "assets/images/icons/spin_arrow_down.svg"
+            ).resolve().as_posix(),
+        }
+        for token, url in asset_urls.items():
+            qss = qss.replace(token, url)
+        return qss
 
     @classmethod
     def _load_base_qss(cls) -> str:
@@ -1545,6 +1685,176 @@ class ThemeManager:
         )
 
     @classmethod
+    def _font_weight_css(cls, weight) -> str:
+        try:
+            value = int(weight)
+        except (TypeError, ValueError):
+            value = 400
+        if value >= 700:
+            return "700"
+        if value == 600:
+            return "600"
+        return "400"
+
+    @classmethod
+    def _typography_style_css(
+        cls,
+        category,
+        style: dict,
+        *,
+        global_family_id: str,
+    ) -> list[str]:
+        family = resolve_category_family(
+            category,
+            family_id=global_family_id,
+            override_family_id=str(
+                style.get("family_id") or ""
+            ),
+            theme_id=cls._current_theme_id,
+        )
+        props = [
+            f'font-family: "{family}"',
+            f"font-size: {int(style.get('size_px', category.default_size_px))}px",
+            (
+                "font-weight: "
+                f"{cls._font_weight_css(style.get('weight'))}"
+            ),
+            f"color: {style.get('color', category.default_color)}",
+        ]
+        spacing = float(
+            style.get(
+                "letter_spacing_px",
+                category.default_letter_spacing_px,
+            )
+            or 0
+        )
+        if spacing > 0:
+            props.append(f"letter-spacing: {spacing}px")
+        if style.get("italic"):
+            props.append("font-style: italic")
+        else:
+            props.append("font-style: normal")
+        return props
+
+    @classmethod
+    def build_typography_preview_stylesheet(
+        cls,
+        category_id: str,
+        style: dict,
+        *,
+        global_family_id: str | None = None,
+    ) -> str:
+        category = TYPOGRAPHY_CATEGORY_BY_ID.get(category_id)
+        if category is None:
+            return ""
+        family_id = (
+            global_family_id
+            or cls._current_settings.get(
+                "font_family",
+                DEFAULT_FONT_FAMILY,
+            )
+        )
+        props = cls._typography_style_css(
+            category,
+            style,
+            global_family_id=family_id,
+        )
+        css = "; ".join(props)
+        if category_id == "button":
+            return (
+                f"{css}; background: transparent; border: 1px solid #33485C; "
+                "padding: 8px 16px;"
+            )
+        if category_id == "input":
+            return (
+                f"{css}; background: #0A1016; border: 1px solid #243040; "
+                "padding: 6px 8px;"
+            )
+        if category_id == "tooltip":
+            return (
+                f"{css}; background: #121820; padding: 6px 10px; "
+                "border: 1px solid #33485C; border-radius: 4px;"
+            )
+        if category_id == "table_header":
+            return (
+                f"{css}; background: #141C26; padding: 8px 12px; "
+                "border: 1px solid #263545; text-transform: uppercase;"
+            )
+        if category_id == "table_cell":
+            return (
+                f"{css}; background: #0E141C; padding: 8px 10px; "
+                "border: 1px solid #263545;"
+            )
+        if category_id == "profit":
+            return f"{css}; background: transparent;"
+        return f"{css}; background: transparent;"
+
+    @classmethod
+    def _append_typography_overrides(
+        cls,
+        qss: str,
+        typography_overrides,
+        *,
+        global_family_id: str,
+    ) -> str:
+        overrides = normalize_typography_settings(
+            typography_overrides
+        )
+        if not overrides:
+            return qss
+
+        lines = ["/* ThemeManager: Schrift-Kategorien */"]
+        for category_id, payload in overrides.items():
+            category = TYPOGRAPHY_CATEGORY_BY_ID.get(category_id)
+            if category is None:
+                continue
+            style = merge_category_style(
+                category,
+                payload,
+                global_family_id=global_family_id,
+            )
+            props = cls._typography_style_css(
+                category,
+                style,
+                global_family_id=global_family_id,
+            )
+            lines.append(
+                f"{category.qss_selector} {{\n    "
+                + ";\n    ".join(props)
+                + ";\n}"
+            )
+
+        return qss + "\n\n" + "\n".join(lines)
+
+    @classmethod
+    def typography_defaults_for_ui(
+        cls,
+        *,
+        global_family_id: str | None = None,
+    ) -> dict[str, dict]:
+        family_id = (
+            global_family_id
+            or cls._current_settings.get(
+                "font_family",
+                DEFAULT_FONT_FAMILY,
+            )
+        )
+        return collect_effective_typography(
+            {},
+            global_family_id=family_id,
+        )
+
+    @classmethod
+    def normalize_typography_overrides_for_save(
+        cls,
+        form_values: dict[str, dict],
+        *,
+        global_family_id: str,
+    ) -> dict[str, dict]:
+        del global_family_id
+        return serialize_typography_form(form_values)
+
+    @classmethod
     def default_dashboard_font_scale(cls) -> int:
         return DEFAULT_DASHBOARD_FONT_SCALE
 
@@ -1722,6 +2032,73 @@ class ThemeManager:
         )
 
     @classmethod
+    def apply_dashboard_fonts_live(
+        cls,
+        root_widget: QWidget,
+        scales=None,
+    ) -> None:
+        """Live-Vorschau — nur Fonts/Timeline, kein QSS-Reparse."""
+        scale_key = cls._dashboard_scale_key(scales)
+        if cls._dashboard_live_scale_keys.get(root_widget) == scale_key:
+            return
+
+        resolved = cls.resolve_dashboard_scales(scales)
+        widget_scale = resolved["dashboard_font_scale"]
+        title_scale = resolved["dashboard_title_font_scale"]
+        button_scale = resolved["dashboard_button_font_scale"]
+        widget_px = cls._scaled_dashboard_px(
+            DASHBOARD_FONT_BASE_PX,
+            widget_scale,
+        )
+        title_px = cls._scaled_dashboard_px(
+            DASHBOARD_FONT_BASE_PX,
+            title_scale,
+        )
+        button_px = cls._scaled_dashboard_px(
+            DASHBOARD_FONT_BASE_PX,
+            button_scale,
+        )
+
+        family_id = cls._current_font_family_id()
+        heading_font = resolve_heading_font(family_id)
+        body_font = resolve_body_font(family_id)
+        label_fonts = dashboard_label_fonts(family_id)
+
+        from ui.dashboard_fit_label import DashboardFitLabel
+
+        cache = cls._dashboard_widget_cache_for(root_widget)
+        root_widget.setUpdatesEnabled(False)
+        try:
+            for label in cache["labels"]:
+                name = label.objectName()
+                spec = label_fonts.get(name)
+                if spec is not None:
+                    family = spec[0]
+                elif name in ("pageTitle", "sectionAccent"):
+                    family = heading_font
+                else:
+                    family = body_font
+                label_px = (
+                    title_px
+                    if name in ("pageTitle", "sectionAccent")
+                    else widget_px
+                )
+                font = cls._dashboard_font(family, label_px)
+                if isinstance(label, DashboardFitLabel):
+                    label.apply_theme_font(QFont(font))
+                else:
+                    label.setFont(font)
+
+            button_font = cls._dashboard_font(body_font, button_px)
+            for button in cache["buttons"]:
+                button.setFont(button_font)
+        finally:
+            root_widget.setUpdatesEnabled(True)
+            root_widget.update()
+
+        cls._dashboard_live_scale_keys[root_widget] = scale_key
+
+    @classmethod
     def apply_dashboard_fonts(
         cls,
         root_widget: QWidget,
@@ -1745,12 +2122,19 @@ class ThemeManager:
         )
 
         root_widget.setStyleSheet(
-            cls.build_dashboard_font_qss(
+            cls._cached_dashboard_font_qss(
                 widget_scale,
                 title_scale,
                 button_scale,
             )
         )
+        cls._dashboard_live_scale_keys[root_widget] = (
+            widget_scale,
+            title_scale,
+            button_scale,
+        )
+
+        cache = cls._rebuild_dashboard_widget_cache(root_widget)
 
         family_id = cls._current_font_family_id()
         heading_font = resolve_heading_font(family_id)
@@ -1759,41 +2143,46 @@ class ThemeManager:
 
         from ui.dashboard_fit_label import DashboardFitLabel
 
-        for label in root_widget.findChildren(QLabel):
-            name = label.objectName()
-            if name not in DASHBOARD_FONT_LABEL_NAMES:
-                continue
-            spec = label_fonts.get(name)
-            if spec is not None:
-                family = spec[0]
-            elif name in ("pageTitle", "sectionAccent"):
-                family = heading_font
-            else:
-                family = body_font
-            if name in ("pageTitle", "sectionAccent"):
-                label_px = title_px
-            else:
-                label_px = widget_px
-            font = QFont(family, label_px)
-            font.setBold(True)
-            if isinstance(label, DashboardFitLabel):
-                label.apply_theme_font(font)
-            else:
-                label.setFont(font)
+        root_widget.setUpdatesEnabled(False)
+        try:
+            for label in cache["labels"]:
+                name = label.objectName()
+                spec = label_fonts.get(name)
+                if spec is not None:
+                    family = spec[0]
+                elif name in ("pageTitle", "sectionAccent"):
+                    family = heading_font
+                else:
+                    family = body_font
+                if name in ("pageTitle", "sectionAccent"):
+                    label_px = title_px
+                else:
+                    label_px = widget_px
+                font = QFont(family, label_px)
+                font.setBold(True)
+                if isinstance(label, DashboardFitLabel):
+                    label.apply_theme_font(font)
+                else:
+                    label.setFont(font)
 
-        font = QFont(body_font, button_px)
-        font.setBold(True)
-        for button in root_widget.findChildren(QPushButton):
-            if button.objectName() not in (
-                "secondaryAction",
-                "primaryAction",
-            ):
-                continue
-            button.setFont(font)
+            font = QFont(body_font, button_px)
+            font.setBold(True)
+            for button in cache["buttons"]:
+                button.setFont(font)
+        finally:
+            root_widget.setUpdatesEnabled(True)
 
         root_widget.style().unpolish(root_widget)
         root_widget.style().polish(root_widget)
         root_widget.update()
+
+        from ui.context_dashboard.components import TimelineRow
+
+        TimelineRow.refresh_when_columns(
+            root_widget,
+            scales,
+            rows=cache["timeline_rows"],
+        )
 
         page = root_widget
         if page.objectName() != "dashboardPage":
@@ -1806,17 +2195,27 @@ class ThemeManager:
             canvas.reflow_content_sizes()
 
     @classmethod
-    def refresh_dashboard_font_scale(cls, scales=None) -> None:
-        app = QApplication.instance()
-        if app is None:
-            return
-
+    def refresh_dashboard_font_scale(
+        cls,
+        scales=None,
+        *,
+        live_preview: bool = False,
+    ) -> None:
         if scales is None:
             scales = cls._current_settings
 
-        for widget in app.allWidgets():
-            if widget.objectName() == "dashboardPage":
-                cls.apply_dashboard_fonts(widget, scales)
+        pages = cls._iter_dashboard_pages()
+        if not pages:
+            return
+
+        if live_preview:
+            for page in pages:
+                if page.isVisible():
+                    cls.apply_dashboard_fonts_live(page, scales)
+            return
+
+        for page in pages:
+            cls.apply_dashboard_fonts(page, scales)
 
     @classmethod
     def _append_dashboard_font_scale(
@@ -2040,6 +2439,7 @@ class ThemeManager:
         dashboard_font_scale: int = DEFAULT_DASHBOARD_FONT_SCALE,
         dashboard_title_font_scale: int | None = None,
         dashboard_button_font_scale: int | None = None,
+        typography_json: str = "",
         persist: bool = False,
     ) -> None:
         if theme_id not in THEME_IDS:
@@ -2092,6 +2492,7 @@ class ThemeManager:
             "animations": animations,
             "dashboard_layout": dashboard_layout,
             **scales,
+            "typography_json": typography_json or "",
         }
 
         qss = cls._derive_qss(theme_id)
@@ -2120,6 +2521,12 @@ class ThemeManager:
             panel_transparency,
         )
         qss = cls._append_table_density(qss, table_density)
+        qss = cls._append_typography_overrides(
+            qss,
+            typography_json,
+            global_family_id=font_family,
+        )
+        qss = cls._inject_qss_assets(qss)
 
         app = QApplication.instance()
         if app is not None:
@@ -2175,6 +2582,10 @@ class ThemeManager:
 
     @classmethod
     def apply_settings(cls, settings: dict) -> None:
+        cls._dashboard_font_qss_cache.clear()
+        cls._dashboard_live_scale_keys.clear()
+        cls._dashboard_widget_cache.clear()
+        cls._dashboard_font_object_cache.clear()
         scales = cls.resolve_dashboard_scales(settings)
         cls.load_theme(
             settings.get("theme", "star_citizen"),
@@ -2215,6 +2626,7 @@ class ThemeManager:
             dashboard_button_font_scale=scales[
                 "dashboard_button_font_scale"
             ],
+            typography_json=settings.get("typography_json", ""),
         )
 
     @classmethod

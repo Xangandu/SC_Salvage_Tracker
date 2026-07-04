@@ -118,17 +118,11 @@ def station_dropdown_groups() -> list[tuple[str, list[tuple[str, str]]]]:
 
 
 def refinery_station_dropdown_groups() -> list[tuple[str, list[tuple[str, str]]]]:
-    """Weltraum-Stationen mit Raffinerie + Landeplaetze (Orison, Area18, …)."""
+    """Weltraum-Stationen mit Refinery Deck (keine Landeplaetze / Staedte)."""
     groups: list[tuple[str, list[tuple[str, str]]]] = []
-    landing = landing_zones_catalog().get("systems", {})
     for system in _SYSTEM_ORDER:
         with_ref, _ = _station_entries(system)
         entries = [(e["id"], e["name"]) for e in with_ref]
-        zone_entries = landing.get(system, [])
-        if zone_entries:
-            entries.extend(
-                (e["id"], e["name"]) for e in zone_entries
-            )
         if entries:
             groups.append((f"{system} — Raffinerie", entries))
     return groups

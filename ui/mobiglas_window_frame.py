@@ -36,6 +36,62 @@ _CONTROLS_BUTTON_SPACING = 0
 _CONTROLS_FRAME_BORDER = 0
 
 
+def _win32_minimize(window) -> bool:
+    try:
+        import ctypes
+
+        hwnd = int(window.winId())
+        if hwnd:
+            return bool(ctypes.windll.user32.ShowWindow(hwnd, _SW_MINIMIZE))
+    except (AttributeError, OSError, ValueError):
+        pass
+    return False
+
+
+def _win32_force_rect(window, rect: QRect) -> bool:
+    """Fenstergröße setzen — auch nach nativem Aero-Snap-Maximize."""
+    try:
+        import ctypes
+
+        hwnd = int(window.winId())
+        if not hwnd:
+            return False
+        user32 = ctypes.windll.user32
+        if window.isMaximized():
+            user32.ShowWindow(hwnd, _SW_RESTORE)
+        user32.SetWindowPos(
+            hwnd,
+            0,
+            int(rect.left()),
+            int(rect.top()),
+            int(rect.width()),
+            int(rect.height()),
+            _SWP_NOZORDER,
+        )
+        return window.geometry() == rect
+    except (AttributeError, OSError, ValueError):
+        return False
+
+
+def _clear_native_window_maximize(window) -> None:
+    """Native Windows-Maximize ohne showNormal() lösen (vermeidet setGeometry-Konflikte)."""
+    if not window.isMaximized():
+        return
+    if sys.platform == "win32":
+        try:
+            import ctypes
+
+            hwnd = int(window.winId())
+            if hwnd:
+                ctypes.windll.user32.ShowWindow(hwnd, _SW_RESTORE)
+                return
+        except (AttributeError, OSError, ValueError):
+            pass
+    state = window.windowState()
+    if state & Qt.WindowState.WindowMaximized:
+        window.setWindowState(state & ~Qt.WindowState.WindowMaximized)
+
+
 def _enable_styled_background(widget):
     widget.setAttribute(
         Qt.WidgetAttribute.WA_StyledBackground,
@@ -155,6 +211,8 @@ _SWP_FRAMECHANGED = 0x0020
 _SWP_NOMOVE = 0x0002
 _SWP_NOSIZE = 0x0001
 _SWP_NOZORDER = 0x0004
+_SW_MINIMIZE = 6
+_SW_RESTORE = 9
 _RESIZE_HIT_CODES = frozenset(
     {
         _HTLEFT,
@@ -574,6 +632,21 @@ class MobiglasFramelessMixin:
         if event.type() == QEvent.Type.WindowStateChange:
             title_bar = getattr(self, "_mobiglas_title_bar", None)
             if title_bar is not None:
+                if self.isMaximized():
+                    normal = self.normalGeometry()
+                    if (
+                        normal.width() > 0
+                        and not title_bar._is_full_screen_geometry(normal)
+                    ):
+                        title_bar._normal_geometry = normal
+                    title_bar._custom_maximized = True
+                elif (
+                    title_bar._custom_maximized
+                    and not title_bar._is_full_screen_geometry(
+                        self.geometry()
+                    )
+                ):
+                    title_bar._custom_maximized = False
                 title_bar._sync_maximize_button()
         super().changeEvent(event)
 
@@ -900,9 +973,10 @@ class MobiglasTitleBar(QWidget):
         return button
 
     def _is_window_maximized(self) -> bool:
-        if self._custom_maximized:
+        window = self._window
+        if window.isMaximized():
             return True
-        return self._window.isMaximized()
+        return self._custom_maximized and self._is_full_screen_geometry()
 
     def _is_full_screen_geometry(self, geom: QRect | None = None) -> bool:
         window = self._window
@@ -945,20 +1019,69 @@ class MobiglasTitleBar(QWidget):
             self._max_button.setIcon(_window_icon("maximize"))
             self._max_button.setToolTip(tr("common.maximize"))
 
+    def _ensure_normal_geometry_saved(self) -> None:
+        window = self._window
+        if self._is_window_maximized():
+            return
+        geom = window.geometry()
+        if not self._is_full_screen_geometry(geom):
+            self._normal_geometry = geom
+
+    def _apply_custom_maximize(self) -> None:
+        window = self._window
+        screen = window.screen()
+        if screen is None:
+            return
+
+        self._ensure_normal_geometry_saved()
+        if (
+            self._normal_geometry is None
+            or self._is_full_screen_geometry(self._normal_geometry)
+        ):
+            self._normal_geometry = self._default_restore_geometry()
+
+        _clear_native_window_maximize(window)
+        window.setGeometry(screen.availableGeometry())
+        self._custom_maximized = True
+        self._sync_maximize_button()
+
+    def _apply_custom_restore(self, target: QRect | None = None) -> None:
+        window = self._window
+        if target is None:
+            target = self._fallback_normal_geometry()
+        if (
+            self._is_full_screen_geometry(target)
+            or target.size() == window.geometry().size()
+        ):
+            target = self._default_restore_geometry()
+
+        target = _clamp_geometry_to_screen(window, target)
+        self._custom_maximized = False
+
+        if sys.platform == "win32" and _win32_force_rect(window, target):
+            self._normal_geometry = window.geometry()
+            self._sync_maximize_button()
+            return
+
+        _clear_native_window_maximize(window)
+        window.setGeometry(target)
+        self._normal_geometry = window.geometry()
+        self._sync_maximize_button()
+
     def _minimize_window(self):
         window = self._window
         self._end_window_drag()
 
-        if not self._is_full_screen_geometry():
-            self._normal_geometry = window.geometry()
-
+        self._ensure_normal_geometry_saved()
         self._custom_maximized = False
-        if window.isMaximized():
-            window.showNormal()
 
-        window.setWindowState(
-            window.windowState() | Qt.WindowState.WindowMinimized
-        )
+        if sys.platform == "win32" and _win32_minimize(window):
+            self._sync_maximize_button()
+            return
+
+        _clear_native_window_maximize(window)
+        state = window.windowState() & ~Qt.WindowState.WindowMaximized
+        window.setWindowState(state | Qt.WindowState.WindowMinimized)
 
     def _toggle_maximize(self):
         if self._max_button is None:
@@ -968,41 +1091,10 @@ class MobiglasTitleBar(QWidget):
         self._end_window_drag()
 
         if self._is_window_maximized():
-            target = self._fallback_normal_geometry()
-            if (
-                self._is_full_screen_geometry(target)
-                or target.size() == window.geometry().size()
-            ):
-                target = self._default_restore_geometry()
-
-            self._custom_maximized = False
-            if window.isMaximized():
-                window.showNormal()
-            window.setGeometry(
-                _clamp_geometry_to_screen(window, target)
-            )
-            self._normal_geometry = window.geometry()
-            self._sync_maximize_button()
+            self._apply_custom_restore()
             return
 
-        current = window.geometry()
-        if not self._is_full_screen_geometry(current):
-            self._normal_geometry = current
-        elif (
-            self._normal_geometry is None
-            or self._is_full_screen_geometry(self._normal_geometry)
-        ):
-            self._normal_geometry = self._default_restore_geometry()
-
-        screen = window.screen()
-        if screen is not None:
-            window.setGeometry(screen.availableGeometry())
-            self._custom_maximized = True
-        else:
-            window.showMaximized()
-            self._custom_maximized = window.isMaximized()
-
-        self._sync_maximize_button()
+        self._apply_custom_maximize()
 
     def restore_from_maximize(self):
         if not self._is_window_maximized():
@@ -1064,15 +1156,18 @@ class MobiglasTitleBar(QWidget):
         else:
             y = gy - self.mapFromGlobal(global_pos).y()
 
-        self._custom_maximized = False
-        if window.isMaximized():
-            window.showNormal()
-        window.setGeometry(
-            _clamp_geometry_to_screen(
-                window,
-                QRect(x, y, width, height),
-            )
+        target = _clamp_geometry_to_screen(
+            window,
+            QRect(x, y, width, height),
         )
+        self._custom_maximized = False
+        if sys.platform == "win32" and _win32_force_rect(window, target):
+            self._normal_geometry = window.geometry()
+            self._sync_maximize_button()
+            return
+
+        _clear_native_window_maximize(window)
+        window.setGeometry(target)
         self._normal_geometry = window.geometry()
         self._sync_maximize_button()
 
@@ -1092,22 +1187,35 @@ class MobiglasTitleBar(QWidget):
         new_x = int(global_pos.x() - normal.width() * ratio)
         new_y = int(global_pos.y() - local.y())
 
-        self._custom_maximized = False
-        if window.isMaximized():
-            window.showNormal()
-        window.setGeometry(
-            _clamp_geometry_to_screen(
-                window,
-                QRect(
-                    new_x,
-                    new_y,
-                    normal.width(),
-                    normal.height(),
-                ),
-            )
+        target = _clamp_geometry_to_screen(
+            window,
+            QRect(
+                new_x,
+                new_y,
+                normal.width(),
+                normal.height(),
+            ),
         )
+        self._custom_maximized = False
+        if sys.platform == "win32" and _win32_force_rect(window, target):
+            self._normal_geometry = window.geometry()
+            self._sync_maximize_button()
+            return
+
+        _clear_native_window_maximize(window)
+        window.setGeometry(target)
         self._normal_geometry = window.geometry()
         self._sync_maximize_button()
+
+    def _try_start_system_move(self, event) -> bool:
+        handle = self._window.windowHandle()
+        if handle is None:
+            return False
+        if not handle.startSystemMove():
+            return False
+        self._end_window_drag()
+        event.accept()
+        return True
 
     def _begin_window_drag(self, event):
         self._drag_moved = False
@@ -1116,13 +1224,18 @@ class MobiglasTitleBar(QWidget):
         if self._is_window_maximized():
             self._pending_restore_press = event
             self._drag_start = None
-        else:
-            self._pending_restore_press = None
-            self._drag_start = (
-                self._drag_press_global
-                - self._window.frameGeometry().topLeft()
-            )
+            self.grabMouse()
+            event.accept()
+            return True
 
+        if sys.platform == "win32" and self._try_start_system_move(event):
+            return True
+
+        self._pending_restore_press = None
+        self._drag_start = (
+            self._drag_press_global
+            - self._window.frameGeometry().topLeft()
+        )
         self.grabMouse()
         event.accept()
         return True
@@ -1141,6 +1254,8 @@ class MobiglasTitleBar(QWidget):
             if self._pending_restore_press is not None:
                 self._restore_window_for_drag(self._pending_restore_press)
                 self._pending_restore_press = None
+                if sys.platform == "win32" and self._try_start_system_move(event):
+                    return True
                 self._drag_start = (
                     global_pos - self._window.frameGeometry().topLeft()
                 )

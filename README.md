@@ -7,6 +7,15 @@ Salvage**\
 Sitzungen, Materialfluss, Raffinerie, Verkäufe, Kosten und
 Crew-Auszahlungen.
 
+## Highlights (Beta)
+
+- **Kontext-Dashboard** — Neues Dashboard zeigt den Status der Materialien und Sitzungen klar an, inklusive Verkaufsbereitschaft.
+- **Verkaufskorrekturen** — Verkaufszähler im Dashboard zeigt nun die tatsächliche Verkaufsanzahl, Stornierungen werden korrekt behandelt.
+- **Sitzungsoptimierung** — Ohne aktive Sitzung werden nicht relevante Informationen ausgeblendet, um die Übersichtlichkeit zu verbessern.
+- **UI-Verbesserungen** — Fenster können nun einfacher skaliert und verschoben werden, ohne versehentlich zu maximieren oder minimieren.
+- **Auszahlungsübersicht** — Verbesserte Darstellung der Crew-Auszahlungen mit aufklappbaren Zeilen für detaillierte Informationen.
+
+
 ## Highlights (Beta 0.16.6)
 
 - **Dashboard SESSION & STATUS** — Keine falsche „Aktive Sitzung“ nach Sitzungsende; kombinierte Material-Bereitschaft (RMC, CM Salvage)

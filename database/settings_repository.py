@@ -2,6 +2,12 @@
 
 from config.debug import debug_log
 from config.font_families import DEFAULT_FONT_FAMILY
+from config.typography import (
+    TYPOGRAPHY_SETTINGS_KEY,
+    TYPOGRAPHY_BASELINE_KEY,
+    normalize_typography_settings,
+    serialize_typography_settings,
+)
 
 DEFAULT_APP_SETTINGS = {
     "theme": "star_citizen",
@@ -21,6 +27,8 @@ DEFAULT_APP_SETTINGS = {
     "dashboard_font_scale": "100",
     "dashboard_title_font_scale": "",
     "dashboard_button_font_scale": "",
+    TYPOGRAPHY_SETTINGS_KEY: "",
+    TYPOGRAPHY_BASELINE_KEY: "",
     "update_auto_check": "1",
     "update_skipped_version": "",
     "update_last_check": "",
@@ -45,6 +53,8 @@ DEFAULT_USER_SETTINGS = {
     "dashboard_font_scale": None,
     "dashboard_title_font_scale": None,
     "dashboard_button_font_scale": None,
+    TYPOGRAPHY_SETTINGS_KEY: None,
+    TYPOGRAPHY_BASELINE_KEY: None,
 }
 
 
@@ -140,6 +150,30 @@ class SettingsRepository:
                 )
                 self.connection.commit()
 
+        columns = {
+            row[1]
+            for row in self.cursor.execute(
+                "PRAGMA table_info(user_settings)"
+            )
+        }
+        if TYPOGRAPHY_SETTINGS_KEY not in columns:
+            self.cursor.execute(
+                f"""
+                ALTER TABLE user_settings
+                ADD COLUMN {TYPOGRAPHY_SETTINGS_KEY} TEXT
+                """
+            )
+            self.connection.commit()
+
+        if TYPOGRAPHY_BASELINE_KEY not in columns:
+            self.cursor.execute(
+                f"""
+                ALTER TABLE user_settings
+                ADD COLUMN {TYPOGRAPHY_BASELINE_KEY} TEXT
+                """
+            )
+            self.connection.commit()
+
         if self.get_app_setting("dashboard_font_scale") is None:
             self.set_app_setting(
                 "dashboard_font_scale",
@@ -169,6 +203,12 @@ class SettingsRepository:
             self.set_app_setting(
                 "table_density",
                 DEFAULT_APP_SETTINGS["table_density"],
+            )
+
+        if self.get_app_setting(TYPOGRAPHY_SETTINGS_KEY) is None:
+            self.set_app_setting(
+                TYPOGRAPHY_SETTINGS_KEY,
+                DEFAULT_APP_SETTINGS[TYPOGRAPHY_SETTINGS_KEY],
             )
 
     def get_app_setting(self, key, default=None):
@@ -246,7 +286,9 @@ class SettingsRepository:
                 dashboard_layout,
                 dashboard_font_scale,
                 dashboard_title_font_scale,
-                dashboard_button_font_scale
+                dashboard_button_font_scale,
+                typography_json,
+                typography_baseline_json
             FROM user_settings
             WHERE user_id = ?
             """,
@@ -274,6 +316,8 @@ class SettingsRepository:
             "dashboard_font_scale",
             "dashboard_title_font_scale",
             "dashboard_button_font_scale",
+            TYPOGRAPHY_SETTINGS_KEY,
+            TYPOGRAPHY_BASELINE_KEY,
         )
         return dict(zip(keys, row))
 
@@ -302,9 +346,11 @@ class SettingsRepository:
                 dashboard_font_scale,
                 dashboard_title_font_scale,
                 dashboard_button_font_scale,
+                typography_json,
+                typography_baseline_json,
                 updated_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'))
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'))
             ON CONFLICT(user_id) DO UPDATE SET
                 theme = excluded.theme,
                 language = excluded.language,
@@ -323,6 +369,8 @@ class SettingsRepository:
                 dashboard_font_scale = excluded.dashboard_font_scale,
                 dashboard_title_font_scale = excluded.dashboard_title_font_scale,
                 dashboard_button_font_scale = excluded.dashboard_button_font_scale,
+                typography_json = excluded.typography_json,
+                typography_baseline_json = excluded.typography_baseline_json,
                 updated_at = datetime('now', 'localtime')
             """,
             (
@@ -344,6 +392,8 @@ class SettingsRepository:
                 merged.get("dashboard_font_scale"),
                 merged.get("dashboard_title_font_scale"),
                 merged.get("dashboard_button_font_scale"),
+                merged.get(TYPOGRAPHY_SETTINGS_KEY),
+                merged.get(TYPOGRAPHY_BASELINE_KEY),
             ),
         )
         self.connection.commit()
@@ -404,6 +454,34 @@ class SettingsRepository:
                 DEFAULT_APP_SETTINGS[key],
             ) or ""
 
+        def pick_typography_json():
+            value = user.get(TYPOGRAPHY_SETTINGS_KEY)
+            if value is not None and str(value).strip():
+                return serialize_typography_settings(
+                    normalize_typography_settings(value)
+                )
+            app_value = app.get(
+                TYPOGRAPHY_SETTINGS_KEY,
+                DEFAULT_APP_SETTINGS[TYPOGRAPHY_SETTINGS_KEY],
+            )
+            return serialize_typography_settings(
+                normalize_typography_settings(app_value)
+            )
+
+        def pick_typography_baseline_json():
+            value = user.get(TYPOGRAPHY_BASELINE_KEY)
+            if value is not None and str(value).strip():
+                return serialize_typography_settings(
+                    normalize_typography_settings(value)
+                )
+            app_value = app.get(
+                TYPOGRAPHY_BASELINE_KEY,
+                DEFAULT_APP_SETTINGS[TYPOGRAPHY_BASELINE_KEY],
+            )
+            return serialize_typography_settings(
+                normalize_typography_settings(app_value)
+            )
+
         return {
             "theme": pick("theme"),
             "language": pick("language"),
@@ -434,4 +512,6 @@ class SettingsRepository:
                 app,
                 "dashboard_button_font_scale",
             ),
+            TYPOGRAPHY_SETTINGS_KEY: pick_typography_json(),
+            TYPOGRAPHY_BASELINE_KEY: pick_typography_baseline_json(),
         }

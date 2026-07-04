@@ -1,7 +1,8 @@
-"""Erstinstallation — Notfall-Zugang und Organisations-Administrator."""
+"""Erstinstallation — Notfall-Zugang und Benutzerkonto (editionsspezifische Texte)."""
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import (
+    QApplication,
     QCheckBox,
     QDialog,
     QFrame,
@@ -15,7 +16,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from config.i18n import tr
+from config.i18n import tr, tr_setup
 from config.permissions import ROLE_ADMIN
 from config.setup import DEFAULT_SUPERADMIN_PASSWORD, SUPERADMIN_USERNAME
 from config.version import format_version_subtitle
@@ -126,8 +127,8 @@ class InitialSetupWizard(MobiglasFramelessMixin, QDialog):
     def _step_names(self):
         return (
             tr("setup.step.welcome"),
-            tr("setup.step.emergency"),
-            tr("setup.step.admin"),
+            tr_setup("setup.step.emergency", db=self.db),
+            tr_setup("setup.step.admin", db=self.db),
             tr("setup.step.finish"),
         )
 
@@ -137,7 +138,7 @@ class InitialSetupWizard(MobiglasFramelessMixin, QDialog):
         page_layout.setContentsMargins(0, 4, 0, 0)
         page_layout.setSpacing(12)
 
-        info = QLabel(tr("setup.welcome.info"))
+        info = QLabel(tr_setup("setup.welcome.info", db=self.db))
         info.setWordWrap(True)
         info.setObjectName("mutedLabel")
         page_layout.addWidget(info)
@@ -165,7 +166,7 @@ class InitialSetupWizard(MobiglasFramelessMixin, QDialog):
         banner.setAlignment(Qt.AlignmentFlag.AlignCenter)
         page_layout.addWidget(banner)
 
-        info = QLabel(tr("setup.emergency.info"))
+        info = QLabel(tr_setup("setup.emergency.info", db=self.db))
         info.setWordWrap(True)
         info.setObjectName("mutedLabel")
         page_layout.addWidget(info)
@@ -187,7 +188,7 @@ class InitialSetupWizard(MobiglasFramelessMixin, QDialog):
         )
 
         self.superadmin_note_checkbox = QCheckBox(
-            tr("setup.emergency.note_checkbox")
+            tr_setup("setup.emergency.note_checkbox", db=self.db)
         )
         self.superadmin_note_checkbox.setObjectName("formLabel")
         page_layout.addWidget(self.superadmin_note_checkbox)
@@ -202,11 +203,11 @@ class InitialSetupWizard(MobiglasFramelessMixin, QDialog):
         page_layout.setSpacing(10)
 
         page_layout.addWidget(
-            subsection_title(tr("setup.admin.title"))
+            subsection_title(tr_setup("setup.admin.title", db=self.db))
         )
 
         hint = QLabel(
-            tr("setup.admin.hint", role=ROLE_ADMIN)
+            tr_setup("setup.admin.hint", db=self.db, role=ROLE_ADMIN)
         )
         hint.setWordWrap(True)
         hint.setObjectName("formLabel")
@@ -367,6 +368,21 @@ class InitialSetupWizard(MobiglasFramelessMixin, QDialog):
 
         return True
 
+    def _restart_after_setup_error(self) -> None:
+        from auth.app_restart import (
+            restart_application,
+            shutdown_before_restart,
+        )
+
+        def _do_restart():
+            shutdown_before_restart()
+            restart_application()
+            app = QApplication.instance()
+            if app is not None:
+                app.quit()
+
+        QTimer.singleShot(150, _do_restart)
+
     def _create_org_administrator(self):
         username = self.username_input.text().strip()
         display_name = (
@@ -419,6 +435,7 @@ class InitialSetupWizard(MobiglasFramelessMixin, QDialog):
                 tr("setup.error.title"),
                 tr("setup.error.role_missing", role=ROLE_ADMIN),
             )
+            self._restart_after_setup_error()
             return False
 
         try:
@@ -447,7 +464,11 @@ class InitialSetupWizard(MobiglasFramelessMixin, QDialog):
         self.created_username = username
 
         self.finish_label.setText(
-            tr("setup.finish.message", username=username)
+            tr_setup(
+                "setup.finish.message",
+                db=self.db,
+                username=username,
+            )
         )
         return True
 
@@ -473,7 +494,9 @@ class InitialSetupWizard(MobiglasFramelessMixin, QDialog):
         elif index == 1:
             self.next_button.setText(tr("setup.emergency.button"))
         elif index == 2:
-            self.next_button.setText(tr("setup.admin.button"))
+            self.next_button.setText(
+                tr_setup("setup.admin.button", db=self.db)
+            )
         else:
             self.next_button.setText(tr("setup.button.finish"))
 

@@ -51,6 +51,7 @@ class DashboardPage(QWidget):
     def __init__(self):
         super().__init__()
         self.setObjectName("dashboardPage")
+        ThemeManager.register_dashboard_page(self)
 
         self.db = get_database()
         self._current_user = None
@@ -148,14 +149,29 @@ class DashboardPage(QWidget):
         self._refresh_timer = QTimer(self)
         self._refresh_timer.setInterval(3000)
         self._refresh_timer.timeout.connect(
-            self.refresh_dashboard
+            lambda: self.refresh_dashboard(animated=False)
+        )
+
+        self._refinery_refresh_timer = QTimer(self)
+        self._refinery_refresh_timer.setSingleShot(True)
+        self._refinery_refresh_timer.setInterval(300)
+        self._refinery_refresh_timer.timeout.connect(
+            lambda: self.refresh_dashboard(animated=False)
         )
 
         self.refresh_dashboard()
         ThemeManager.refresh_dashboard_font_scale()
 
     def refresh_refinery_kpis(self):
-        self.refresh_dashboard()
+        if not self.is_dashboard_active():
+            return
+        self._refinery_refresh_timer.start()
+
+    def is_dashboard_active(self) -> bool:
+        window = self.detached_window
+        if window is not None and window.isVisible():
+            return True
+        return self.isVisible()
 
     def reload_user_layout(self):
         return
@@ -705,17 +721,21 @@ class DashboardPage(QWidget):
             on_finished,
         )
 
-    def refresh_dashboard(self):
+    def refresh_dashboard(self, *, animated: bool = True):
         debug_log("REFRESH_DASHBOARD WIRD AUSGEFÜHRT")
         self.db = get_database()
         self.context_shell.ensure_db(self.db)
-        self.context_shell.refresh()
+        self.context_shell.refresh(animated=animated)
 
-    def set_context(self, context_key: str, *, force: bool = False):
-        self.context_shell.set_context(context_key, force=force)
+    def set_context(self, context_key: str, *, force: bool = False, animated: bool = True):
+        self.context_shell.set_context(
+            context_key,
+            force=force,
+            animated=animated,
+        )
 
     def set_context_from_nav(self, context_key: str):
-        self.context_shell.set_context(context_key)
+        self.context_shell.set_context(context_key, animated=False)
 
     def _on_alert_context_requested(self, context_key: str):
         parent = self.parent_window

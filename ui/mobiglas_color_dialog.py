@@ -24,6 +24,8 @@ from ui.mobiglas_window_frame import (
 def _secondary_button(text):
     button = QPushButton(text)
     button.setObjectName("secondaryAction")
+    button.setAutoDefault(False)
+    button.setDefault(False)
     return button
 
 
@@ -165,7 +167,15 @@ class MobiglasColorDialog(MobiglasFramelessMixin, QDialog):
         title,
         initial=None,
     ):
-        dialog = cls(parent, title, initial=initial)
+        host = parent
+        if parent is not None and hasattr(parent, "window"):
+            top_level = parent.window()
+            if top_level is not None:
+                host = top_level
+                top_level.raise_()
+                top_level.activateWindow()
+
+        dialog = cls(host, title, initial=initial)
 
         if dialog.exec() == QDialog.DialogCode.Accepted:
             return dialog.selected_color(), True

@@ -57,6 +57,7 @@ from config.i18n import (
     save_language_choice,
     set_language,
     tr,
+    tr_setup,
 )
 from ui.language_dialog import LanguageDialog
 
@@ -260,7 +261,11 @@ class SalvageTrackerApp:
         QMessageBox.information(
             None,
             tr("setup.complete.title"),
-            tr("setup.complete.message", username=created_user),
+            tr_setup(
+                "setup.complete.message",
+                db=self.db,
+                username=created_user,
+            ),
         )
         return True
 

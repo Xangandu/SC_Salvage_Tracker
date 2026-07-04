@@ -76,7 +76,7 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "setup.admin.title": "Organization Administrator",
         "setup.admin.hint": (
             "Role: {role} (fixed)\n"
-            "This user sets their own password on first sign-in."
+            "Choose the username and password for everyday sign-in."
         ),
         "setup.admin.username": "Username",
         "setup.admin.display_name": "Display name",
@@ -91,6 +91,37 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "setup.finish.message": (
             "The organization administrator \"{username}\" was created.\n\n"
             "Click \"Finish\" and sign in with the new administrator."
+        ),
+        "setup.welcome.info.solo": (
+            "Set up Salvage Tracker for yourself.\n\n"
+            "First you secure the emergency backup account, "
+            "then you create your everyday sign-in account.\n\n"
+            "For normal use, sign in with your user account — "
+            "not the emergency account."
+        ),
+        "setup.step.admin.solo": "YOUR ACCOUNT",
+        "setup.emergency.info.solo": (
+            "This account already exists and is only for emergencies "
+            "(forgotten password, recovery if something goes wrong).\n\n"
+            "Choose a strong password and write down the credentials. "
+            "You will need them only if something goes wrong later."
+        ),
+        "setup.emergency.note_checkbox.solo": (
+            "I have written down the emergency access credentials"
+        ),
+        "setup.admin.title.solo": "Your sign-in account",
+        "setup.admin.hint.solo": (
+            "Choose the username and password you will use every time "
+            "you open the tracker."
+        ),
+        "setup.admin.button.solo": "CREATE ACCOUNT",
+        "setup.finish.message.solo": (
+            "Your sign-in account \"{username}\" was created.\n\n"
+            "Click \"Finish\" and sign in with the new account."
+        ),
+        "setup.complete.message.solo": (
+            "Initial setup is complete.\n\n"
+            "Sign in now with \"{username}\"."
         ),
         "setup.button.back": "BACK",
         "setup.button.next": "CONTINUE",
@@ -107,7 +138,7 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "setup.error.password_mismatch": "The passwords do not match.",
         "setup.error.role_missing": (
             "The role \"{role}\" was not found. "
-            "Please restart the application."
+            "The application will restart now to reload the database."
         ),
         "setup.error.create_failed": (
             "The administrator could not be created. "
@@ -247,6 +278,7 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "admin.design.tab.appearance": "Appearance",
         "admin.design.tab.density": "Density",
         "admin.design.tab.colors": "Colors",
+        "admin.design.tab.typography": "Fonts",
         "admin.design.tab.dashboard": "Dashboard",
         "admin.design.tab.organization": "Organization",
         "admin.design.section.appearance": "◆ APPEARANCE",
@@ -254,6 +286,138 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "admin.design.section.colors": "◆ COLOR PALETTE",
         "admin.design.section.dashboard": "◆ DASHBOARD",
         "admin.design.section.organization": "◆ APP DEFAULT (ORGANIZATION)",
+        "admin.design.section.typography": "◆ FONTS",
+        "admin.design.hint.typography": (
+            "Each category controls matching text across the app. The active "
+            "theme is the default until you save — then your choices override "
+            "the theme. Save stores your font theme as the new reset baseline."
+        ),
+        "typography.group.hierarchy": "Page & sections",
+        "typography.group.forms": "Forms",
+        "typography.group.data": "Data & KPIs",
+        "typography.group.hints": "Hints & empty states",
+        "typography.group.tables": "Tables",
+        "typography.group.navigation": "Navigation",
+        "typography.group.dashboard": "Dashboard",
+        "typography.group.dialogs": "Dialogs & window",
+        "typography.field.family": "Font family",
+        "typography.field.size": "Size (px)",
+        "typography.field.weight": "Font weight",
+        "typography.field.letter_spacing": "Letter spacing (px)",
+        "typography.field.color": "Color",
+        "typography.family.inherit": "Inherit global font",
+        "typography.weight.normal": "Normal",
+        "typography.weight.semibold": "Semi-bold",
+        "typography.weight.bold": "Bold",
+        "typography.italic": "Italic",
+        "typography.preview_label": "Preview",
+        "typography.reset_role": "Reset this text style",
+        "typography.reset_all": "Reset all fonts",
+        "typography.color_dialog_title": "Pick text color",
+        "typography.category.page_heading": "Page headings",
+        "typography.category.page_heading.desc": (
+            "Page names (Refinery, Storage, …) and large dashboard titles "
+            "(◆ SESSION, ◆ REFINERY, …)."
+        ),
+        "typography.category.section_heading": "Section headings",
+        "typography.category.section_heading.desc": (
+            "Orange ◆ lines, subsection titles, navigation section labels "
+            "(USER, LANGUAGE, …)."
+        ),
+        "typography.category.body": "Body text & labels",
+        "typography.category.body.desc": (
+            "Form labels, hints, read-only values, card subtitles, timeline "
+            "text, and window title bar."
+        ),
+        "typography.category.data": "Numbers & highlights",
+        "typography.category.data.desc": (
+            "KPI values, statistics, and large dashboard numbers."
+        ),
+        "typography.category.profit": "Profit & earnings",
+        "typography.category.profit.desc": (
+            "Profit lines (e.g. “Profit: … aUEC”) and highlighted earnings "
+            "on sales and finance summaries."
+        ),
+        "typography.category.button": "Buttons",
+        "typography.category.button.desc": (
+            "Primary and secondary actions, navigation buttons, and dashboard "
+            "controls."
+        ),
+        "typography.category.table_header": "Table column headers",
+        "typography.category.table_header.desc": (
+            "Column titles in all data tables (Location, Material, Status, …)."
+        ),
+        "typography.category.table_cell": "Table cell text",
+        "typography.category.table_cell.desc": (
+            "Text inside table rows — values and entries in all data tables."
+        ),
+        "typography.category.input": "Input fields",
+        "typography.category.input.desc": (
+            "Text fields, dropdowns, spin boxes, and multi-line inputs."
+        ),
+        "typography.category.status": "Status messages",
+        "typography.category.status.desc": (
+            "Empty states, dialog messages, and warning banners."
+        ),
+        "typography.category.tooltip": "Tooltips",
+        "typography.category.tooltip.desc": (
+            "Short help text shown when hovering controls."
+        ),
+        "typography.preview.page_heading": "REFINERY",
+        "typography.preview.section_heading": "◆ AVAILABLE MATERIAL",
+        "typography.preview.body": "Refinery method",
+        "typography.preview.data": "12.4 SCU",
+        "typography.preview.profit": "Profit: 18,200 aUEC",
+        "typography.preview.button": "SAVE",
+        "typography.preview.table_header": "Location",
+        "typography.preview.table_cell": "Terra Gateway",
+        "typography.preview.input": "Search location…",
+        "typography.preview.status": "No refinery jobs yet.",
+        "typography.preview.tooltip": "Sorted by location.",
+        "typography.role.page_title": "Page title",
+        "typography.role.section_accent": "Section heading (◆ …)",
+        "typography.role.subsection_title": "Subsection heading",
+        "typography.role.form_label": "Form label",
+        "typography.role.display_value": "Read-only field value",
+        "typography.role.card_title": "Card / KPI title",
+        "typography.role.card_value": "Card / KPI value",
+        "typography.role.stat_label": "Statistics label",
+        "typography.role.stat_value": "Statistics value",
+        "typography.role.profit_label": "Profit highlight",
+        "typography.role.muted_label": "Hint / secondary text",
+        "typography.role.hint_label": "Small hint",
+        "typography.role.empty_info": "Empty state message",
+        "typography.role.table_header": "Table column header",
+        "typography.role.table_cell": "Table cell text",
+        "typography.role.nav_title_primary": "Navigation app title",
+        "typography.role.nav_user_name": "Navigation username",
+        "typography.role.nav_section_heading": "Navigation section heading",
+        "typography.role.dashboard_context_title": "Dashboard context title",
+        "typography.role.dashboard_timeline_when": "Dashboard timeline time",
+        "typography.role.window_title": "Window title bar",
+        "typography.role.dialog_info_value": "Dialog message text",
+        "typography.preview.page_title": "REFINERY",
+        "typography.preview.section_accent": "◆ AVAILABLE MATERIAL",
+        "typography.preview.subsection_title": "◆ CREATE REFINERY JOB",
+        "typography.preview.form_label": "Refinery method",
+        "typography.preview.display_value": "Aegis Reclaimer",
+        "typography.preview.card_title": "STATUS",
+        "typography.preview.card_value": "12.4 SCU",
+        "typography.preview.stat_label": "Mission costs",
+        "typography.preview.stat_value": "24,500 aUEC",
+        "typography.preview.profit_label": "+18,200 aUEC",
+        "typography.preview.muted_label": "No active session.",
+        "typography.preview.hint_label": "Sorted by location.",
+        "typography.preview.empty_info": "No refinery jobs yet.",
+        "typography.preview.table_header": "Location",
+        "typography.preview.table_cell": "Terra Gateway",
+        "typography.preview.nav_title_primary": "SALVAGE",
+        "typography.preview.nav_user_name": "Xangandu",
+        "typography.preview.nav_section_heading": "USER",
+        "typography.preview.dashboard_context_title": "SESSION",
+        "typography.preview.dashboard_timeline_when": "Today 14:32",
+        "typography.preview.window_title": "SC SALVAGE TRACKER",
+        "typography.preview.dialog_info_value": "Settings saved.",
         "admin.design.label.theme": "Theme",
         "admin.design.label.font_size": "Font size",
         "admin.design.label.font_family": "Font",
@@ -2276,7 +2440,7 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "setup.admin.title": "Organisations-Administrator",
         "setup.admin.hint": (
             "Rolle: {role} (fest)\n"
-            "Der neue Benutzer setzt beim ersten Login ein eigenes Passwort."
+            "Lege Benutzername und Passwort für die tägliche Anmeldung fest."
         ),
         "setup.admin.username": "Benutzername",
         "setup.admin.display_name": "Anzeigename",
@@ -2292,6 +2456,36 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
             "Der Organisations-Administrator „{username}“ wurde angelegt.\n\n"
             "Klicke auf „Fertig“ und melde dich danach mit dem neuen "
             "Administrator an."
+        ),
+        "setup.welcome.info.solo": (
+            "Richte den Salvage Tracker für dich ein.\n\n"
+            "Zuerst sicherst du den Notfall-Zugang, "
+            "danach legst du dein Benutzerkonto für die tägliche Anmeldung an.\n\n"
+            "Für den normalen Betrieb meldest du dich mit deinem "
+            "Benutzerkonto an — nicht mit dem Notfall-Zugang."
+        ),
+        "setup.step.admin.solo": "DEIN KONTO",
+        "setup.emergency.info.solo": (
+            "Dieses Konto existiert bereits und ist nur für Notfälle "
+            "gedacht (Passwort vergessen, Wiederherstellung bei Problemen).\n\n"
+            "Wähle ein sicheres Passwort und schreib dir die Zugangsdaten auf. "
+            "Du brauchst sie nur, wenn später etwas schiefgeht."
+        ),
+        "setup.emergency.note_checkbox.solo": (
+            "Ich habe die Zugangsdaten für den Notfall-Zugang notiert"
+        ),
+        "setup.admin.title.solo": "Dein Benutzerkonto",
+        "setup.admin.hint.solo": (
+            "Lege Benutzername und Passwort für die tägliche Anmeldung fest."
+        ),
+        "setup.admin.button.solo": "KONTO ANLEGEN",
+        "setup.finish.message.solo": (
+            "Dein Benutzerkonto „{username}“ wurde angelegt.\n\n"
+            "Klicke auf „Fertig“ und melde dich danach mit dem neuen Konto an."
+        ),
+        "setup.complete.message.solo": (
+            "Die Erstinstallation ist abgeschlossen.\n\n"
+            "Melde dich jetzt als „{username}“ an."
         ),
         "setup.button.back": "ZURÜCK",
         "setup.button.next": "WEITER",
@@ -2310,7 +2504,7 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         ),
         "setup.error.role_missing": (
             "Die Rolle „{role}“ wurde nicht gefunden. "
-            "Bitte starte die Anwendung neu."
+            "Die Anwendung startet jetzt neu, um die Datenbank erneut zu laden."
         ),
         "setup.error.create_failed": (
             "Der Administrator konnte nicht angelegt werden. "
@@ -2462,6 +2656,7 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "admin.design.tab.appearance": "Erscheinungsbild",
         "admin.design.tab.density": "Dichte",
         "admin.design.tab.colors": "Farben",
+        "admin.design.tab.typography": "Schriften",
         "admin.design.tab.dashboard": "Dashboard",
         "admin.design.tab.organization": "Organisation",
         "admin.design.section.appearance": "◆ ERSCHEINUNGSBILD",
@@ -2469,6 +2664,140 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "admin.design.section.colors": "◆ FARBPALETTE",
         "admin.design.section.dashboard": "◆ DASHBOARD",
         "admin.design.section.organization": "◆ APP-STANDARD (ORGANISATION)",
+        "admin.design.section.typography": "◆ SCHRIFTEN",
+        "admin.design.hint.typography": (
+            "Pro Kategorie ein Stil für alle passenden Texte. Das aktive Theme "
+            "ist der Standard, bis du speicherst — dann überschreiben deine "
+            "Werte das Theme. Speichern legt dein Schrift-Theme als neuen "
+            "Zurücksetzen-Standard fest."
+        ),
+        "typography.group.hierarchy": "Seiten & Bereiche",
+        "typography.group.forms": "Formulare & Eingaben",
+        "typography.group.data": "Zahlen & Werte",
+        "typography.group.hints": "Hinweise & Meldungen",
+        "typography.group.tables": "Tabellen",
+        "typography.group.navigation": "Linke Leiste",
+        "typography.group.dashboard": "Dashboard",
+        "typography.group.dialogs": "Fenster & Dialoge",
+        "typography.field.family": "Schriftart",
+        "typography.field.size": "Größe (Pixel)",
+        "typography.field.weight": "Schriftstärke",
+        "typography.field.letter_spacing": "Abstand zwischen Buchstaben",
+        "typography.field.color": "Farbe",
+        "typography.family.inherit": "Wie unter „Erscheinungsbild“",
+        "typography.weight.normal": "Normal",
+        "typography.weight.semibold": "Halbfett",
+        "typography.weight.bold": "Fett",
+        "typography.italic": "Kursiv",
+        "typography.preview_label": "So sieht es aus",
+        "typography.reset_role": "Diese Schrift zurücksetzen",
+        "typography.reset_all": "Alle Schriften zurücksetzen",
+        "typography.color_dialog_title": "Textfarbe wählen",
+        "typography.category.page_heading": "Seitenüberschriften",
+        "typography.category.page_heading.desc": (
+            "Seitennamen (Raffinerie, Lager, …) und große Dashboard-Titel "
+            "(◆ SESSION, ◆ RAFFINERIE, …)."
+        ),
+        "typography.category.section_heading": "Abschnittsüberschriften",
+        "typography.category.section_heading.desc": (
+            "Orange ◆-Zeilen, kleinere Überschriften, Navigations-Bereiche "
+            "(USER, SPRACHE, …)."
+        ),
+        "typography.category.body": "Standardtexte & Labels",
+        "typography.category.body.desc": (
+            "Beschriftungen, Hinweise, Anzeigewerte, Karten-Untertitel, "
+            "Zeitstempel und Fensterleiste."
+        ),
+        "typography.category.data": "Zahlen & Hervorhebungen",
+        "typography.category.data.desc": (
+            "KPI-Werte, Statistiken und große Dashboard-Zahlen."
+        ),
+        "typography.category.profit": "Gewinn & Erlöse",
+        "typography.category.profit.desc": (
+            "Gewinn-Zeilen (z. B. „Gewinn: … aUEC“) und hervorgehobene "
+            "Erlöse in Verkauf und Finanzübersicht."
+        ),
+        "typography.category.button": "Buttons",
+        "typography.category.button.desc": (
+            "Haupt- und Nebenaktionen, Navigations-Buttons und "
+            "Dashboard-Steuerung."
+        ),
+        "typography.category.table_header": "Tabellen-Spaltenüberschriften",
+        "typography.category.table_header.desc": (
+            "Spaltennamen in allen Datentabellen (Standort, Material, Status, …)."
+        ),
+        "typography.category.table_cell": "Tabellen-Zelltext",
+        "typography.category.table_cell.desc": (
+            "Text in den Tabellenzeilen — Werte und Einträge in allen "
+            "Datentabellen."
+        ),
+        "typography.category.input": "Eingabefelder",
+        "typography.category.input.desc": (
+            "Textfelder, Dropdowns, Zahlenfelder und mehrzeilige Eingaben."
+        ),
+        "typography.category.status": "Statusmeldungen",
+        "typography.category.status.desc": (
+            "Leere Zustände, Dialog-Texte und Warn-Banner."
+        ),
+        "typography.category.tooltip": "Tooltips",
+        "typography.category.tooltip.desc": (
+            "Kurze Hilfe beim Überfahren von Elementen mit der Maus."
+        ),
+        "typography.preview.page_heading": "RAFFINERIE",
+        "typography.preview.section_heading": "◆ VERFÜGBARES MATERIAL",
+        "typography.preview.body": "Raffinerie-Methode",
+        "typography.preview.data": "12,4 SCU",
+        "typography.preview.profit": "Gewinn: 18.200 aUEC",
+        "typography.preview.button": "SPEICHERN",
+        "typography.preview.table_header": "Standort",
+        "typography.preview.table_cell": "Terra Gateway",
+        "typography.preview.input": "Standort suchen…",
+        "typography.preview.status": "Noch keine Raffinerieaufträge.",
+        "typography.preview.tooltip": "Sortiert nach Standort.",
+        "typography.role.page_title": "Seitenname (z. B. RAFFINERIE)",
+        "typography.role.section_accent": "Orange Zeile mit ◆",
+        "typography.role.subsection_title": "Kleinere Überschrift im Bereich",
+        "typography.role.form_label": "Text über Eingabefeldern",
+        "typography.role.display_value": "Angezeigter Wert (nur lesen)",
+        "typography.role.card_title": "Kleine Überschrift in Karten",
+        "typography.role.card_value": "Große Zahl in Karten",
+        "typography.role.stat_label": "Text neben Statistik-Zahlen",
+        "typography.role.stat_value": "Statistik-Zahlen",
+        "typography.role.profit_label": "Gewinn (hervorgehoben)",
+        "typography.role.muted_label": "Grauer Hinweistext",
+        "typography.role.hint_label": "Kleiner Zusatz-Hinweis",
+        "typography.role.empty_info": "Text wenn nichts eingetragen ist",
+        "typography.role.table_header": "Spaltenname in Tabellen (z. B. Standort)",
+        "typography.role.table_cell": "Text in Tabellenzellen",
+        "typography.role.nav_title_primary": "App-Name links (SALVAGE)",
+        "typography.role.nav_user_name": "Dein Name in der Leiste",
+        "typography.role.nav_section_heading": "Kleine Überschrift (z. B. USER)",
+        "typography.role.dashboard_context_title": "Großer Titel im Dashboard",
+        "typography.role.dashboard_timeline_when": "Uhrzeit in „Letzte Bewegungen“",
+        "typography.role.window_title": "Text oben in der Fensterleiste",
+        "typography.role.dialog_info_value": "Text in Hinweis-Fenstern",
+        "typography.preview.page_title": "RAFFINERIE",
+        "typography.preview.section_accent": "◆ VERFÜGBARES MATERIAL",
+        "typography.preview.subsection_title": "◆ RAFFINERIE-AUFTRAG ANLEGEN",
+        "typography.preview.form_label": "Raffinerie-Methode",
+        "typography.preview.display_value": "Aegis Reclaimer",
+        "typography.preview.card_title": "STATUS",
+        "typography.preview.card_value": "12,4 SCU",
+        "typography.preview.stat_label": "Missionskosten",
+        "typography.preview.stat_value": "24.500 aUEC",
+        "typography.preview.profit_label": "+18.200 aUEC",
+        "typography.preview.muted_label": "Keine aktive Sitzung.",
+        "typography.preview.hint_label": "Sortiert nach Standort.",
+        "typography.preview.empty_info": "Noch keine Raffinerieaufträge.",
+        "typography.preview.table_header": "Standort",
+        "typography.preview.table_cell": "Terra Gateway",
+        "typography.preview.nav_title_primary": "SALVAGE",
+        "typography.preview.nav_user_name": "Xangandu",
+        "typography.preview.nav_section_heading": "USER",
+        "typography.preview.dashboard_context_title": "SITZUNG",
+        "typography.preview.dashboard_timeline_when": "Heute 14:32",
+        "typography.preview.window_title": "SC SALVAGE TRACKER",
+        "typography.preview.dialog_info_value": "Einstellungen gespeichert.",
         "admin.design.label.theme": "Theme",
         "admin.design.label.font_size": "Schriftgröße",
         "admin.design.label.font_family": "Schriftart",
@@ -4689,6 +5018,14 @@ def set_language(language: str) -> None:
     _current_language = normalize_language(language)
 
 
+def _has_translation(key: str) -> bool:
+    lang = _current_language
+    table = _TRANSLATIONS.get(lang, _TRANSLATIONS[DEFAULT_LANGUAGE])
+    if key in table:
+        return True
+    return key in _TRANSLATIONS[DEFAULT_LANGUAGE]
+
+
 def tr(key: str, *, default: str | None = None, **kwargs) -> str:
     lang = _current_language
     table = _TRANSLATIONS.get(lang, _TRANSLATIONS[DEFAULT_LANGUAGE])
@@ -4703,6 +5040,17 @@ def tr(key: str, *, default: str | None = None, **kwargs) -> str:
         except (KeyError, ValueError):
             return text
     return text
+
+
+def tr_setup(key: str, *, db=None, **kwargs) -> str:
+    """Setup copy for the active edition (SOLO uses ``{key}.solo`` when defined)."""
+    from config.editions import EDITION_SOLO, effective_edition
+
+    if effective_edition(db) == EDITION_SOLO:
+        solo_key = f"{key}.solo"
+        if _has_translation(solo_key):
+            return tr(solo_key, **kwargs)
+    return tr(key, **kwargs)
 
 
 def init_language_from_db(db) -> None:

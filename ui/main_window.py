@@ -13,9 +13,10 @@ from ui.changelog_dialog import (
     ChangelogDialog
 )
 
-from ui.nav_edition_badge import (
-    build_nav_edition_badge,
-    sync_nav_edition_badge_size,
+from ui.nav_brand_logo import (
+    rebuild_nav_brand_header,
+    refresh_nav_brand_logo,
+    sync_nav_brand_badge_after_theme,
 )
 from config.editions import (
     EDITION_GLOW_RGB,
@@ -51,7 +52,6 @@ from ui.page_layout import (
     build_nav_divider,
     build_nav_scroll,
     hud_divider,
-    nav_edition_divider,
 )
 from ui.update_manager import UpdateManager
 from ui.window_geometry import (
@@ -130,32 +130,17 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
         brand_layout.setContentsMargins(14, 14, 14, 12)
         brand_layout.setSpacing(0)
 
-        title_primary = QLabel("SALVAGE")
-        title_primary.setObjectName("navTitlePrimary")
-        title_primary.setAlignment(
-            Qt.AlignmentFlag.AlignLeft
-            | Qt.AlignmentFlag.AlignVCenter
+        self._nav_width = "normal"
+        self._nav_brand_header_host = QWidget()
+        self._nav_brand_header_layout = QVBoxLayout(
+            self._nav_brand_header_host
         )
-
-        title_secondary = QLabel("TRACKER")
-        title_secondary.setObjectName("navTitleSecondary")
-        title_secondary.setAlignment(
-            Qt.AlignmentFlag.AlignLeft
-            | Qt.AlignmentFlag.AlignVCenter
-        )
-
-        edition_key = effective_edition(db)
-        self.edition_badge_host, self.edition_badge = build_nav_edition_badge(
-            edition_short_label(db),
-            edition_key,
-        )
-        self._apply_edition_badge_glow(edition_key)
-
-        title_stack = QVBoxLayout()
-        title_stack.setContentsMargins(0, 0, 0, 0)
-        title_stack.setSpacing(0)
-        title_stack.addWidget(title_primary)
-        title_stack.addWidget(title_secondary)
+        self._nav_brand_header_layout.setContentsMargins(0, 0, 0, 0)
+        self._nav_brand_header_layout.setSpacing(0)
+        self._nav_brand_logo_label = None
+        self.edition_badge_host = None
+        self.edition_badge = None
+        self._apply_nav_brand_header()
 
         user_panel = QFrame()
         user_panel.setObjectName("navUserPanel")
@@ -197,11 +182,7 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
         self.network_label.setWordWrap(True)
         self._update_network_label()
 
-        brand_layout.addLayout(title_stack)
-        brand_layout.addSpacing(6)
-        brand_layout.addLayout(
-            nav_edition_divider(self.edition_badge_host)
-        )
+        brand_layout.addWidget(self._nav_brand_header_host)
         brand_layout.addSpacing(8)
 
         user_panel_layout.addWidget(user_heading)
@@ -492,6 +473,7 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
         self.btn_dashboard.update()
 
     def apply_nav_width(self, nav_width: str = "normal"):
+        self._nav_width = nav_width
         apply_nav_panel_metrics(
             self.nav_widget,
             self._nav_layout,
@@ -505,6 +487,12 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
             nav_middle_layout=self._nav_middle_layout,
             nav_width=nav_width,
         )
+        if self._nav_brand_logo_label is not None:
+            refresh_nav_brand_logo(
+                self._nav_brand_logo_label,
+                effective_edition(self.db),
+                nav_width,
+            )
 
     def refresh_network_display(self):
         """Navigations-Anzeige und Client-/Host-UI aktualisieren."""
@@ -630,10 +618,7 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
         if title_bar is not None:
             title_bar.set_title(app_name)
 
-        self.edition_badge.setText(edition_short_label(self.db))
-        self.edition_badge.setProperty("edition", edition_key)
-        self.edition_badge_host.setProperty("edition", edition_key)
-        self._apply_edition_badge_glow(edition_key)
+        self._apply_nav_brand_header()
 
         if hasattr(self, "admin_page"):
             self.admin_page.refresh_support_tab()
@@ -643,9 +628,28 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
 
         self._update_network_label()
 
+    def _apply_nav_brand_header(self):
+        refs = rebuild_nav_brand_header(
+            self._nav_brand_header_host,
+            self._nav_brand_header_layout,
+            self.db,
+            edition_short_label_fn=edition_short_label,
+            nav_width=self._nav_width,
+        )
+        self._nav_brand_logo_label = refs["logo_label"]
+        self.edition_badge_host = refs["badge_host"]
+        self.edition_badge = refs["badge"]
+
+        if self.edition_badge_host is not None and self.edition_badge is not None:
+            edition_key = effective_edition(self.db)
+            self._apply_edition_badge_glow(edition_key)
+
     def _apply_edition_badge_glow(self, edition_key: str):
+        if self.edition_badge_host is None or self.edition_badge is None:
+            return
+
         rgb = EDITION_GLOW_RGB.get(edition_key, EDITION_GLOW_RGB["solo"])
-        sync_nav_edition_badge_size(
+        sync_nav_brand_badge_after_theme(
             self.edition_badge_host,
             self.edition_badge,
         )
@@ -660,7 +664,7 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
         self.edition_badge.style().polish(self.edition_badge)
         QTimer.singleShot(
             0,
-            lambda: sync_nav_edition_badge_size(
+            lambda: sync_nav_brand_badge_after_theme(
                 self.edition_badge_host,
                 self.edition_badge,
             ),
@@ -750,7 +754,7 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
         if self.dashboard_page.isVisible() or (
             self.dashboard_window.isVisible()
         ):
-            self.dashboard_page.refresh_dashboard()
+            self.dashboard_page.refresh_dashboard(animated=False)
 
         self._update_network_label()
 
@@ -1010,33 +1014,15 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
         self,
         active_button
     ):
-        buttons = list(self.nav_buttons.values())
+        for button in self.nav_buttons.values():
+            should_be_active = button is active_button
+            if button.property("active") == should_be_active:
+                continue
 
-        for button in buttons:
-
-            button.setProperty(
-                "active",
-                False
-            )
-
+            button.setProperty("active", should_be_active)
             button.style().unpolish(button)
             button.style().polish(button)
-
             button.update()
-
-        active_button.setProperty(
-            "active",
-            True
-        )
-
-        active_button.style().unpolish(
-            active_button
-        )
-
-        active_button.style().polish(
-            active_button
-        )
-        active_button.update()
 
     def get_dashboard_page(self):
 
