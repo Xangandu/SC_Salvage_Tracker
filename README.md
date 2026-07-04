@@ -16,6 +16,13 @@ Crew-Auszahlungen.
 - **Auszahlungsübersicht** — Verbesserte Darstellung der Crew-Auszahlungen mit aufklappbaren Zeilen für detaillierte Informationen.
 
 
+## Highlights (Beta 0.16.7)
+
+- **UEX-Preise** — Verkaufsseite lädt UEX-Verkaufspreise automatisch nach Standortwahl (RMC/CM); asynchron und weiter editierbar
+- **Tabellen-Performance** — Admin-Listen (Login-Historie, Backups) passen Höhe an Zeilenanzahl an
+- **Admin-Polish** — System-Tab mit einheitlichen Trennern, Abständen und Label-Stilen
+- **Standort-Picker** — Ortswechsel-Signal; erster Ort automatisch vorausgewählt
+
 ## Highlights (Beta 0.16.6)
 
 - **Dashboard SESSION & STATUS** — Keine falsche „Aktive Sitzung“ nach Sitzungsende; kombinierte Material-Bereitschaft (RMC, CM Salvage)

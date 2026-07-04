@@ -1591,6 +1591,14 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         ),
         "sales.msg.saved.title": "Sale saved",
         "sales.msg.saved.message": "The sale was recorded in inventory.",
+        "sales.uex.loading": "Loading UEX prices…",
+        "sales.uex.loaded": "UEX prices applied — you can still edit them.",
+        "sales.uex.error.network": "UEX prices unavailable (no internet connection).",
+        "sales.uex.error.timeout": "UEX prices unavailable (request timed out).",
+        "sales.uex.error.terminal_not_found": "No UEX trade terminal found for this location.",
+        "sales.uex.error.no_prices": "No current UEX sell prices for RMC/CM at this location.",
+        "sales.uex.error.invalid_response": "UEX prices unavailable (invalid response).",
+        "sales.uex.error.unknown": "UEX prices could not be loaded.",
         "sales.msg.no_selection": (
             "Please select a sale in the history first."
         ),
@@ -4121,6 +4129,14 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         ),
         "sales.msg.saved.title": "Verkauf gespeichert",
         "sales.msg.saved.message": "Der Verkauf wurde im Lager verbucht.",
+        "sales.uex.loading": "UEX-Preise werden geladen…",
+        "sales.uex.loaded": "UEX-Preise übernommen — du kannst sie weiter anpassen.",
+        "sales.uex.error.network": "UEX-Preise nicht verfügbar (keine Internetverbindung).",
+        "sales.uex.error.timeout": "UEX-Preise nicht verfügbar (Zeitüberschreitung).",
+        "sales.uex.error.terminal_not_found": "Für diesen Ort wurde kein UEX-Handels-Terminal gefunden.",
+        "sales.uex.error.no_prices": "Keine aktuellen UEX-Verkaufspreise für RMC/CM an diesem Ort.",
+        "sales.uex.error.invalid_response": "UEX-Preise nicht verfügbar (ungültige Antwort).",
+        "sales.uex.error.unknown": "UEX-Preise konnten nicht geladen werden.",
         "sales.msg.no_selection": (
             "Bitte zuerst einen Verkauf in der Historie auswählen."
         ),

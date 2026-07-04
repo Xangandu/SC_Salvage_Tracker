@@ -1,7 +1,7 @@
 SC SALVAGE TRACKER – VERSIONSHISTORIE
 ======================================
 
-Aktuelle Version: 0.16.6 Beta | Build 2026.17 | Codename: OPERATIONS HUD
+Aktuelle Version: 0.16.7 Beta | Build 2026.18 | Codename: POLISH AND PERFORMANCE
 
 Detaillierte Patchnotes:  Changelogs/PATCHNOTES.txt
 Roadmap:                  Changelogs/ROADMAP.txt
@@ -14,6 +14,7 @@ Im Programm: Navigation → Link „Patchnotes & Roadmap“
 KURZÜBERSICHT DER ENTWICKLUNG
 -------------------------------
 
+0.16.7 Polish and Performance: UEX-Preise beim Verkauf, Tabellen-Höhe/Performance, Admin-Polish
 0.16.6 Operations HUD: Dashboard-Sitzung/STATUS, Auszahlungs-Historie, Fenster-UI, Lager-Transfer-Fix
 0.16.5 Logistics Pooling: Physische SCU beim Verkauf (Lager ↔ Verkäufe synchron)
 0.16.4 Logistics Pooling: Material-Pools, sichtbares In-App-Update, granulare Korrekturen

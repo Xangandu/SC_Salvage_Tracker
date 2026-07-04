@@ -1,7 +1,7 @@
 SC SALVAGE TRACKER – PROJEKT-ZUSAMMENFASSUNG
 ==============================================
 
-Stand: Version 0.16.0 Beta | Build 2026.11 | Codename: LOCATION FLOW
+Stand: Version 0.16.7 Beta | Build 2026.18 | Codename: POLISH AND PERFORMANCE
 
 
 1. PROJEKTZIEL
@@ -52,6 +52,11 @@ Crew-Auszahlungen.
 
 3. WICHTIGE ÄNDERUNGEN NACH VERSION
 ------------------------------------
+
+v0.16.7 – Polish and Performance (UEX & Tabellen)
+• UEX-Verkaufspreise automatisch nach Standort (async, editierbar)
+• Admin-Tabellen: dynamische Höhe, weniger Leerfläche, bessere Spaltenverteilung
+• Standort-Picker mit location_changed; Admin-System-Tab visuell aufgeräumt
 
 v0.16.6 – Operations HUD (Dashboard & Fenster)
 • Kontext-Dashboard SESSION: nach Sitzungsende kein Schiff/Status mehr; STATUS = Material-Bereitschaft

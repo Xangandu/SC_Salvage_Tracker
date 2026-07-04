@@ -6,6 +6,8 @@ from PySide6.QtWidgets import (
 
     QHeaderView,
 
+    QSizePolicy,
+
     QTableWidget,
 
 )
@@ -84,8 +86,6 @@ def configure_mobiglas_table(
 
     ThemeManager.apply_table_row_height(table)
 
-    ThemeManager.apply_table_row_height(table)
-
 
 
 
@@ -150,15 +150,59 @@ def finalize_table_columns(
 
 
 
-    if stretch_column < 0:
-
-        stretch_column = column_count - 1
-
-
-
     header = table.horizontalHeader()
 
     header.setStretchLastSection(False)
+
+
+
+    if stretch_column is None:
+
+        for col in range(column_count):
+
+            header.setSectionResizeMode(
+
+                col,
+
+                QHeaderView.ResizeMode.ResizeToContents,
+
+            )
+
+
+
+        table.resizeColumnsToContents()
+
+
+
+        for col in range(column_count):
+
+            width = max(
+
+                header.sectionSize(col),
+
+                header.minimumSectionSize(),
+
+            )
+
+            header.setSectionResizeMode(
+
+                col,
+
+                QHeaderView.ResizeMode.Fixed,
+
+            )
+
+            header.resizeSection(col, width)
+
+
+
+        return
+
+
+
+    if stretch_column < 0:
+
+        stretch_column = column_count - 1
 
 
 
@@ -215,6 +259,110 @@ def finalize_table_columns(
             )
 
             header.resizeSection(col, width)
+
+
+
+
+
+def adjust_table_list_height(
+
+    table,
+
+    *,
+
+    min_rows: int = 2,
+
+    max_visible_rows: int = 8,
+
+) -> None:
+
+    """Höhe an Zeilenanzahl anpassen; ab max_visible_rows intern scrollen."""
+
+    vheader = table.verticalHeader()
+
+    hheader = table.horizontalHeader()
+
+    row_h = vheader.defaultSectionSize()
+
+    header_h = hheader.height() if hheader.isVisible() else 0
+
+    row_count = table.rowCount()
+
+    visible_rows = max(
+
+        min_rows,
+
+        min(row_count if row_count > 0 else min_rows, max_visible_rows),
+
+    )
+
+    frame = table.frameWidth() * 2
+
+    height = header_h + row_h * visible_rows + frame
+
+
+
+    table.setMinimumHeight(height)
+
+
+
+    if row_count > max_visible_rows:
+
+        capped = header_h + row_h * max_visible_rows + frame
+
+        table.setMaximumHeight(capped)
+
+        table.setVerticalScrollBarPolicy(
+
+            Qt.ScrollBarPolicy.ScrollBarAsNeeded,
+
+        )
+
+    else:
+
+        table.setMaximumHeight(16777215)
+
+        table.setVerticalScrollBarPolicy(
+
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOff,
+
+        )
+
+
+
+
+
+def finalize_system_list_table(
+
+    table,
+
+    stretch_column: int,
+
+    *,
+
+    max_visible_rows: int = 8,
+
+) -> None:
+
+    """System-Listen: Spalten sinnvoll verteilen, Höhe begrenzen."""
+
+    finalize_table_columns(table, stretch_column=stretch_column)
+
+    adjust_table_list_height(
+
+        table,
+
+        max_visible_rows=max_visible_rows,
+
+    )
+
+    table.setSizePolicy(
+
+        QSizePolicy.Policy.Expanding,
+
+        QSizePolicy.Policy.Fixed,
+
+    )
 
 
 

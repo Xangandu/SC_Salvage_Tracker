@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "source": "Manual overrides for UEX terminal resolution (optional)",
+  "locations": {
+    "Stanton|CITY|AREA18": {
+      "id_terminal": 12,
+      "code": "TDA18",
+      "name": "TDD - Trade and Development Division - Area18"
+    }
+  }
+}

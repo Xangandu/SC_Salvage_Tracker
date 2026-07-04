@@ -1,6 +1,26 @@
 SC SALVAGE TRACKER – PATCHNOTES
 ================================
 
+VERSION 0.16.7 Beta | Build 2026.18 | Codename: POLISH AND PERFORMANCE
+--------------------------------------------------------------------
+
+NEU — UEX-PREISE BEIM VERKAUF
+• Verkaufsseite lädt UEX-Verkaufspreise automatisch nach Standortwahl (RMC/CM)
+• Asynchroner Abruf — UI bleibt bedienbar; Preisfeld weiter manuell editierbar
+• Klare Statusmeldungen bei Netzwerk-, Timeout- oder Terminal-Fehlern (DE/EN)
+• Terminal-Zuordnung über config/uex_terminal_map.json (Stanton/Pyro/Nyx)
+
+PERFORMANCE — TABELLEN & ADMIN
+• System-Listen (Login-Historie, Backups): Höhe passt sich der Zeilenanzahl an
+• Ab max. sichtbaren Zeilen intern scrollen statt großer Leerflächen
+• Spaltenbreiten robuster: Inhaltsbreite oder Stretch je nach Tabellentyp
+• Doppelter ThemeManager-Aufruf in table_utils entfernt
+
+UI — ADMIN & STANDORT
+• Admin → System: HUD-Trenner, Abstände und Label-Stile vereinheitlicht
+• Standort-Picker: Signal bei System-/Ortswechsel; erster Ort automatisch vorausgewählt
+
+
 VERSION 0.16.6 Beta | Build 2026.17 | Codename: OPERATIONS HUD
 --------------------------------------------------------------------
 

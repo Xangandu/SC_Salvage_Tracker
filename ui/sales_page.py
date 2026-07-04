@@ -22,6 +22,7 @@ from config.materials import material_label
 from config.i18n import tr, format_number
 from config.strings_de import parse_number_de
 from config.permissions import apply_widget_permissions
+from ui.sales_uex_bridge import SalesUexBridge
 from ui.system_location_picker import SystemLocationPicker
 from ui.table_utils import (
     configure_mobiglas_table,
@@ -97,6 +98,11 @@ class SalesPage(QWidget):
 
         self.location_picker = SystemLocationPicker()
         form_layout.addWidget(self.location_picker)
+
+        self.uex_status_label = QLabel("")
+        self.uex_status_label.setObjectName("mutedLabel")
+        self.uex_status_label.setWordWrap(True)
+        form_layout.addWidget(self.uex_status_label)
 
         self.sale_date_input = QLineEdit()
         self.sale_date_input.setPlaceholderText(
@@ -243,6 +249,13 @@ class SalesPage(QWidget):
         )
         self.save_button.clicked.connect(
             self.save_sale
+        )
+
+        self._uex_bridge = SalesUexBridge(
+            location_picker=self.location_picker,
+            unit_price_input=self.unit_price_input,
+            material_combo=self.material_combo,
+            status_label=self.uex_status_label,
         )
 
         self.load_data()

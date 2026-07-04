@@ -1,4 +1,28 @@
 {
+  "0.16.7": {
+    "de": {
+      "title": "SC Salvage Tracker 0.16.7 Beta — Polish and Performance",
+      "summary": "UEX-Verkaufspreise beim Verkauf, schnellere Admin-Tabellen und UI-Polish im System-Bereich.",
+      "highlights": [
+        "UEX-Preise automatisch nach Standortwahl (RMC/CM), Preis weiter editierbar",
+        "Asynchroner Abruf — Verkaufsseite bleibt bedienbar",
+        "Login-Historie und Backups: Tabellenhöhe passt sich der Zeilenanzahl an",
+        "Admin → System: Trenner, Abstände und Label-Stile vereinheitlicht",
+        "Standort-Picker meldet Ortswechsel; erster Ort vorausgewählt"
+      ]
+    },
+    "en": {
+      "title": "SC Salvage Tracker 0.16.7 Beta — Polish and Performance",
+      "summary": "UEX sale prices on the sales page, faster admin tables, and UI polish in the system area.",
+      "highlights": [
+        "UEX prices load automatically by location (RMC/CM); price remains editable",
+        "Async fetch — sales page stays responsive",
+        "Login history and backups: table height adapts to row count",
+        "Admin → System: dividers, spacing, and label styles unified",
+        "Location picker emits changes; first location pre-selected"
+      ]
+    }
+  },
   "0.16.6": {
     "de": {
       "title": "SC Salvage Tracker 0.16.6 Beta — Operations HUD",

@@ -63,6 +63,7 @@ from ui.edition_dialog import show_edition_locked
 from ui.table_utils import (
     configure_mobiglas_table,
     finalize_table_columns,
+    finalize_system_list_table,
 )
 from ui.page_layout import (
     build_page_scroll,
@@ -2419,9 +2420,11 @@ class AdminPage(QWidget):
         login_history_layout.addWidget(
             subsection_title(tr("admin.system.section.login_history"))
         )
+        login_history_layout.addLayout(hud_divider())
 
         history_panel, history_layout = page_panel()
         history_layout.setContentsMargins(12, 12, 12, 12)
+        history_layout.setSpacing(8)
 
         self.history_table = QTableWidget()
         self.history_table.setColumnCount(4)
@@ -2435,7 +2438,6 @@ class AdminPage(QWidget):
             self.history_table,
             "dataTable",
         )
-        self.history_table.setMinimumHeight(220)
 
         self.history_empty_panel = empty_info_panel(
             tr("admin.system.history.empty"),
@@ -2463,11 +2465,14 @@ class AdminPage(QWidget):
 
         data_panel, data_layout = page_panel()
         data_layout.setContentsMargins(12, 12, 12, 12)
+        data_layout.setSpacing(10)
 
         self.data_health_label = QLabel()
+        self.data_health_label.setObjectName("formLabel")
         data_layout.addWidget(self.data_health_label)
 
         self.data_summary_label = QLabel()
+        self.data_summary_label.setObjectName("mutedLabel")
         self.data_summary_label.setWordWrap(True)
         self.data_summary_label.setTextFormat(
             Qt.TextFormat.RichText
@@ -2516,7 +2521,6 @@ class AdminPage(QWidget):
             self.backups_table,
             "dataTable",
         )
-        self.backups_table.setMinimumHeight(180)
         self.backups_table.setSelectionBehavior(
             QTableWidget.SelectionBehavior.SelectRows
         )
@@ -2532,6 +2536,8 @@ class AdminPage(QWidget):
         data_layout.addWidget(self.backups_table)
         data_layout.addWidget(self.backups_empty_panel)
         self.backups_empty_panel.hide()
+
+        data_layout.addLayout(hud_divider())
 
         secondary_action_row = QHBoxLayout()
         secondary_action_row.setSpacing(8)
@@ -2998,7 +3004,11 @@ class AdminPage(QWidget):
                 ),
             )
 
-        finalize_table_columns(self.history_table)
+        finalize_system_list_table(
+            self.history_table,
+            stretch_column=1,
+            max_visible_rows=8,
+        )
 
     def refresh_data(self):
         self.refresh_users()
@@ -3639,7 +3649,11 @@ class AdminPage(QWidget):
                 ),
             )
 
-        finalize_table_columns(self.backups_table)
+        finalize_system_list_table(
+            self.backups_table,
+            stretch_column=0,
+            max_visible_rows=6,
+        )
 
     def selected_backup_filename(self):
         row = self.backups_table.currentRow()

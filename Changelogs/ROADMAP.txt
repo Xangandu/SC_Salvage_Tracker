@@ -1,7 +1,7 @@
 SC SALVAGE TRACKER – ROADMAP
 =============================
 
-Stand: Version 0.16.6 Beta | Build 2026.17 | Codename: OPERATIONS HUD
+Stand: Version 0.16.7 Beta | Build 2026.18 | Codename: POLISH AND PERFORMANCE
 
 
 PHASE 1 – UI AN NEUES DATENMODELL ANBINDEN (ABGESCHLOSSEN)

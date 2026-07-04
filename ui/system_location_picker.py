@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
     QComboBox,
     QLabel,
@@ -34,6 +35,8 @@ class SystemLocationSelection:
 
 class SystemLocationPicker(QWidget):
     """System wählen, dann Station **oder** Stadt aus einer gemeinsamen Liste."""
+
+    location_changed = Signal(object)
 
     def __init__(
         self,
@@ -72,10 +75,20 @@ class SystemLocationPicker(QWidget):
         layout.addWidget(self.location_combo)
 
         self.system_combo.currentIndexChanged.connect(
-            self._reload_for_system
+            self._on_system_changed
+        )
+        self.location_combo.currentIndexChanged.connect(
+            self._emit_location_changed
         )
 
         self._reload_for_system()
+
+    def _on_system_changed(self) -> None:
+        self._reload_for_system()
+        self._emit_location_changed()
+
+    def _emit_location_changed(self) -> None:
+        self.location_changed.emit(self.selection())
 
     def _reload_for_system(self) -> None:
         system = self.system_combo.currentData()
@@ -98,6 +111,8 @@ class SystemLocationPicker(QWidget):
             cities,
             placeholder=tr("location.placeholder.select"),
         )
+        if self.location_combo.count() > 0:
+            self.location_combo.setCurrentIndex(0)
 
     def is_selected(self) -> bool:
         return self.selection() is not None
