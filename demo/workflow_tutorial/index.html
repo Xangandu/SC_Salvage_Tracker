@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SC Salvage Tracker — Workflow-Tutorial DEMO</title>
+  <style>
+    :root {
+      --bg-deep: #0a0e14;
+      --bg-panel: #121820;
+      --bg-card: #1a2230;
+      --accent: #4db8e8;
+      --accent-dim: #2a6f94;
+      --text: #d8e4f0;
+      --muted: #7a8fa3;
+      --success: #5fd48a;
+      --warn: #f0c060;
+      --border: #2a3545;
+      --highlight: rgba(77, 184, 232, 0.18);
+      --highlight-ring: rgba(77, 184, 232, 0.75);
+      --font: "Segoe UI", system-ui, sans-serif;
+      --mono: "Consolas", "Courier New", monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg-deep);
+      color: var(--text);
+      min-height: 100vh;
+      overflow: hidden;
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      height: 100vh;
+    }
+
+    .nav {
+      background: var(--bg-panel);
+      border-right: 1px solid var(--border);
+      padding: 16px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .brand {
+      padding: 12px 16px 20px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 8px;
+    }
+
+    .brand h1 {
+      font-size: 13px;
+      letter-spacing: 0.18em;
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .brand p {
+      font-size: 10px;
+      letter-spacing: 0.22em;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .nav-btn {
+      display: block;
+      width: 100%;
+      text-align: left;
+      padding: 10px 16px;
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      cursor: pointer;
+      border-left: 3px solid transparent;
+      transition: all 0.15s;
+    }
+
+    .nav-btn:hover { color: var(--text); background: rgba(255,255,255,0.03); }
+    .nav-btn.active {
+      color: var(--accent);
+      background: var(--highlight);
+      border-left-color: var(--accent);
+    }
+
+    .nav-btn.highlight-target {
+      box-shadow: inset 0 0 0 1px var(--highlight-ring);
+      animation: pulse 1.6s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { background: var(--highlight); }
+      50% { background: rgba(77, 184, 232, 0.28); }
+    }
+
+    .main {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .demo-banner {
+      background: #1e2a18;
+      border-bottom: 1px solid #3a5230;
+      padding: 8px 20px;
+      font-size: 11px;
+      color: #9fd48a;
+      letter-spacing: 0.06em;
+    }
+
+    .page {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px 28px;
+    }
+
+    .page-title {
+      font-size: 22px;
+      letter-spacing: 0.12em;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+
+    .page-accent {
+      font-size: 11px;
+      letter-spacing: 0.14em;
+      color: var(--accent);
+      margin-bottom: 16px;
+    }
+
+    .panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 16px 18px;
+      margin-bottom: 14px;
+    }
+
+    .panel h3 {
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      color: var(--accent);
+      margin-bottom: 10px;
+    }
+
+    .field-row {
+      display: grid;
+      grid-template-columns: 140px 1fr;
+      gap: 8px;
+      margin-bottom: 8px;
+      font-size: 13px;
+    }
+
+    .field-label { color: var(--muted); font-size: 11px; letter-spacing: 0.06em; }
+
+    .field-value {
+      font-family: var(--mono);
+      color: var(--text);
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 3px 8px;
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      border-radius: 2px;
+      background: rgba(240, 192, 96, 0.15);
+      color: var(--warn);
+      border: 1px solid rgba(240, 192, 96, 0.35);
+    }
+
+    .status-badge.ready {
+      background: rgba(95, 212, 138, 0.12);
+      color: var(--success);
+      border-color: rgba(95, 212, 138, 0.35);
+    }
+
+    .status-badge.payout {
+      background: rgba(77, 184, 232, 0.12);
+      color: var(--accent);
+      border-color: rgba(77, 184, 232, 0.35);
+    }
+
+    .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+
+    .btn {
+      padding: 9px 16px;
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      border: 1px solid var(--border);
+      background: var(--bg-panel);
+      color: var(--text);
+      cursor: pointer;
+      border-radius: 2px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(180deg, #3a9cc8 0%, #2a6f94 100%);
+      border-color: var(--accent-dim);
+      color: #fff;
+    }
+
+    .btn.highlight-target {
+      box-shadow: 0 0 0 2px var(--highlight-ring), 0 0 20px rgba(77,184,232,0.35);
+      animation: pulse 1.6s ease-in-out infinite;
+    }
+
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .kpi {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      padding: 14px;
+      border-radius: 4px;
+    }
+
+    .kpi .label { font-size: 10px; color: var(--muted); letter-spacing: 0.1em; }
+    .kpi .value { font-size: 20px; font-family: var(--mono); margin-top: 4px; color: var(--success); }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    th { color: var(--muted); font-size: 10px; letter-spacing: 0.08em; }
+
+    .hidden { display: none !important; }
+
+    /* Tutorial overlay */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(4, 8, 12, 0.72);
+      z-index: 100;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      padding: 24px;
+      pointer-events: none;
+    }
+
+    .overlay.hidden { display: none; }
+
+    .coach-card {
+      pointer-events: all;
+      width: min(640px, 100%);
+      background: var(--bg-panel);
+      border: 1px solid var(--accent-dim);
+      border-radius: 6px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.55);
+      overflow: hidden;
+    }
+
+    .coach-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(77, 184, 232, 0.06);
+    }
+
+    .coach-step {
+      font-size: 10px;
+      letter-spacing: 0.14em;
+      color: var(--accent);
+    }
+
+    .coach-progress {
+      height: 3px;
+      background: var(--border);
+    }
+
+    .coach-progress-fill {
+      height: 100%;
+      background: var(--accent);
+      transition: width 0.3s ease;
+    }
+
+    .coach-body { padding: 18px 20px 14px; }
+
+    .coach-title {
+      font-size: 15px;
+      letter-spacing: 0.06em;
+      margin-bottom: 10px;
+    }
+
+    .coach-text {
+      font-size: 13px;
+      line-height: 1.55;
+      color: #b8c8d8;
+      margin-bottom: 12px;
+    }
+
+    .coach-action {
+      font-size: 12px;
+      padding: 10px 12px;
+      background: rgba(77, 184, 232, 0.08);
+      border-left: 3px solid var(--accent);
+      color: var(--text);
+      margin-bottom: 14px;
+    }
+
+    .coach-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 18px 16px;
+      gap: 10px;
+    }
+
+    .coach-footer .left { display: flex; gap: 8px; }
+
+    /* Welcome modal */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(4, 8, 12, 0.88);
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal-backdrop.hidden { display: none; }
+
+    .modal {
+      width: min(480px, 100%);
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 28px 28px 22px;
+      text-align: center;
+    }
+
+    .modal .logo {
+      font-size: 14px;
+      letter-spacing: 0.22em;
+      color: var(--accent);
+      margin-bottom: 6px;
+    }
+
+    .modal h2 {
+      font-size: 18px;
+      letter-spacing: 0.08em;
+      margin-bottom: 14px;
+    }
+
+    .modal p {
+      font-size: 13px;
+      line-height: 1.55;
+      color: #b0c0d0;
+      margin-bottom: 22px;
+      text-align: left;
+    }
+
+    .modal .btn-row { justify-content: center; }
+
+    .flow-mini {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin: 16px 0;
+      justify-content: center;
+    }
+
+    .flow-chip {
+      font-size: 9px;
+      letter-spacing: 0.08em;
+      padding: 4px 8px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      border-radius: 2px;
+    }
+
+    .flow-chip.active { color: var(--accent); border-color: var(--accent-dim); }
+
+    .completion {
+      text-align: center;
+      padding: 40px 20px;
+    }
+
+    .completion .icon { font-size: 48px; margin-bottom: 16px; }
+    .completion h2 { margin-bottom: 10px; letter-spacing: 0.08em; }
+    .completion p { color: var(--muted); max-width: 420px; margin: 0 auto 20px; line-height: 1.5; }
+  </style>
+</head>
+<body>
+
+  <!-- Willkommens-Dialog (Erststart nach Login) -->
+  <div class="modal-backdrop" id="welcomeModal">
+    <div class="modal">
+      <div class="logo">MOBIGLAS</div>
+      <h2>Willkommen beim Salvage Tracker</h2>
+      <p>
+        Du hast die Erstinstallation abgeschlossen. Möchtest du eine kurze
+        <strong>Einführung</strong> durch den kompletten Workflow starten?
+        Wir führen dich Schritt für Schritt von der ersten Sitzung bis zur
+        <strong>Auszahlung des Gewinns</strong> — mit Beispieldaten, nichts wird
+        in deiner echten Datenbank gespeichert.
+      </p>
+      <div class="flow-mini" id="flowPreview">
+        <span class="flow-chip">Sitzung</span>
+        <span class="flow-chip">→</span>
+        <span class="flow-chip">Raffinerie</span>
+        <span class="flow-chip">→</span>
+        <span class="flow-chip">Verkauf</span>
+        <span class="flow-chip">→</span>
+        <span class="flow-chip">Auszahlung</span>
+      </div>
+      <div class="btn-row">
+        <button class="btn" id="btnSkipWelcome">Später</button>
+        <button class="btn btn-primary" id="btnStartTutorial">Einführung starten</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="app">
+    <nav class="nav" id="navPanel">
+      <div class="brand">
+        <h1>SALVAGE</h1>
+        <p>TRACKER · DEMO</p>
+      </div>
+      <button class="nav-btn" data-page="overview">ÜBERSICHT</button>
+      <button class="nav-btn active" data-page="session">SITZUNG</button>
+      <button class="nav-btn" data-page="refinery">RAFFINERIE</button>
+      <button class="nav-btn" data-page="storage">LAGER</button>
+      <button class="nav-btn" data-page="sales">VERKÄUFE</button>
+      <button class="nav-btn" data-page="payout">AUSZAHLUNG</button>
+      <button class="nav-btn" data-page="history">HISTORIE</button>
+    </nav>
+
+    <div class="main">
+      <div class="demo-banner">
+        ◆ WORKFLOW-TUTORIAL DEMO — Keine echte Datenbank · Nur Vorschau des geplanten Erststart-Tutorials
+      </div>
+
+      <!-- SITZUNG -->
+      <div class="page" id="page-session">
+        <div class="page-title">SITZUNG</div>
+        <div class="page-accent">◆ AKTIVE SALVAGE-SITZUNG</div>
+
+        <div class="panel" id="panel-session-start">
+          <h3>◆ SITZUNG STARTEN</h3>
+          <div class="field-row">
+            <span class="field-label">Schiff</span>
+            <span class="field-value">Drake Vulture</span>
+          </div>
+          <div class="field-row">
+            <span class="field-label">Mitspieler</span>
+            <span class="field-value">Pilot (du)</span>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-primary" id="btn-start-session">SITZUNG STARTEN</button>
+          </div>
+        </div>
+
+        <div class="panel hidden" id="panel-session-active">
+          <h3>◆ AKTIVE SITZUNG · #DEMO-001</h3>
+          <div class="field-row">
+            <span class="field-label">Status</span>
+            <span><span class="status-badge" id="session-status">AKTIV</span></span>
+          </div>
+          <div class="btn-row">
+            <button class="btn" id="btn-add-cost">KOSTEN ERFASSEN</button>
+            <button class="btn" id="btn-add-material">BEUTE EINTRAGEN</button>
+            <button class="btn btn-primary" id="btn-end-session">SITZUNG ABSCHLIESSEN</button>
+          </div>
+        </div>
+
+        <div class="panel hidden" id="panel-session-material">
+          <h3>◆ BEUTE EINTRAGEN</h3>
+          <table>
+            <thead><tr><th>Material</th><th>Menge (SCU)</th><th>Ort</th></tr></thead>
+            <tbody>
+              <tr><td>RMC</td><td>100</td><td>Schiff (Vulture)</td></tr>
+              <tr><td>CM_RUBBLE</td><td>80</td><td>Schiff (Vulture)</td></tr>
+            </tbody>
+          </table>
+          <div class="btn-row">
+            <button class="btn btn-primary" id="btn-save-material">MATERIAL SPEICHERN</button>
+          </div>
+        </div>
+
+        <div class="panel hidden" id="panel-session-cost">
+          <h3>◆ MISSIONSKOSTEN</h3>
+          <div class="field-row">
+            <span class="field-label">Beschreibung</span>
+            <span class="field-value">Treibstoff &amp; Verschleiß</span>
+          </div>
+          <div class="field-row">
+            <span class="field-label">Betrag</span>
+            <span class="field-value">5.000 aUEC</span>
+          </div>
+          <div class="field-row">
+            <span class="field-label">Bezahlt von</span>
+            <span class="field-value">Pilot (du)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- RAFFINERIE -->
+      <div class="page hidden" id="page-refinery">
+        <div class="page-title">RAFFINERIE</div>
+        <div class="page-accent">◆ VERFÜGBARES MATERIAL &amp; AKTIVE AUFTRÄGE</div>
+        <div class="panel">
+          <h3>◆ VERFÜGBARES MATERIAL</h3>
+          <table>
+            <thead><tr><th>Material</th><th>SCU</th><th>Herkunft</th></tr></thead>
+            <tbody>
+              <tr><td>CM_RUBBLE</td><td>80</td><td>Sitzung #DEMO-001</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="panel" id="panel-refinery-job">
+          <h3>◆ RAFFINERIEAUFTRAG ANLEGEN</h3>
+          <div class="field-row"><span class="field-label">Station</span><span class="field-value">Orison · Crusader</span></div>
+          <div class="field-row"><span class="field-label">Input</span><span class="field-value">80 SCU CM_RUBBLE (8.000 cSCU)</span></div>
+          <div class="field-row"><span class="field-label">Output (geschätzt)</span><span class="field-value">~35 SCU CM</span></div>
+          <div class="field-row"><span class="field-label">Kosten</span><span class="field-value">500 aUEC · bezahlt von Pilot</span></div>
+          <div class="btn-row">
+            <button class="btn btn-primary" id="btn-create-refinery">AUFTRAG ANLEGEN</button>
+            <button class="btn btn-primary hidden" id="btn-complete-refinery">AUFTRAG ABSCHLIESSEN</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- LAGER -->
+      <div class="page hidden" id="page-storage">
+        <div class="page-title">LAGER</div>
+        <div class="page-accent">◆ MATERIAL JE STANDORT</div>
+        <div class="panel">
+          <table>
+            <thead><tr><th>Standort</th><th>Material</th><th>SCU</th></tr></thead>
+            <tbody>
+              <tr><td>Schiff · Vulture</td><td>RMC</td><td>100</td></tr>
+              <tr><td>Orison</td><td>CM (raffiniert)</td><td>35</td></tr>
+            </tbody>
+          </table>
+          <p style="margin-top:12px;font-size:12px;color:var(--muted);">
+            Optional: Material zwischen Schiff und Station verschieben, bevor du verkaufst.
+          </p>
+        </div>
+      </div>
+
+      <!-- VERKÄUFE -->
+      <div class="page hidden" id="page-sales">
+        <div class="page-title">VERKÄUFE</div>
+        <div class="page-accent">◆ VERFÜGBARER LAGERBESTAND</div>
+        <div class="panel">
+          <table>
+            <thead><tr><th>Material</th><th>SCU</th><th>Standort</th></tr></thead>
+            <tbody>
+              <tr><td>RMC</td><td>100</td><td>Schiff</td></tr>
+              <tr><td>CM</td><td>35</td><td>Orison</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="panel" id="panel-sale">
+          <h3>◆ NEUER VERKAUF</h3>
+          <div class="field-row"><span class="field-label">Verkauf 1</span><span class="field-value">40 SCU RMC @ Area18 · 12.400 aUEC</span></div>
+          <div class="field-row"><span class="field-label">Verkauf 2</span><span class="field-value">35 SCU CM @ Orison · 8.750 aUEC</span></div>
+          <div class="btn-row">
+            <button class="btn btn-primary" id="btn-record-sale">VERKAUF SPEICHERN</button>
+          </div>
+        </div>
+        <div class="kpi-grid hidden" id="sales-kpi">
+          <div class="kpi"><div class="label">UMSATZ</div><div class="value">21.150</div></div>
+          <div class="kpi"><div class="label">KOSTEN</div><div class="value" style="color:var(--warn)">5.500</div></div>
+          <div class="kpi"><div class="label">GEWINN</div><div class="value">15.650</div></div>
+        </div>
+      </div>
+
+      <!-- AUSZAHLUNG -->
+      <div class="page hidden" id="page-payout">
+        <div class="page-title">GEWINNVERTEILUNG</div>
+        <div class="page-accent">◆ CREW-AUSZAHLUNG &amp; STATISTIK</div>
+        <div class="panel" id="panel-open-sales">
+          <h3>◆ OFFENE VERKÄUFE</h3>
+          <table>
+            <thead><tr><th>Verkauf</th><th>Umsatz</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr><td>RMC · Area18</td><td>12.400 aUEC</td><td><span class="status-badge payout">AUSZAHLUNG OFFEN</span></td></tr>
+              <tr><td>CM · Orison</td><td>8.750 aUEC</td><td><span class="status-badge payout">AUSZAHLUNG OFFEN</span></td></tr>
+            </tbody>
+          </table>
+          <div class="btn-row">
+            <button class="btn" id="btn-calc-payout">AUSZAHLUNG BERECHNEN</button>
+            <button class="btn btn-primary hidden" id="btn-save-payout">AUSZAHLUNG SPEICHERN</button>
+          </div>
+        </div>
+        <div class="panel hidden" id="panel-payout-result">
+          <h3>◆ AUSZAHLUNGSVORSCHLAG</h3>
+          <div class="field-row"><span class="field-label">Umsatz gesamt</span><span class="field-value">21.150 aUEC</span></div>
+          <div class="field-row"><span class="field-label">Abzüge (Kosten)</span><span class="field-value">− 5.500 aUEC</span></div>
+          <div class="field-row"><span class="field-label">Dein Gewinn (SOLO)</span><span class="field-value" style="color:var(--success)">15.650 aUEC</span></div>
+        </div>
+      </div>
+
+      <!-- HISTORIE -->
+      <div class="page hidden" id="page-history">
+        <div class="completion">
+          <div class="icon">✓</div>
+          <h2>Workflow abgeschlossen</h2>
+          <p>
+            Sitzung #DEMO-001 ist verkauft und ausgezahlt. In der echten App findest du
+            alles unter <strong>Historie</strong> — und die Übersicht zeigt keine offenen Alerts mehr.
+          </p>
+          <button class="btn btn-primary" id="btn-restart">Demo neu starten</button>
+        </div>
+      </div>
+
+      <!-- ÜBERSICHT -->
+      <div class="page hidden" id="page-overview">
+        <div class="page-title">SALVAGE-ÜBERSICHT</div>
+        <div class="page-accent">◆ NÄCHSTE AKTIONEN</div>
+        <div class="kpi-grid">
+          <div class="kpi"><div class="label">OFFENE SITZUNGEN</div><div class="value" style="color:var(--warn)">1</div></div>
+          <div class="kpi"><div class="label">RAFFINERIE JOBS</div><div class="value">0</div></div>
+          <div class="kpi"><div class="label">AUSZAHLUNG OFFEN</div><div class="value">0</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Coach-Overlay -->
+  <div class="overlay hidden" id="coachOverlay">
+    <div class="coach-card">
+      <div class="coach-progress"><div class="coach-progress-fill" id="progressFill" style="width:0%"></div></div>
+      <div class="coach-header">
+        <span class="coach-step" id="coachStepLabel">SCHRITT 1 · 12</span>
+        <button class="btn" id="btnCloseTutorial" style="padding:4px 10px;font-size:10px;">Beenden</button>
+      </div>
+      <div class="coach-body">
+        <div class="coach-title" id="coachTitle">Titel</div>
+        <div class="coach-text" id="coachText">Text</div>
+        <div class="coach-action" id="coachAction">Aktion</div>
+      </div>
+      <div class="coach-footer">
+        <div class="left">
+          <button class="btn" id="btnPrev">Zurück</button>
+        </div>
+        <div class="left">
+          <button class="btn" id="btnSkipStep">Überspringen</button>
+          <button class="btn btn-primary" id="btnNext">Weiter</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const STEPS = [
+      {
+        page: "session",
+        highlight: "#btn-start-session",
+        title: "Sitzung starten",
+        text: "Jede Salvage-Runde beginnt mit einer Sitzung. Wähle dein Schiff und trage die Mitspieler ein — in SOLO bist du allein an Bord.",
+        action: "Klicke auf „SITZUNG STARTEN“, um die Demo-Sitzung zu eröffnen.",
+        onEnter: () => showPage("session"),
+      },
+      {
+        page: "session",
+        highlight: "#btn-add-cost",
+        title: "Missionskosten erfassen",
+        text: "Treibstoff, Reparaturen und andere Ausgaben gehören zur Sitzung. Sie werden später vom Gewinn abgezogen.",
+        action: "Öffne „KOSTEN ERFASSEN“ — wir haben 5.000 aUEC Treibstoff vorbereitet.",
+        onEnter: () => {
+          document.getElementById("panel-session-start").classList.add("hidden");
+          document.getElementById("panel-session-active").classList.remove("hidden");
+        },
+      },
+      {
+        page: "session",
+        highlight: "#panel-session-cost",
+        title: "Kosten zuordnen",
+        text: "Jede Kostenposition braucht einen Zahler („Bezahlt von“). In CREW-Editionen teilt sich die Crew diese Beträge.",
+        action: "Prüfe die Kosten — dann weiter zur Beute.",
+        onEnter: () => {
+          document.getElementById("panel-session-cost").classList.remove("hidden");
+        },
+      },
+      {
+        page: "session",
+        highlight: "#btn-add-material",
+        title: "Beute eintragen",
+        text: "Nach jedem Salvage-Lauf erfasst du Material getrennt: RMC, Rubble, Scraps usw. — abhängig vom Schiff.",
+        action: "Klicke „BEUTE EINTRAGEN“.",
+        onEnter: () => {},
+      },
+      {
+        page: "session",
+        highlight: "#btn-save-material",
+        title: "Material speichern",
+        text: "100 SCU RMC und 80 SCU CM_RUBBLE landen auf deinem Schiff. Roh-CM muss später raffiniert werden, bevor du es verkaufen kannst.",
+        action: "Speichere die Beute mit „MATERIAL SPEICHERN“.",
+        onEnter: () => {
+          document.getElementById("panel-session-material").classList.remove("hidden");
+        },
+      },
+      {
+        page: "session",
+        highlight: "#btn-end-session",
+        title: "Sitzung abschließen",
+        text: "Wenn du für heute fertig bist, schließt du die Sitzung ab. Der Status wechselt zu „WARTET AUF RAFFINERIE“.",
+        action: "Klicke „SITZUNG ABSCHLIESSEN“.",
+        onEnter: () => {},
+      },
+      {
+        page: "refinery",
+        highlight: "#btn-create-refinery",
+        title: "Raffinerieauftrag anlegen",
+        text: "Wähle Station und Input-Menge. Tipp: Im Spiel-Terminal siehst du cSCU — 1.000 cSCU = 10 SCU im Tracker.",
+        action: "Lege den Auftrag in Orison an (80 SCU Rubble → ~35 SCU CM).",
+        onEnter: () => {
+          showPage("refinery");
+          const st = document.getElementById("session-status");
+          if (st) { st.textContent = "WARTET AUF RAFFINERIE"; }
+        },
+      },
+      {
+        page: "refinery",
+        highlight: "#btn-complete-refinery",
+        title: "Auftrag abschließen",
+        text: "Wenn das CM fertig ist, schließt du den Job ab. Das Material liegt dann am Raffinerie-Standort.",
+        action: "Schließe den Auftrag ab.",
+        onEnter: () => {
+          document.getElementById("btn-create-refinery").classList.add("hidden");
+          document.getElementById("btn-complete-refinery").classList.remove("hidden");
+        },
+      },
+      {
+        page: "storage",
+        highlight: "#page-storage .panel",
+        title: "Lager & Standorte (optional)",
+        text: "Hier siehst du, wo welches Material liegt — Schiff, Station oder Stadt. So vergisst du kein RMC auf einer Station.",
+        action: "Wirf einen Blick auf den Bestand, dann weiter zum Verkauf.",
+        onEnter: () => showPage("storage"),
+      },
+      {
+        page: "sales",
+        highlight: "#btn-record-sale",
+        title: "Material verkaufen",
+        text: "Verkaufsort und Preis sind wichtig — UEX-Preise können automatisch geladen werden. RMC und CM werden oft an verschiedenen Orten verkauft.",
+        action: "Speichere beide Verkäufe.",
+        onEnter: () => showPage("sales"),
+      },
+      {
+        page: "sales",
+        highlight: "#sales-kpi",
+        title: "Gewinnübersicht",
+        text: "Die Finanzübersicht zeigt Umsatz minus Kosten. Der Session-Status springt auf „AUSZAHLUNG“.",
+        action: "Prüfe den Gewinn — dann zur Auszahlung.",
+        onEnter: () => {
+          document.getElementById("sales-kpi").classList.remove("hidden");
+        },
+      },
+      {
+        page: "payout",
+        highlight: "#btn-calc-payout",
+        title: "Auszahlung berechnen",
+        text: "Verkauf ≠ Auszahlung: Hier verteilst du den Gewinn (in SOLO: alles an dich). Kosten werden automatisch berücksichtigt.",
+        action: "Berechne die Auszahlung für die offenen Verkäufe.",
+        onEnter: () => showPage("payout"),
+      },
+      {
+        page: "payout",
+        highlight: "#btn-save-payout",
+        title: "Auszahlung speichern",
+        text: "Nach dem Speichern ist die Sitzung abgeschlossen (Status: SOLD). Der Gewinn ist dokumentiert.",
+        action: "Speichere die Auszahlung.",
+        onEnter: () => {
+          document.getElementById("panel-payout-result").classList.remove("hidden");
+          document.getElementById("btn-save-payout").classList.remove("hidden");
+        },
+      },
+      {
+        page: "history",
+        highlight: null,
+        title: "Fertig — Workflow komplett",
+        text: "Von der Sitzung bis zur Auszahlung: Du hast den gesamten Materialfluss durchlaufen. In der echten App kannst du das Tutorial jederzeit unter Einstellungen erneut starten.",
+        action: "Schau dir die Abschlussseite an.",
+        onEnter: () => showPage("history"),
+      },
+    ];
+
+    let currentStep = 0;
+    let tutorialActive = false;
+
+    function showPage(key) {
+      document.querySelectorAll(".page").forEach(p => p.classList.add("hidden"));
+      const page = document.getElementById("page-" + key);
+      if (page) page.classList.remove("hidden");
+      document.querySelectorAll(".nav-btn").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.page === key);
+      });
+    }
+
+    function clearHighlights() {
+      document.querySelectorAll(".highlight-target").forEach(el => {
+        el.classList.remove("highlight-target");
+      });
+    }
+
+    function renderStep() {
+      const step = STEPS[currentStep];
+      if (!step) return;
+
+      step.onEnter?.();
+
+      document.getElementById("coachStepLabel").textContent =
+        `SCHRITT ${currentStep + 1} · ${STEPS.length}`;
+      document.getElementById("coachTitle").textContent = step.title;
+      document.getElementById("coachText").textContent = step.text;
+      document.getElementById("coachAction").textContent = "▸ " + step.action;
+      document.getElementById("progressFill").style.width =
+        `${((currentStep + 1) / STEPS.length) * 100}%`;
+
+      clearHighlights();
+      if (step.highlight) {
+        const el = document.querySelector(step.highlight);
+        if (el) el.classList.add("highlight-target");
+      }
+
+      document.getElementById("btnPrev").disabled = currentStep === 0;
+      document.getElementById("btnNext").textContent =
+        currentStep === STEPS.length - 1 ? "Abschließen" : "Weiter";
+    }
+
+    function startTutorial() {
+      tutorialActive = true;
+      currentStep = 0;
+      resetDemoState();
+      document.getElementById("welcomeModal").classList.add("hidden");
+      document.getElementById("coachOverlay").classList.remove("hidden");
+      renderStep();
+    }
+
+    function endTutorial() {
+      tutorialActive = false;
+      document.getElementById("coachOverlay").classList.add("hidden");
+      clearHighlights();
+    }
+
+    function resetDemoState() {
+      document.querySelectorAll(".panel, .page, .kpi-grid, .btn").forEach(el => {
+        /* keep defaults */
+      });
+      document.getElementById("panel-session-start").classList.remove("hidden");
+      document.getElementById("panel-session-active").classList.add("hidden");
+      document.getElementById("panel-session-material").classList.add("hidden");
+      document.getElementById("panel-session-cost").classList.add("hidden");
+      document.getElementById("btn-create-refinery").classList.remove("hidden");
+      document.getElementById("btn-complete-refinery").classList.add("hidden");
+      document.getElementById("sales-kpi").classList.add("hidden");
+      document.getElementById("panel-payout-result").classList.add("hidden");
+      document.getElementById("btn-save-payout").classList.add("hidden");
+      showPage("session");
+    }
+
+    document.getElementById("btnStartTutorial").addEventListener("click", startTutorial);
+    document.getElementById("btnSkipWelcome").addEventListener("click", () => {
+      document.getElementById("welcomeModal").classList.add("hidden");
+    });
+    document.getElementById("btnCloseTutorial").addEventListener("click", endTutorial);
+    document.getElementById("btnSkipStep").addEventListener("click", () => {
+      if (currentStep < STEPS.length - 1) { currentStep++; renderStep(); }
+      else endTutorial();
+    });
+    document.getElementById("btnPrev").addEventListener("click", () => {
+      if (currentStep > 0) { currentStep--; renderStep(); }
+    });
+    document.getElementById("btnNext").addEventListener("click", () => {
+      if (currentStep < STEPS.length - 1) { currentStep++; renderStep(); }
+      else endTutorial();
+    });
+    document.getElementById("btn-restart").addEventListener("click", () => {
+      document.getElementById("welcomeModal").classList.remove("hidden");
+      resetDemoState();
+    });
+
+    document.querySelectorAll(".nav-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        if (!tutorialActive) showPage(btn.dataset.page);
+      });
+    });
+
+    ["btn-start-session","btn-add-cost","btn-add-material","btn-save-material",
+     "btn-end-session","btn-create-refinery","btn-complete-refinery",
+     "btn-record-sale","btn-calc-payout","btn-save-payout"].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener("click", () => {
+        if (tutorialActive && currentStep < STEPS.length - 1) {
+          currentStep++;
+          renderStep();
+        }
+      });
+    });
+  </script>
+</body>
+</html>
