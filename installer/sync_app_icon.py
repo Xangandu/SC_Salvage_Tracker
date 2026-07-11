@@ -1,21 +1,31 @@
-"""Synchronisiert App-Icon für App- und Setup-Build (PNG/ICO → Multi-Size-ICO)."""
+"""Synchronisiert scst_solo_logo.ico für App- und Setup-Build."""
 
 from __future__ import annotations
 
 import sys
 from pathlib import Path
 
+_ROOT = Path(__file__).resolve().parent.parent
+if str(_ROOT) not in sys.path:
+    sys.path.insert(0, str(_ROOT))
+
 try:
     from PIL import Image
 except ImportError:
     raise SystemExit("Pillow fehlt — bitte installieren: pip install pillow")
+
+from config.app_icon import (
+    SOLO_APP_ICON_NAME,
+    SOLO_APP_ICON_PNG,
+    installer_app_icon_path,
+)
 
 # Größte zuerst — Windows Explorer / PyInstaller nutzen 256 px für große Ansichten.
 ICON_SIZES = [(256, 256), (128, 128), (64, 64), (48, 48), (32, 32), (16, 16)]
 
 
 def _root() -> Path:
-    return Path(__file__).resolve().parent.parent
+    return _ROOT
 
 
 def _ico_frame_sizes(path: Path) -> list[tuple[int, int]]:
@@ -32,11 +42,7 @@ def _ico_frame_sizes(path: Path) -> list[tuple[int, int]]:
         return sizes
 
 
-def _load_best_source(png_path: Path, ico_path: Path) -> Image.Image:
-    if png_path.exists():
-        with Image.open(png_path) as img:
-            return img.convert("RGBA")
-
+def _load_best_source(ico_path: Path, png_path: Path) -> Image.Image:
     if ico_path.exists():
         with Image.open(ico_path) as img:
             best = img.convert("RGBA")
@@ -47,10 +53,14 @@ def _load_best_source(png_path: Path, ico_path: Path) -> Image.Image:
                     best = img.convert("RGBA")
             return best
 
+    if png_path.exists():
+        with Image.open(png_path) as img:
+            return img.convert("RGBA")
+
     raise FileNotFoundError(
         "Kein App-Icon gefunden. Bitte ablegen als:\n"
-        "  assets/images/app_icon.png  (empfohlen, mind. 256×256)\n"
-        "  oder assets/images/app_icon.ico"
+        f"  assets/images/{SOLO_APP_ICON_NAME}  (empfohlen)\n"
+        f"  oder assets/images/{SOLO_APP_ICON_PNG}"
     )
 
 
@@ -90,46 +100,45 @@ def _needs_rebuild(ico_path: Path) -> bool:
 def sync_app_icon(*, verbose: bool = True, force: bool = False) -> Path:
     root = _root()
     images_dir = root / "assets" / "images"
-    png_path = images_dir / "app_icon.png"
-    project_ico = images_dir / "app_icon.ico"
-    installer_ico = Path(__file__).resolve().parent / "assets" / "app_icon.ico"
+    ico_path = images_dir / SOLO_APP_ICON_NAME
+    png_path = images_dir / SOLO_APP_ICON_PNG
+    installer_ico = installer_app_icon_path(Path(__file__).resolve().parent)
 
     source_label = ""
-    rebuild = force or _needs_rebuild(project_ico)
 
-    if png_path.exists():
-        png_mtime = png_path.stat().st_mtime
-        ico_mtime = project_ico.stat().st_mtime if project_ico.exists() else 0
-        if rebuild or png_mtime >= ico_mtime:
-            with Image.open(png_path) as img:
-                _save_multi_ico(img, project_ico)
-            source_label = "assets/images/app_icon.png"
+    if ico_path.exists():
+        if force or _needs_rebuild(ico_path):
+            source = _load_best_source(ico_path, png_path)
+            _save_multi_ico(source, ico_path)
+            source_label = f"assets/images/{SOLO_APP_ICON_NAME} (aufbereitet)"
             if verbose:
-                print(f"Icon: PNG -> Multi-Size-ICO ({project_ico})")
-    elif rebuild:
-        source = _load_best_source(png_path, project_ico)
-        _save_multi_ico(source, project_ico)
-        source_label = "assets/images/app_icon.ico (aufbereitet)"
+                print(f"Icon: ICO -> Multi-Size-ICO ({ico_path})")
+        else:
+            source_label = f"assets/images/{SOLO_APP_ICON_NAME}"
+    elif png_path.exists():
+        with Image.open(png_path) as img:
+            _save_multi_ico(img, ico_path)
+        source_label = f"assets/images/{SOLO_APP_ICON_PNG}"
         if verbose:
-            print(f"Icon: ICO -> Multi-Size-ICO ({project_ico})")
-
-    if not project_ico.exists():
+            print(f"Icon: PNG -> Multi-Size-ICO ({ico_path})")
+    else:
         raise FileNotFoundError(
             "Kein App-Icon gefunden. Bitte ablegen als:\n"
-            "  assets/images/app_icon.png  (empfohlen)\n"
-            "  oder assets/images/app_icon.ico"
+            f"  assets/images/{SOLO_APP_ICON_NAME}\n"
+            f"  oder assets/images/{SOLO_APP_ICON_PNG}"
         )
 
     installer_ico.parent.mkdir(parents=True, exist_ok=True)
-    installer_ico.write_bytes(project_ico.read_bytes())
+    installer_ico.write_bytes(ico_path.read_bytes())
 
-    sizes = _ico_frame_sizes(project_ico)
+    sizes = _ico_frame_sizes(ico_path)
     if verbose:
-        label = source_label or "assets/images/app_icon.ico"
-        print(f"App-Icon bereit ({label}): {project_ico}")
+        label = source_label or f"assets/images/{SOLO_APP_ICON_NAME}"
+        print(f"App-Icon bereit ({label}): {ico_path}")
+        print(f"  Installer-Kopie: {installer_ico}")
         print(f"  Groessen: {', '.join(f'{w}x{h}' for w, h in sizes)}")
 
-    return project_ico
+    return ico_path
 
 
 def main() -> int:

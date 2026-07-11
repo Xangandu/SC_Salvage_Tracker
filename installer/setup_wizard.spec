@@ -11,9 +11,9 @@ payload_path = installer_dir / payload_name
 
 _bg_custom = installer_dir / "assets" / "install_background.png"
 _bg_legacy = installer_dir / "assets" / "install_bg.png"
-_app_icon = project_dir / "assets" / "images" / "app_icon.ico"
+_app_icon = project_dir / "assets" / "images" / "scst_solo_logo.ico"
 if not _app_icon.exists():
-    _app_icon = installer_dir / "assets" / "app_icon.ico"
+    _app_icon = installer_dir / "assets" / "scst_solo_logo.ico"
 datas = [
     (str(project_dir / "config"), "config"),
 ]
@@ -21,6 +21,8 @@ if _bg_custom.exists():
     datas.append((str(_bg_custom), "installer/assets"))
 else:
     datas.append((str(_bg_legacy), "installer/assets"))
+if _app_icon.exists():
+    datas.append((str(_app_icon), "installer/assets"))
 if payload_path.exists():
     datas.append((str(payload_path), "installer"))
 

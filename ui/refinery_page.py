@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QWidget,
     QLabel,
@@ -12,6 +13,7 @@ from PySide6.QtWidgets import (
     QTableWidget,
     QTableWidgetItem,
     QPushButton,
+    QSplitter,
 )
 
 from database.access import get_database
@@ -27,7 +29,6 @@ from config.materials import (
 )
 from config.refinery_methods import (
     REFINERY_METHODS,
-    display_refinery_method,
 )
 from config.locations.cscu import cscu_to_scu
 from config.i18n import tr, format_number
@@ -38,6 +39,10 @@ from ui.table_utils import (
     configure_mobiglas_table,
     finalize_table_columns,
 )
+from ui.page_split_persistence import (
+    SETTING_REFINERY_PAGE_SPLIT,
+    bind_page_split_persistence,
+)
 from ui.page_layout import (
     build_page_scroll,
     page_content_widget,
@@ -46,9 +51,10 @@ from ui.page_layout import (
     subsection_title,
     add_form_field,
     info_panel,
+    page_panel,
     primary_button,
     empty_info_panel,
-    svg_icon_widget,
+    hud_divider,
 )
 from ui.mobiglas_input_dialog import MobiglasDoubleInputDialog
 from ui.refinery_job_card import RefineryJobCard
@@ -76,10 +82,6 @@ def _secondary_button(text):
     return button
 
 
-def _refinery_job_status(status):
-    return tr(f"refinery.job_status.{status}", default=status)
-
-
 def _status_panel(*, ready_at="-", remaining="-", status=None):
     if status is None:
         status = tr("refinery.status.waiting_input")
@@ -102,8 +104,86 @@ class RefineryPage(QWidget):
 
         layout.addWidget(page_title(tr("refinery.title")))
         layout.addWidget(
-            section_accent(tr("refinery.section.batches"))
+            section_accent(tr("refinery.section.main"))
         )
+        layout.addLayout(hud_divider())
+
+        kpi_row = QWidget()
+        kpi_layout = QHBoxLayout(kpi_row)
+        kpi_layout.setContentsMargins(0, 0, 0, 0)
+        kpi_layout.setSpacing(12)
+
+        available_panel = QFrame()
+        available_panel.setObjectName("financeSummaryPanel")
+        available_layout = QVBoxLayout(available_panel)
+        available_layout.setContentsMargins(14, 10, 14, 10)
+        available_layout.setSpacing(4)
+        available_layout.addWidget(
+            QLabel(tr("refinery.kpi.available_scu"))
+        )
+        self.available_scu_label = QLabel(
+            f"{format_number(0)} SCU"
+        )
+        self.available_scu_label.setObjectName("statValue")
+        available_layout.addWidget(self.available_scu_label)
+
+        active_panel = QFrame()
+        active_panel.setObjectName("financeSummaryPanel")
+        active_kpi_layout = QVBoxLayout(active_panel)
+        active_kpi_layout.setContentsMargins(14, 10, 14, 10)
+        active_kpi_layout.setSpacing(4)
+        active_kpi_layout.addWidget(
+            QLabel(tr("refinery.kpi.active_jobs"))
+        )
+        self.active_jobs_label = QLabel("0")
+        self.active_jobs_label.setObjectName("statValue")
+        active_kpi_layout.addWidget(self.active_jobs_label)
+
+        ready_panel = QFrame()
+        ready_panel.setObjectName("financeSummaryPanel")
+        ready_kpi_layout = QVBoxLayout(ready_panel)
+        ready_kpi_layout.setContentsMargins(14, 10, 14, 10)
+        ready_kpi_layout.setSpacing(4)
+        ready_kpi_layout.addWidget(
+            QLabel(tr("refinery.kpi.ready_jobs"))
+        )
+        self.ready_jobs_label = QLabel("0")
+        self.ready_jobs_label.setObjectName("statValue")
+        ready_kpi_layout.addWidget(self.ready_jobs_label)
+
+        kpi_layout.addWidget(available_panel, 1)
+        kpi_layout.addWidget(active_panel, 1)
+        kpi_layout.addWidget(ready_panel, 1)
+        layout.addWidget(kpi_row)
+
+        self._ready_banner = QFrame()
+        self._ready_banner.setObjectName("refineryReadyBanner")
+        self._ready_banner.hide()
+        banner_layout = QHBoxLayout(self._ready_banner)
+        banner_layout.setContentsMargins(12, 10, 12, 10)
+        self._ready_banner_label = QLabel()
+        self._ready_banner_label.setObjectName("refineryReadyBannerText")
+        self._ready_banner_label.setWordWrap(True)
+        banner_layout.addWidget(self._ready_banner_label, 1)
+        layout.addWidget(self._ready_banner)
+
+        splitter = QSplitter(Qt.Orientation.Horizontal)
+        splitter.setObjectName("pageSplit")
+        splitter.setHandleWidth(14)
+        splitter.setChildrenCollapsible(False)
+
+        left_column = QWidget()
+        left_layout = QVBoxLayout(left_column)
+        left_layout.setContentsMargins(0, 0, 16, 0)
+        left_layout.setSpacing(12)
+
+        batches_panel, batches_layout = page_panel()
+        batches_layout.setContentsMargins(12, 12, 12, 12)
+        batches_layout.setSpacing(8)
+        batches_layout.addWidget(
+            subsection_title(tr("refinery.section.batches"))
+        )
+        batches_layout.addLayout(hud_divider())
 
         self.batches_table = QTableWidget()
         self.batches_table.setColumnCount(3)
@@ -116,13 +196,20 @@ class RefineryPage(QWidget):
             self.batches_table,
             "dataTable",
         )
-        self.batches_table.setMinimumHeight(140)
-        layout.addWidget(self.batches_table)
+        self.batches_empty = empty_info_panel(
+            tr("refinery.msg.no_pool"),
+            "assets/images/icons/info.svg",
+        )
+        batches_layout.addWidget(self.batches_table)
+        batches_layout.addWidget(self.batches_empty)
+        self.batches_empty.hide()
+        left_layout.addWidget(batches_panel)
 
         form_panel, form_layout = info_panel()
         form_layout.addWidget(
             subsection_title(tr("refinery.section.create"))
         )
+        form_layout.addLayout(hud_divider())
 
         self.refinery_location_picker = SystemLocationPicker(
             refinery_stations_only=True,
@@ -248,67 +335,45 @@ class RefineryPage(QWidget):
 
         form_layout.addWidget(self.ready_info_label)
         form_layout.addWidget(self.create_button)
-        layout.addWidget(form_panel)
+        left_layout.addWidget(form_panel)
+        left_layout.addStretch()
 
-        layout.addWidget(
-            section_accent(tr("refinery.section.active"))
+        self._job_cards: dict[int, RefineryJobCard] = {}
+        self._live_sync = None
+
+        right_column = QWidget()
+        right_layout = QVBoxLayout(right_column)
+        right_layout.setContentsMargins(16, 0, 0, 0)
+        right_layout.setSpacing(12)
+
+        active_outer, active_outer_layout = page_panel()
+        active_outer_layout.setContentsMargins(12, 12, 12, 12)
+        active_outer_layout.setSpacing(8)
+        active_outer_layout.addWidget(
+            subsection_title(tr("refinery.section.active"))
         )
-
-        self._ready_banner = QFrame()
-        self._ready_banner.setObjectName("refineryReadyBanner")
-        self._ready_banner.hide()
-        banner_layout = QHBoxLayout(self._ready_banner)
-        banner_layout.setContentsMargins(12, 10, 12, 10)
-        self._ready_banner_label = QLabel()
-        self._ready_banner_label.setObjectName("refineryReadyBannerText")
-        self._ready_banner_label.setWordWrap(True)
-        banner_layout.addWidget(self._ready_banner_label, 1)
-        layout.addWidget(self._ready_banner)
+        active_outer_layout.addLayout(hud_divider())
 
         self.jobs_container = QVBoxLayout()
         self.jobs_container.setSpacing(10)
         self._jobs_host = QWidget()
         self._jobs_host.setLayout(self.jobs_container)
-        layout.addWidget(self._jobs_host)
+        active_outer_layout.addWidget(self._jobs_host)
+        right_layout.addWidget(active_outer, 1)
 
-        self._job_cards: dict[int, RefineryJobCard] = {}
-        self._live_sync = None
+        splitter.addWidget(left_column)
+        splitter.addWidget(right_column)
+        splitter.setStretchFactor(0, 0)
+        splitter.setStretchFactor(1, 1)
+        splitter.setSizes([620, 420])
+        layout.addWidget(splitter, 1)
 
-        layout.addWidget(
-            section_accent(tr("refinery.section.history"))
+        bind_page_split_persistence(
+            splitter,
+            self.db,
+            SETTING_REFINERY_PAGE_SPLIT,
+            default_sizes=[620, 420],
         )
-
-        self.history_table = QTableWidget()
-        self.history_table.setColumnCount(9)
-        self.history_table.setHorizontalHeaderLabels([
-            tr("refinery.history.no"),
-            tr("refinery.history.station"),
-            tr("refinery.history.method"),
-            tr("refinery.history.status"),
-            tr("refinery.history.input"),
-            tr("refinery.history.cm_output"),
-            tr("refinery.history.yield"),
-            tr("refinery.history.cost"),
-            tr("refinery.history.created_by"),
-        ])
-        configure_mobiglas_table(
-            self.history_table,
-            "historyTable",
-        )
-        self.history_table.setMinimumHeight(180)
-
-        history_actions = QHBoxLayout()
-        history_actions.setSpacing(12)
-        self.delete_job_button = _secondary_button(
-            tr("refinery.button.delete")
-        )
-        self.delete_job_button.clicked.connect(
-            self.delete_selected_job
-        )
-        history_actions.addWidget(self.delete_job_button)
-        history_actions.addStretch()
-        layout.addWidget(self.history_table)
-        layout.addLayout(history_actions)
 
         layout.addStretch()
 
@@ -369,6 +434,7 @@ class RefineryPage(QWidget):
         for card in self._job_cards.values():
             card.tick()
         self._update_ready_banner(jobs)
+        self._update_kpis()
 
     def _on_jobs_became_ready(self, job_ids: list) -> None:
         jobs = self.db.get_active_refinery_jobs()
@@ -482,10 +548,46 @@ class RefineryPage(QWidget):
     def load_data(self):
         self.load_batches()
         self.load_active_jobs()
-        self.load_history()
+
+    def _refresh_history_page(self) -> None:
+        main_window = self.window()
+        if hasattr(main_window, "history_page"):
+            main_window.history_page.refresh_history()
+
+    def _update_kpis(self) -> None:
+        pools = self.db.get_refinery_material_pools()
+        total_scu = sum(
+            float(pool.get("quantity_scu") or 0)
+            for pool in pools
+        )
+        self.available_scu_label.setText(
+            f"{format_number(total_scu, 0)} SCU"
+        )
+
+        jobs = self.db.get_active_refinery_jobs()
+        ready_count = sum(
+            1 for job in jobs if job.get("status") == "READY"
+        )
+        self.active_jobs_label.setText(
+            format_number(len(jobs), 0)
+        )
+        self.ready_jobs_label.setText(
+            format_number(ready_count, 0)
+        )
+        self.ready_jobs_label.setObjectName(
+            "warningBannerTitle" if ready_count > 0 else "statValue"
+        )
+        style = self.ready_jobs_label.style()
+        if style is not None:
+            style.unpolish(self.ready_jobs_label)
+            style.polish(self.ready_jobs_label)
 
     def load_batches(self):
         pools = self.db.get_refinery_material_pools()
+
+        has_pools = len(pools) > 0
+        self.batches_table.setVisible(has_pools)
+        self.batches_empty.setVisible(not has_pools)
 
         self.pool_combo.blockSignals(True)
         self.pool_combo.clear()
@@ -534,6 +636,7 @@ class RefineryPage(QWidget):
             self.batches_table,
             stretch_column=0,
         )
+        self._update_kpis()
 
     def _update_refinery_cost_payers(self):
         current = self.refinery_cost_paid_by.currentText()
@@ -555,108 +658,6 @@ class RefineryPage(QWidget):
             self.refinery_cost_paid_by.setCurrentIndex(index)
 
         self.refinery_cost_paid_by.blockSignals(False)
-
-    def load_history(self):
-        history = self.db.get_refinery_history()
-
-        self.history_table.setRowCount(len(history))
-
-        for row, job in enumerate(history):
-            input_text = ", ".join(
-                tr(
-                    "refinery.history.input_line",
-                    quantity=format_number(item["input_quantity"], 0),
-                    material=material_label(item["input_material"]),
-                    batch_id=item["batch_id"],
-                )
-                for item in job["items"]
-            )
-            output_scu = job.get("cm_raf_output") or job["total_output"]
-            output_text = (
-                tr(
-                    "refinery.history.output_line",
-                    quantity=format_number(output_scu, 0),
-                    material=material_label(REFINERY_OUTPUT_CODE),
-                )
-                if output_scu > 0
-                else "—"
-            )
-            yield_text = "—"
-
-            if job["total_input"] > 0 and output_scu > 0:
-                yield_pct = (
-                    output_scu
-                    / job["total_input"]
-                    * 100
-                )
-                yield_text = tr(
-                    "refinery.history.yield_pct",
-                    yield_pct=format_number(yield_pct, 1),
-                )
-
-            self.history_table.setItem(
-                row,
-                0,
-                QTableWidgetItem(f"#{job['id']}"),
-            )
-            self.history_table.setItem(
-                row,
-                1,
-                QTableWidgetItem(job["refinery_name"]),
-            )
-            self.history_table.setItem(
-                row,
-                2,
-                QTableWidgetItem(
-                    display_refinery_method(
-                        job.get("refinery_method") or ""
-                    ) or "—"
-                ),
-            )
-            self.history_table.setItem(
-                row,
-                3,
-                QTableWidgetItem(
-                    _refinery_job_status(job["status"])
-                ),
-            )
-            self.history_table.setItem(
-                row,
-                4,
-                QTableWidgetItem(input_text),
-            )
-            self.history_table.setItem(
-                row,
-                5,
-                QTableWidgetItem(output_text),
-            )
-            self.history_table.setItem(
-                row,
-                6,
-                QTableWidgetItem(yield_text),
-            )
-            cost = job.get("cost", 0) or 0
-            payer = (job.get("cost_paid_by") or "").strip()
-            cost_text = f"{format_number(cost)} aUEC"
-
-            if cost > 0 and payer:
-                cost_text = f"{cost_text} ({payer})"
-
-            self.history_table.setItem(
-                row,
-                7,
-                QTableWidgetItem(cost_text),
-            )
-            self.history_table.setItem(
-                row,
-                8,
-                QTableWidgetItem(job["created_by"]),
-            )
-
-        finalize_table_columns(
-            self.history_table,
-            stretch_column=4,
-        )
 
     def update_ready_time(self):
         try:
@@ -709,6 +710,7 @@ class RefineryPage(QWidget):
         for card in self._job_cards.values():
             card.tick()
         self._update_ready_banner(jobs)
+        self._update_kpis()
         if not jobs:
             self.refinery_location_picker.clear_selection()
 
@@ -826,6 +828,7 @@ class RefineryPage(QWidget):
 
         self.load_data()
         self._refresh_dashboard()
+        self._refresh_history_page()
 
     def complete_job(self, job_id):
         hint_text = ""
@@ -917,22 +920,10 @@ class RefineryPage(QWidget):
 
         self.load_data()
         self._refresh_dashboard()
+        self._refresh_history_page()
 
         if self._live_sync is not None:
             self._live_sync.clear_notified(job_id)
-
-    def _selected_history_job_id(self):
-        row = self.history_table.currentRow()
-
-        if row < 0:
-            return None
-
-        item = self.history_table.item(row, 0)
-
-        if not item:
-            return None
-
-        return int(item.text().lstrip("#"))
 
     def cancel_job(self, job_id):
         answer = QMessageBox.question(
@@ -968,6 +959,7 @@ class RefineryPage(QWidget):
 
         self.load_data()
         self._refresh_dashboard()
+        self._refresh_history_page()
 
         if self._live_sync is not None:
             self._live_sync.clear_notified(job_id)
@@ -977,60 +969,6 @@ class RefineryPage(QWidget):
             tr("refinery.msg.cancelled.title"),
             tr(
                 "refinery.msg.cancelled.message",
-                job_id=job_id,
-            ),
-        )
-
-    def delete_selected_job(self):
-        job_id = self._selected_history_job_id()
-
-        if job_id is None:
-            QMessageBox.warning(
-                self,
-                tr("common.hint"),
-                tr("refinery.msg.no_selection"),
-            )
-            return
-
-        answer = QMessageBox.question(
-            self,
-            tr("refinery.msg.delete_confirm.title"),
-            tr(
-                "refinery.msg.delete_confirm.message",
-                job_id=job_id,
-            ),
-            QMessageBox.Yes | QMessageBox.No,
-            QMessageBox.No,
-        )
-
-        if answer != QMessageBox.Yes:
-            return
-
-        try:
-            self.db.delete_refinery_job(job_id)
-        except ValueError as error:
-            QMessageBox.warning(
-                self,
-                tr("common.not_possible"),
-                str(error),
-            )
-            return
-        except Exception as error:
-            QMessageBox.critical(
-                self,
-                tr("common.error"),
-                tr("refinery.msg.delete_failed", error=error),
-            )
-            return
-
-        self.load_data()
-        self._refresh_dashboard()
-
-        QMessageBox.information(
-            self,
-            tr("refinery.msg.deleted.title"),
-            tr(
-                "refinery.msg.deleted.message",
                 job_id=job_id,
             ),
         )

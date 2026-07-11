@@ -59,8 +59,8 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=str(project_dir / "assets" / "images" / "app_icon.ico")
-    if (project_dir / "assets" / "images" / "app_icon.ico").exists()
+    icon=str(project_dir / "assets" / "images" / "scst_solo_logo.ico")
+    if (project_dir / "assets" / "images" / "scst_solo_logo.ico").exists()
     else None,
 )
 

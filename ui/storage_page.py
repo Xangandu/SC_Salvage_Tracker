@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
     QFrame,
     QDialog,
     QMenu,
+    QSplitter,
 )
 
 from database.access import get_database
@@ -41,6 +42,10 @@ from ui.table_utils import (
     configure_mobiglas_table,
     finalize_table_columns,
 )
+from ui.page_split_persistence import (
+    SETTING_STORAGE_PAGE_SPLIT,
+    bind_page_split_persistence,
+)
 from ui.page_layout import (
     build_page_scroll,
     page_content_widget,
@@ -50,8 +55,10 @@ from ui.page_layout import (
     add_form_field,
     form_label,
     info_panel,
+    page_panel,
     primary_button,
     empty_info_panel,
+    hud_divider,
 )
 
 
@@ -81,6 +88,50 @@ class StoragePage(QWidget):
         content, layout = page_content_widget()
 
         layout.addWidget(page_title(tr("storage.title")))
+        layout.addWidget(
+            section_accent(tr("storage.section.main"))
+        )
+        layout.addLayout(hud_divider())
+
+        kpi_row = QWidget()
+        kpi_layout = QHBoxLayout(kpi_row)
+        kpi_layout.setContentsMargins(0, 0, 0, 0)
+        kpi_layout.setSpacing(12)
+
+        total_panel = QFrame()
+        total_panel.setObjectName("financeSummaryPanel")
+        total_layout = QVBoxLayout(total_panel)
+        total_layout.setContentsMargins(14, 10, 14, 10)
+        total_layout.setSpacing(4)
+        total_layout.addWidget(QLabel(tr("storage.kpi.total_scu")))
+        self.total_scu_label = QLabel(format_scu(0))
+        self.total_scu_label.setObjectName("statValue")
+        total_layout.addWidget(self.total_scu_label)
+
+        entries_panel = QFrame()
+        entries_panel.setObjectName("financeSummaryPanel")
+        entries_layout = QVBoxLayout(entries_panel)
+        entries_layout.setContentsMargins(14, 10, 14, 10)
+        entries_layout.setSpacing(4)
+        entries_layout.addWidget(QLabel(tr("storage.kpi.entries")))
+        self.entries_label = QLabel("0")
+        self.entries_label.setObjectName("statValue")
+        entries_layout.addWidget(self.entries_label)
+
+        warnings_panel = QFrame()
+        warnings_panel.setObjectName("financeSummaryPanel")
+        warnings_layout = QVBoxLayout(warnings_panel)
+        warnings_layout.setContentsMargins(14, 10, 14, 10)
+        warnings_layout.setSpacing(4)
+        warnings_layout.addWidget(QLabel(tr("storage.kpi.warnings")))
+        self.warnings_label = QLabel("0")
+        self.warnings_label.setObjectName("statValue")
+        warnings_layout.addWidget(self.warnings_label)
+
+        kpi_layout.addWidget(total_panel, 1)
+        kpi_layout.addWidget(entries_panel, 1)
+        kpi_layout.addWidget(warnings_panel, 1)
+        layout.addWidget(kpi_row)
 
         self.idle_banner_host = QFrame()
         self.idle_banner_host.setObjectName("infoPanel")
@@ -112,6 +163,24 @@ class StoragePage(QWidget):
         self.idle_banner_host.hide()
         layout.addWidget(self.idle_banner_host)
 
+        splitter = QSplitter(Qt.Orientation.Horizontal)
+        splitter.setObjectName("pageSplit")
+        splitter.setHandleWidth(14)
+        splitter.setChildrenCollapsible(False)
+
+        left_column = QWidget()
+        left_layout = QVBoxLayout(left_column)
+        left_layout.setContentsMargins(0, 0, 16, 0)
+        left_layout.setSpacing(12)
+
+        list_panel, list_panel_layout = page_panel()
+        list_panel_layout.setContentsMargins(12, 12, 12, 12)
+        list_panel_layout.setSpacing(8)
+        list_panel_layout.addWidget(
+            subsection_title(tr("storage.section.list"))
+        )
+        list_panel_layout.addLayout(hud_divider())
+
         filter_row = QHBoxLayout()
         filter_row.setSpacing(12)
         sort_label = QLabel(tr("storage.label.sort"))
@@ -136,9 +205,7 @@ class StoragePage(QWidget):
         filter_row.addWidget(sort_label)
         filter_row.addWidget(self.sort_combo, 1)
         filter_row.addWidget(self.warnings_only_checkbox)
-        layout.addLayout(filter_row)
-
-        layout.addWidget(section_accent(tr("storage.section.list")))
+        list_panel_layout.addLayout(filter_row)
 
         self.stockpile_table = QTableWidget()
         self.stockpile_table.setColumnCount(7)
@@ -155,7 +222,6 @@ class StoragePage(QWidget):
             self.stockpile_table,
             "dataTable",
         )
-        self.stockpile_table.setMinimumHeight(200)
         self.stockpile_table.setContextMenuPolicy(
             Qt.ContextMenuPolicy.CustomContextMenu
         )
@@ -166,8 +232,8 @@ class StoragePage(QWidget):
             tr("storage.empty"),
             "assets/images/icons/info.svg",
         )
-        layout.addWidget(self.stockpile_table)
-        layout.addWidget(self.stockpile_empty)
+        list_panel_layout.addWidget(self.stockpile_table)
+        list_panel_layout.addWidget(self.stockpile_empty)
 
         list_actions = QHBoxLayout()
         list_actions.setSpacing(12)
@@ -188,11 +254,18 @@ class StoragePage(QWidget):
         list_actions.addWidget(self.moved_button)
         list_actions.addWidget(self.delete_stockpile_button)
         list_actions.addStretch()
-        layout.addLayout(list_actions)
+        list_panel_layout.addLayout(list_actions)
 
-        layout.addWidget(
-            section_accent(tr("storage.section.totals"))
+        left_layout.addWidget(list_panel, 1)
+
+        totals_outer, totals_outer_layout = page_panel()
+        totals_outer_layout.setContentsMargins(12, 12, 12, 12)
+        totals_outer_layout.setSpacing(8)
+        totals_outer_layout.addWidget(
+            subsection_title(tr("storage.section.totals"))
         )
+        totals_outer_layout.addLayout(hud_divider())
+
         self.totals_panel = QFrame()
         self.totals_panel.setObjectName("storageTotalsPanel")
         totals_panel_layout = QVBoxLayout(self.totals_panel)
@@ -210,12 +283,19 @@ class StoragePage(QWidget):
         self.totals_empty_label.setWordWrap(True)
         totals_panel_layout.addWidget(self.totals_empty_label)
         self.totals_empty_label.hide()
-        layout.addWidget(self.totals_panel)
+        totals_outer_layout.addWidget(self.totals_panel)
+        left_layout.addWidget(totals_outer)
+
+        right_column = QWidget()
+        right_layout = QVBoxLayout(right_column)
+        right_layout.setContentsMargins(16, 0, 0, 0)
+        right_layout.setSpacing(12)
 
         form_panel, form_layout = info_panel()
         form_layout.addWidget(
             subsection_title(tr("storage.section.add"))
         )
+        form_layout.addLayout(hud_divider())
 
         self.location_type_combo = QComboBox()
         self.location_type_combo.addItem(
@@ -293,11 +373,15 @@ class StoragePage(QWidget):
             self.notes_input,
         )
         form_layout.addWidget(self.save_button)
-        layout.addWidget(form_panel)
+        right_layout.addWidget(form_panel)
 
-        layout.addWidget(
-            section_accent(tr("storage.section.history"))
+        history_panel, history_layout = page_panel()
+        history_layout.setContentsMargins(12, 12, 12, 12)
+        history_layout.setSpacing(8)
+        history_layout.addWidget(
+            subsection_title(tr("storage.section.history"))
         )
+        history_layout.addLayout(hud_divider())
 
         self.history_table = QTableWidget()
         self.history_table.setColumnCount(5)
@@ -312,7 +396,6 @@ class StoragePage(QWidget):
             self.history_table,
             "historyTable",
         )
-        self.history_table.setMinimumHeight(160)
 
         history_actions = QHBoxLayout()
         history_actions.setSpacing(12)
@@ -321,8 +404,24 @@ class StoragePage(QWidget):
         )
         history_actions.addWidget(self.delete_event_button)
         history_actions.addStretch()
-        layout.addWidget(self.history_table)
-        layout.addLayout(history_actions)
+
+        history_layout.addWidget(self.history_table)
+        history_layout.addLayout(history_actions)
+        right_layout.addWidget(history_panel, 1)
+
+        splitter.addWidget(left_column)
+        splitter.addWidget(right_column)
+        splitter.setStretchFactor(0, 0)
+        splitter.setStretchFactor(1, 1)
+        splitter.setSizes([620, 420])
+        layout.addWidget(splitter, 1)
+
+        bind_page_split_persistence(
+            splitter,
+            self.db,
+            SETTING_STORAGE_PAGE_SPLIT,
+            default_sizes=[620, 420],
+        )
 
         layout.addStretch()
 
@@ -518,7 +617,15 @@ class StoragePage(QWidget):
                 stretch_column=0,
             )
 
-        self._update_totals(self.db.get_stockpile_totals())
+        totals = self.db.get_stockpile_totals()
+        self._update_totals(totals)
+
+        entry_count = len(
+            self.db.list_material_stockpiles(
+                sort_by=StockpileRepository.SORT_LOCATION,
+            )
+        )
+        self._update_kpis(totals, entry_count, idle_count)
 
         self._load_history()
 
@@ -549,6 +656,28 @@ class StoragePage(QWidget):
         chip_layout.addWidget(name)
         chip_layout.addWidget(qty)
         return chip
+
+    def _update_kpis(
+        self,
+        totals: list[dict],
+        entry_count: int,
+        idle_count: int,
+    ) -> None:
+        total_scu = sum(
+            float(item.get("quantity_scu") or 0)
+            for item in totals
+        )
+        self.total_scu_label.setText(format_scu(total_scu))
+        self.entries_label.setText(format_number(entry_count, 0))
+
+        self.warnings_label.setText(format_number(idle_count, 0))
+        self.warnings_label.setObjectName(
+            "warningBannerTitle" if idle_count > 0 else "statValue"
+        )
+        style = self.warnings_label.style()
+        if style is not None:
+            style.unpolish(self.warnings_label)
+            style.polish(self.warnings_label)
 
     def _update_totals(self, totals):
         self._clear_layout(self.totals_chips_layout)

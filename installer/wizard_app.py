@@ -33,6 +33,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from config.app_icon import resolve_app_icon_path
 from config.editions import EDITION_GLOW_RGB, EDITION_SHORT, EDITION_TITLES, edition_title
 from config.version import (
     APP_BUILD,
@@ -96,20 +97,6 @@ _FONT_SCALE = 1.21  # 2× +10 % (Titelleiste ausgenommen)
 def _fs(px: float) -> int:
     """Installer-Schriftgröße (+10 %); Titelleiste nutzt feste Werte."""
     return round(px * _FONT_SCALE)
-
-
-def _app_icon_path() -> Path | None:
-    project = _ROOT / "assets" / "images" / "app_icon.ico"
-    if project.exists():
-        return project
-    installer = _INSTALLER_DIR / "assets" / "app_icon.ico"
-    if installer.exists():
-        return installer
-    if getattr(sys, "frozen", False):
-        bundled = Path(sys._MEIPASS) / "installer" / "assets" / "app_icon.ico"
-        if bundled.exists():
-            return bundled
-    return None
 
 
 def _edition_app_name(edition: str) -> str:
@@ -1100,7 +1087,7 @@ def run_wizard(
     app.setFont(QFont("Segoe UI", _fs(10)))
     app.setStyleSheet(WIZARD_QSS)
 
-    icon_path = _app_icon_path()
+    icon_path = resolve_app_icon_path()
     if icon_path is not None:
         app_icon = QIcon(str(icon_path))
         app.setWindowIcon(app_icon)

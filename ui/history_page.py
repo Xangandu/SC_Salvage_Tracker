@@ -10,12 +10,17 @@ from PySide6.QtWidgets import (
 
 from database.access import get_database
 from config.dates import format_date
-from config.materials import material_label
+from config.materials import (
+    REFINERY_OUTPUT_CODE,
+    material_label,
+)
+from config.refinery_methods import display_refinery_method
 from config.i18n import tr, format_number, status_label
 from config.permissions import (
     apply_widget_permissions,
     has_permission,
     PERM_PAYOUTS_MANAGE,
+    PERM_REFINERY_MANAGE,
 )
 from ui.table_utils import (
     configure_mobiglas_table,
@@ -36,6 +41,10 @@ def _secondary_button(text):
     button = QPushButton(text)
     button.setObjectName("secondaryAction")
     return button
+
+
+def _refinery_job_status(status: str) -> str:
+    return tr(f"refinery.job_status.{status}", default=status)
 
 
 class HistoryPage(QWidget):
@@ -79,6 +88,56 @@ class HistoryPage(QWidget):
         sessions_layout.addWidget(self.sessions_empty_panel)
         self.sessions_empty_panel.hide()
         layout.addWidget(sessions_panel)
+
+        layout.addWidget(
+            section_accent(tr("history.section.refinery"))
+        )
+        layout.addLayout(hud_divider())
+
+        refinery_panel, refinery_layout = page_panel()
+        refinery_layout.setContentsMargins(12, 12, 12, 12)
+
+        self.refinery_history_table = QTableWidget()
+        self.refinery_history_table.setColumnCount(9)
+        self.refinery_history_table.setHorizontalHeaderLabels([
+            tr("refinery.history.no"),
+            tr("refinery.history.station"),
+            tr("refinery.history.method"),
+            tr("refinery.history.status"),
+            tr("refinery.history.input"),
+            tr("refinery.history.cm_output"),
+            tr("refinery.history.yield"),
+            tr("refinery.history.cost"),
+            tr("refinery.history.created_by"),
+        ])
+        configure_mobiglas_table(
+            self.refinery_history_table,
+            "historyTable",
+        )
+        self.refinery_history_table.setMinimumHeight(180)
+
+        self.refinery_history_empty_panel = empty_info_panel(
+            tr("history.refinery.empty"),
+            "assets/images/icons/info.svg",
+        )
+
+        self.delete_refinery_job_button = _secondary_button(
+            tr("refinery.button.delete")
+        )
+        self.delete_refinery_job_button.clicked.connect(
+            self.delete_selected_refinery_job
+        )
+
+        refinery_actions = QHBoxLayout()
+        refinery_actions.setSpacing(12)
+        refinery_actions.addWidget(self.delete_refinery_job_button)
+        refinery_actions.addStretch()
+
+        refinery_layout.addWidget(self.refinery_history_table)
+        refinery_layout.addLayout(refinery_actions)
+        refinery_layout.addWidget(self.refinery_history_empty_panel)
+        self.refinery_history_empty_panel.hide()
+        layout.addWidget(refinery_panel)
 
         layout.addWidget(
             section_accent(tr("history.section.sales"))
@@ -171,6 +230,9 @@ class HistoryPage(QWidget):
         apply_widget_permissions(self, user, page_name)
         self.void_payout_button.setEnabled(
             has_permission(PERM_PAYOUTS_MANAGE, user)
+        )
+        self.delete_refinery_job_button.setEnabled(
+            has_permission(PERM_REFINERY_MANAGE, user)
         )
 
     def refresh_history(self):
@@ -351,9 +413,115 @@ class HistoryPage(QWidget):
             stretch_column=3,
         )
 
+    def _load_refinery_history(self, db):
+        history = db.get_refinery_history()
+        has_history = len(history) > 0
+
+        self.refinery_history_table.setVisible(has_history)
+        self.refinery_history_empty_panel.setVisible(not has_history)
+        self.refinery_history_table.setRowCount(len(history))
+
+        for row, job in enumerate(history):
+            input_text = ", ".join(
+                tr(
+                    "refinery.history.input_line",
+                    quantity=format_number(item["input_quantity"], 0),
+                    material=material_label(item["input_material"]),
+                    batch_id=item["batch_id"],
+                )
+                for item in job["items"]
+            )
+            output_scu = job.get("cm_raf_output") or job["total_output"]
+            output_text = (
+                tr(
+                    "refinery.history.output_line",
+                    quantity=format_number(output_scu, 0),
+                    material=material_label(REFINERY_OUTPUT_CODE),
+                )
+                if output_scu > 0
+                else "—"
+            )
+            yield_text = "—"
+
+            if job["total_input"] > 0 and output_scu > 0:
+                yield_pct = (
+                    output_scu
+                    / job["total_input"]
+                    * 100
+                )
+                yield_text = tr(
+                    "refinery.history.yield_pct",
+                    yield_pct=format_number(yield_pct, 1),
+                )
+
+            self.refinery_history_table.setItem(
+                row,
+                0,
+                QTableWidgetItem(f"#{job['id']}"),
+            )
+            self.refinery_history_table.setItem(
+                row,
+                1,
+                QTableWidgetItem(job["refinery_name"]),
+            )
+            self.refinery_history_table.setItem(
+                row,
+                2,
+                QTableWidgetItem(
+                    display_refinery_method(
+                        job.get("refinery_method") or ""
+                    ) or "—"
+                ),
+            )
+            self.refinery_history_table.setItem(
+                row,
+                3,
+                QTableWidgetItem(
+                    _refinery_job_status(job["status"])
+                ),
+            )
+            self.refinery_history_table.setItem(
+                row,
+                4,
+                QTableWidgetItem(input_text),
+            )
+            self.refinery_history_table.setItem(
+                row,
+                5,
+                QTableWidgetItem(output_text),
+            )
+            self.refinery_history_table.setItem(
+                row,
+                6,
+                QTableWidgetItem(yield_text),
+            )
+            cost = job.get("cost", 0) or 0
+            payer = (job.get("cost_paid_by") or "").strip()
+            cost_text = f"{format_number(cost)} aUEC"
+
+            if cost > 0 and payer:
+                cost_text = f"{cost_text} ({payer})"
+
+            self.refinery_history_table.setItem(
+                row,
+                7,
+                QTableWidgetItem(cost_text),
+            )
+            self.refinery_history_table.setItem(
+                row,
+                8,
+                QTableWidgetItem(job["created_by"]),
+            )
+
+        finalize_table_columns(
+            self.refinery_history_table,
+            stretch_column=4,
+        )
+
     def load_history(self):
         db = get_database()
         self._load_sessions_history(db)
+        self._load_refinery_history(db)
         self._load_sales_history(db)
         self._load_payouts_history(db)
 
@@ -425,5 +593,75 @@ class HistoryPage(QWidget):
             tr(
                 "payout.msg.voided.message",
                 payout_id=payout_id,
+            ),
+        )
+
+    def _selected_refinery_job_id(self):
+        row = self.refinery_history_table.currentRow()
+        if row < 0:
+            return None
+        item = self.refinery_history_table.item(row, 0)
+        if not item:
+            return None
+        return int(item.text().lstrip("#"))
+
+    def delete_selected_refinery_job(self):
+        job_id = self._selected_refinery_job_id()
+        if job_id is None:
+            QMessageBox.warning(
+                self,
+                tr("common.hint"),
+                tr("refinery.msg.no_selection"),
+            )
+            return
+
+        answer = QMessageBox.question(
+            self,
+            tr("refinery.msg.delete_confirm.title"),
+            tr(
+                "refinery.msg.delete_confirm.message",
+                job_id=job_id,
+            ),
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
+        )
+
+        if answer != QMessageBox.Yes:
+            return
+
+        db = get_database()
+        try:
+            db.delete_refinery_job(job_id)
+        except ValueError as error:
+            QMessageBox.warning(
+                self,
+                tr("common.not_possible"),
+                str(error),
+            )
+            return
+        except Exception as error:
+            QMessageBox.critical(
+                self,
+                tr("common.error"),
+                tr("refinery.msg.delete_failed", error=error),
+            )
+            return
+
+        self.load_history()
+
+        main_window = self.window()
+        if hasattr(main_window, "refinery_page"):
+            main_window.refinery_page.load_data()
+        if hasattr(main_window, "refresh_all"):
+            main_window.refresh_all()
+        elif hasattr(main_window, "dashboard_page"):
+            main_window.dashboard_page.refresh_dashboard()
+
+        QMessageBox.information(
+            self,
+            tr("refinery.msg.deleted.title"),
+            tr(
+                "refinery.msg.deleted.message",
+                job_id=job_id,
             ),
         )

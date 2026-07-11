@@ -193,7 +193,7 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
         brand_layout.addWidget(user_panel)
         brand_outer.addWidget(brand_card)
 
-        self.btn_dashboard = QPushButton(tr("nav.dashboard"))
+        self.btn_dashboard = QPushButton(tr("dashboard.nav.embedded"))
         configure_nav_button(self.btn_dashboard, "dashboard")
         self.btn_dashboard.setProperty("dashboardWindowVisible", "false")
 
@@ -458,10 +458,16 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
         if dashboard_open_on_startup(db):
             QTimer.singleShot(0, self.show_dashboard_window)
         else:
-            QTimer.singleShot(0, self._sync_dashboard_nav_background)
+            QTimer.singleShot(0, self.sync_dashboard_nav_state)
 
-    def _sync_dashboard_nav_background(self) -> None:
+    def sync_dashboard_nav_state(self) -> None:
+        """Übersicht-Nav: Text, Farbe und Symbol an Fenster-Sichtbarkeit."""
         visible = self.dashboard_window.isVisible()
+        self.btn_dashboard.setText(
+            tr("dashboard.nav.detached")
+            if visible
+            else tr("dashboard.nav.embedded")
+        )
         self.btn_dashboard.setProperty(
             "dashboardWindowVisible",
             "true" if visible else "false",
@@ -471,6 +477,16 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
             style.unpolish(self.btn_dashboard)
             style.polish(self.btn_dashboard)
         self.btn_dashboard.update()
+
+    def on_dashboard_window_close_requested(self) -> None:
+        """X auf dem Übersicht-Fenster — gleicher Zustand wie Nav-Toggle."""
+        if not self.dashboard_window.isVisible():
+            self.sync_dashboard_nav_state()
+            return
+        self.hide_dashboard_window()
+
+    def _sync_dashboard_nav_background(self) -> None:
+        self.sync_dashboard_nav_state()
 
     def apply_nav_width(self, nav_width: str = "normal"):
         self._nav_width = nav_width
@@ -1072,11 +1088,7 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
 
         set_dashboard_open_on_startup(self.db, True)
         self.dashboard_window.show_dashboard()
-
-        self.btn_dashboard.setText(
-            tr("dashboard.nav.detached")
-        )
-        self._sync_dashboard_nav_background()
+        self.sync_dashboard_nav_state()
 
     def hide_dashboard_window(self):
 
@@ -1089,11 +1101,7 @@ class MainWindow(MobiglasFramelessMixin, QMainWindow):
 
         set_dashboard_open_on_startup(self.db, False)
         self.dashboard_window.hide_dashboard()
-
-        self.btn_dashboard.setText(
-            tr("dashboard.nav.embedded")
-        )
-        self._sync_dashboard_nav_background()
+        self.sync_dashboard_nav_state()
 
     def toggle_dashboard_window(self):
 

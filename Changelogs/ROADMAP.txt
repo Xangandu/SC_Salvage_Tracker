@@ -1,7 +1,7 @@
 SC SALVAGE TRACKER – ROADMAP
 =============================
 
-Stand: Version 0.16.7 Beta | Build 2026.18 | Codename: POLISH AND PERFORMANCE
+Stand: Version 0.16.8 Beta | Build 2026.19 | Codename: MOBIGLAS LAYOUTS
 
 
 PHASE 1 – UI AN NEUES DATENMODELL ANBINDEN (ABGESCHLOSSEN)

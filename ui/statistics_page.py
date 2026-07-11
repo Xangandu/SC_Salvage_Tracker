@@ -23,6 +23,8 @@ from PySide6.QtWidgets import (
 
     QPushButton,
 
+    QSplitter,
+
 )
 
 
@@ -40,33 +42,26 @@ from config.permissions import apply_widget_permissions
 from ui.table_utils import (
     configure_mobiglas_table,
     configure_editable_table,
-    finalize_table_columns,
+    finalize_system_list_table,
+)
+
+from ui.page_split_persistence import (
+    SETTING_PAYOUT_PAGE_SPLIT,
+    bind_page_split_persistence,
 )
 
 from ui.page_layout import (
-
     build_page_scroll,
-
     page_content_widget,
-
     page_title,
-
     section_accent,
-
     subsection_title,
-
     add_form_field,
-
     info_panel,
-
     page_panel,
-
     primary_button,
-
     empty_info_panel,
-
     hud_divider,
-
 )
 
 
@@ -116,59 +111,54 @@ class StatisticsPage(QWidget):
 
 
 
-        summary_panel = QFrame()
+        kpi_row = QWidget()
+        kpi_layout = QHBoxLayout(kpi_row)
+        kpi_layout.setContentsMargins(0, 0, 0, 0)
+        kpi_layout.setSpacing(12)
 
-        summary_panel.setObjectName("financeSummaryPanel")
+        pending_panel = QFrame()
+        pending_panel.setObjectName("financeSummaryPanel")
+        pending_layout = QVBoxLayout(pending_panel)
+        pending_layout.setContentsMargins(14, 10, 14, 10)
+        pending_layout.setSpacing(4)
+        pending_layout.addWidget(QLabel(tr("payout.kpi.pending")))
+        self.pending_label = QLabel("0")
+        self.pending_label.setObjectName("statValue")
+        pending_layout.addWidget(self.pending_label)
 
-        summary_layout = QVBoxLayout(summary_panel)
-
-        summary_layout.setSpacing(8)
-
-
-
-        summary_layout.addWidget(
-
-            subsection_title(tr("payout.section.summary"))
-
+        paid_panel = QFrame()
+        paid_panel.setObjectName("financeSummaryPanel")
+        paid_layout = QVBoxLayout(paid_panel)
+        paid_layout.setContentsMargins(14, 10, 14, 10)
+        paid_layout.setSpacing(4)
+        paid_layout.addWidget(QLabel(tr("payout.kpi.paid_total")))
+        self.paid_total_label = QLabel(
+            f"{format_number(0)} aUEC"
         )
+        self.paid_total_label.setObjectName("statValue")
+        paid_layout.addWidget(self.paid_total_label)
 
-        summary_layout.addLayout(hud_divider())
+        kpi_layout.addWidget(pending_panel, 1)
+        kpi_layout.addWidget(paid_panel, 1)
+        layout.addWidget(kpi_row)
 
+        splitter = QSplitter(Qt.Orientation.Horizontal)
+        splitter.setObjectName("pageSplit")
+        splitter.setHandleWidth(14)
+        splitter.setChildrenCollapsible(False)
 
-
-        self.summary_label = QLabel(
-
-            tr(
-                "payout.summary",
-                count=0,
-                total=format_number(0),
-            )
-
-        )
-
-        self.summary_label.setObjectName("statValue")
-
-        summary_layout.addWidget(self.summary_label)
-
-        layout.addWidget(summary_panel)
-
-
-
-        layout.addWidget(
-
-            section_accent(tr("payout.section.unpaid"))
-
-        )
-
-        layout.addLayout(hud_divider())
-
-
+        left_column = QWidget()
+        left_layout = QVBoxLayout(left_column)
+        left_layout.setContentsMargins(0, 0, 16, 0)
+        left_layout.setSpacing(12)
 
         unpaid_panel, unpaid_layout = page_panel()
-
         unpaid_layout.setContentsMargins(12, 12, 12, 12)
-
-
+        unpaid_layout.setSpacing(8)
+        unpaid_layout.addWidget(
+            subsection_title(tr("payout.section.unpaid"))
+        )
+        unpaid_layout.addLayout(hud_divider())
 
         self.unpaid_table = QTableWidget()
 
@@ -196,8 +186,6 @@ class StatisticsPage(QWidget):
 
         )
 
-        self.unpaid_table.setMinimumHeight(140)
-
         self.unpaid_table.itemSelectionChanged.connect(
 
             self.on_sale_selected
@@ -212,7 +200,7 @@ class StatisticsPage(QWidget):
         unpaid_layout.addWidget(self.unpaid_table)
         unpaid_layout.addWidget(self.unpaid_empty_panel)
         self.unpaid_empty_panel.hide()
-        layout.addWidget(unpaid_panel)
+        left_layout.addWidget(unpaid_panel)
 
         payout_panel, payout_layout = info_panel()
         payout_layout.addWidget(
@@ -302,18 +290,6 @@ class StatisticsPage(QWidget):
 
         )
 
-        self.payout_table.setMinimumHeight(120)
-
-        finalize_table_columns(
-
-            self.payout_table,
-
-            stretch_column=1,
-
-        )
-
-
-
         self.notes_input = QLineEdit()
 
         self.notes_input.setPlaceholderText(
@@ -370,27 +346,21 @@ class StatisticsPage(QWidget):
 
         payout_layout.addLayout(button_row)
 
+        left_layout.addWidget(payout_panel)
+        left_layout.addStretch()
 
-
-        layout.addWidget(payout_panel)
-
-
-
-        layout.addWidget(
-
-            section_accent(tr("payout.section.crew_totals"))
-
-        )
-
-        layout.addLayout(hud_divider())
-
-
+        right_column = QWidget()
+        right_layout = QVBoxLayout(right_column)
+        right_layout.setContentsMargins(16, 0, 0, 0)
+        right_layout.setSpacing(12)
 
         crew_panel, crew_layout = page_panel()
-
         crew_layout.setContentsMargins(12, 12, 12, 12)
-
-
+        crew_layout.setSpacing(8)
+        crew_layout.addWidget(
+            subsection_title(tr("payout.section.crew_totals"))
+        )
+        crew_layout.addLayout(hud_divider())
 
         self.crew_totals_table = QTableWidget()
 
@@ -413,10 +383,6 @@ class StatisticsPage(QWidget):
             selectable=False,
 
         )
-
-        self.crew_totals_table.setMinimumHeight(120)
-
-
 
         self.crew_empty_panel = empty_info_panel(
 
@@ -442,9 +408,22 @@ class StatisticsPage(QWidget):
 
         )
 
-        layout.addWidget(crew_panel)
+        right_layout.addWidget(crew_panel)
+        right_layout.addStretch()
 
+        splitter.addWidget(left_column)
+        splitter.addWidget(right_column)
+        splitter.setStretchFactor(0, 0)
+        splitter.setStretchFactor(1, 1)
+        splitter.setSizes([620, 420])
+        layout.addWidget(splitter, 1)
 
+        bind_page_split_persistence(
+            splitter,
+            self.db,
+            SETTING_PAYOUT_PAGE_SPLIT,
+            default_sizes=[620, 420],
+        )
 
         layout.addStretch()
 
@@ -507,14 +486,9 @@ class StatisticsPage(QWidget):
 
 
 
-        self.summary_label.setText(
-
-            tr(
-                "payout.summary",
-                count=len(unpaid),
-                total=format_number(paid_total),
-            )
-
+        self.pending_label.setText(str(len(unpaid)))
+        self.paid_total_label.setText(
+            f"{format_number(paid_total)} aUEC"
         )
 
 
@@ -630,9 +604,10 @@ class StatisticsPage(QWidget):
 
 
 
-        finalize_table_columns(
+        finalize_system_list_table(
             self.unpaid_table,
             stretch_column=2,
+            max_visible_rows=5,
         )
 
 
@@ -700,9 +675,10 @@ class StatisticsPage(QWidget):
             self.crew_totals_table.setItem(row, 0, label_item)
             self.crew_totals_table.setItem(row, 1, amount_item)
 
-        finalize_table_columns(
+        finalize_system_list_table(
             self.crew_totals_table,
             stretch_column=0,
+            max_visible_rows=10,
         )
 
 
@@ -1209,9 +1185,10 @@ class StatisticsPage(QWidget):
 
             )
 
-        finalize_table_columns(
+        finalize_system_list_table(
             self.payout_table,
             stretch_column=1,
+            max_visible_rows=6,
         )
 
 

@@ -236,8 +236,8 @@ def main() -> None:
             optimize=True,
         )
 
-    project_icon = root / "assets" / "images" / "app_icon.ico"
-    installer_icon = assets_dir / "app_icon.ico"
+    project_icon = root / "assets" / "images" / "scst_solo_logo.ico"
+    installer_icon = assets_dir / "scst_solo_logo.ico"
     try:
         try:
             from installer.sync_app_icon import sync_app_icon
@@ -245,7 +245,7 @@ def main() -> None:
             from sync_app_icon import sync_app_icon
 
         project_icon = sync_app_icon(verbose=False)
-        icon_source = "sync_app_icon (assets/images/app_icon.png oder .ico)"
+        icon_source = "sync_app_icon (assets/images/scst_solo_logo.ico)"
     except FileNotFoundError:
         if splash is not None:
             save_icon(emblem, installer_icon)
@@ -263,7 +263,7 @@ def main() -> None:
         f"  install_background.png  {INSTALLER_BG_FULL[0]}x{INSTALLER_BG_FULL[1]} "
         "(optional, Vollfläche — manuell ablegen)"
     )
-    print(f"  app_icon.ico        ({icon_source})")
+    print(f"  scst_solo_logo.ico  ({icon_source})")
     print(f"Projekt-Icon: {project_icon}")
 
 

@@ -1,4 +1,28 @@
 {
+  "0.16.8": {
+    "de": {
+      "title": "SC Salvage Tracker 0.16.8 Beta — MobiGlas Layouts",
+      "summary": "Neues SOLO-Icon, Seiten-Layout Variante B mit KPI-Zeilen und horizontalem Spalter — inklusive gespeicherter Spalter-Position.",
+      "highlights": [
+        "Neues SCST-SOLO-App-Icon in EXE, Setup und Fenster",
+        "Auszahlung, Verkäufe, Lager, Raffinerie: KPI-Zeile + horizontaler Spalter",
+        "MobiGlas-Spalter (#pageSplit) in allen Themes; Breite wird gespeichert",
+        "Raffinerie-Historie auf Seite Historie verlegt",
+        "Übersicht-Navigation: Akzentstreifen grün/rot; X-Schließen korrigiert"
+      ]
+    },
+    "en": {
+      "title": "SC Salvage Tracker 0.16.8 Beta — MobiGlas Layouts",
+      "summary": "New SOLO icon, page layout variant B with KPI row and horizontal splitter — including persisted splitter position.",
+      "highlights": [
+        "New SCST SOLO app icon in EXE, setup wizard, and window",
+        "Payout, sales, storage, refinery: KPI row + horizontal splitter",
+        "MobiGlas splitter (#pageSplit) in all themes; width is saved",
+        "Refinery history moved to History page",
+        "Overview nav: green/red accent strip; close button fixed"
+      ]
+    }
+  },
   "0.16.7": {
     "de": {
       "title": "SC Salvage Tracker 0.16.7 Beta — Polish and Performance",

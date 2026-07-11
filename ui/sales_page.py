@@ -1,3 +1,4 @@
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QWidget,
     QVBoxLayout,
@@ -10,6 +11,7 @@ from PySide6.QtWidgets import (
     QTableWidgetItem,
     QMessageBox,
     QPushButton,
+    QSplitter,
 )
 
 from database.access import get_database
@@ -26,7 +28,11 @@ from ui.sales_uex_bridge import SalesUexBridge
 from ui.system_location_picker import SystemLocationPicker
 from ui.table_utils import (
     configure_mobiglas_table,
-    finalize_table_columns,
+    finalize_system_list_table,
+)
+from ui.page_split_persistence import (
+    SETTING_SALES_PAGE_SPLIT,
+    bind_page_split_persistence,
 )
 from ui.page_layout import (
     build_page_scroll,
@@ -36,6 +42,7 @@ from ui.page_layout import (
     subsection_title,
     add_form_field,
     info_panel,
+    page_panel,
     primary_button,
     empty_info_panel,
     hud_divider,
@@ -59,13 +66,73 @@ class SalesPage(QWidget):
 
         layout.addWidget(page_title(tr("sales.title")))
         layout.addWidget(
-            section_accent(tr("sales.section.inventory"))
+            section_accent(tr("sales.section.main"))
         )
+        layout.addLayout(hud_divider())
 
-        self.inventory_container = QVBoxLayout()
-        inventory_host = QWidget()
-        inventory_host.setLayout(self.inventory_container)
-        layout.addWidget(inventory_host)
+        kpi_row = QWidget()
+        kpi_layout = QHBoxLayout(kpi_row)
+        kpi_layout.setContentsMargins(0, 0, 0, 0)
+        kpi_layout.setSpacing(12)
+
+        revenue_panel = QFrame()
+        revenue_panel.setObjectName("financeSummaryPanel")
+        revenue_layout = QVBoxLayout(revenue_panel)
+        revenue_layout.setContentsMargins(14, 10, 14, 10)
+        revenue_layout.setSpacing(4)
+        revenue_layout.addWidget(QLabel(tr("sales.kpi.revenue")))
+        self.revenue_summary_label = QLabel(
+            f"{format_number(0)} aUEC"
+        )
+        self.revenue_summary_label.setObjectName("statValue")
+        revenue_layout.addWidget(self.revenue_summary_label)
+
+        costs_panel = QFrame()
+        costs_panel.setObjectName("financeSummaryPanel")
+        costs_layout = QVBoxLayout(costs_panel)
+        costs_layout.setContentsMargins(14, 10, 14, 10)
+        costs_layout.setSpacing(4)
+        costs_layout.addWidget(QLabel(tr("sales.kpi.costs")))
+        self.costs_summary_label = QLabel(
+            f"{format_number(0)} aUEC"
+        )
+        self.costs_summary_label.setObjectName("statLabel")
+        costs_layout.addWidget(self.costs_summary_label)
+
+        profit_panel = QFrame()
+        profit_panel.setObjectName("financeSummaryPanel")
+        profit_layout = QVBoxLayout(profit_panel)
+        profit_layout.setContentsMargins(14, 10, 14, 10)
+        profit_layout.setSpacing(4)
+        profit_layout.addWidget(QLabel(tr("sales.kpi.profit")))
+        self.profit_summary_label = QLabel(
+            f"{format_number(0)} aUEC"
+        )
+        self.profit_summary_label.setObjectName("profitLabel")
+        profit_layout.addWidget(self.profit_summary_label)
+
+        kpi_layout.addWidget(revenue_panel, 1)
+        kpi_layout.addWidget(costs_panel, 1)
+        kpi_layout.addWidget(profit_panel, 1)
+        layout.addWidget(kpi_row)
+
+        splitter = QSplitter(Qt.Orientation.Horizontal)
+        splitter.setObjectName("pageSplit")
+        splitter.setHandleWidth(14)
+        splitter.setChildrenCollapsible(False)
+
+        left_column = QWidget()
+        left_layout = QVBoxLayout(left_column)
+        left_layout.setContentsMargins(0, 0, 16, 0)
+        left_layout.setSpacing(12)
+
+        inventory_panel, inventory_layout = page_panel()
+        inventory_layout.setContentsMargins(12, 12, 12, 12)
+        inventory_layout.setSpacing(8)
+        inventory_layout.addWidget(
+            subsection_title(tr("sales.section.inventory"))
+        )
+        inventory_layout.addLayout(hud_divider())
 
         self.inventory_table = QTableWidget()
         self.inventory_table.setColumnCount(2)
@@ -77,24 +144,20 @@ class SalesPage(QWidget):
             self.inventory_table,
             "dataTable",
         )
-        self.inventory_table.setMinimumHeight(160)
-
         self.inventory_empty_panel = empty_info_panel(
             tr("sales.inventory.empty"),
             "assets/images/icons/info.svg",
         )
-        self.inventory_container.addWidget(
-            self.inventory_table
-        )
-        self.inventory_container.addWidget(
-            self.inventory_empty_panel
-        )
+        inventory_layout.addWidget(self.inventory_table)
+        inventory_layout.addWidget(self.inventory_empty_panel)
         self.inventory_empty_panel.hide()
+        left_layout.addWidget(inventory_panel)
 
         form_panel, form_layout = info_panel()
         form_layout.addWidget(
             subsection_title(tr("sales.section.new"))
         )
+        form_layout.addLayout(hud_divider())
 
         self.location_picker = SystemLocationPicker()
         form_layout.addWidget(self.location_picker)
@@ -151,60 +214,21 @@ class SalesPage(QWidget):
 
         form_layout.addWidget(self.total_label)
         form_layout.addWidget(self.save_button)
-        layout.addWidget(form_panel)
+        left_layout.addWidget(form_panel)
+        left_layout.addStretch()
 
-        profit_panel = QFrame()
-        profit_panel.setObjectName("financeSummaryPanel")
-        profit_layout = QVBoxLayout(profit_panel)
-        profit_layout.setSpacing(8)
+        right_column = QWidget()
+        right_layout = QVBoxLayout(right_column)
+        right_layout.setContentsMargins(16, 0, 0, 0)
+        right_layout.setSpacing(12)
 
-        profit_layout.addWidget(
-            subsection_title(tr("sales.section.finance"))
+        history_panel, history_layout = page_panel()
+        history_layout.setContentsMargins(12, 12, 12, 12)
+        history_layout.setSpacing(8)
+        history_layout.addWidget(
+            subsection_title(tr("sales.section.history"))
         )
-        profit_layout.addLayout(hud_divider())
-
-        self.revenue_summary_label = QLabel(
-            tr(
-                "sales.summary.revenue",
-                amount=format_number(0),
-            )
-        )
-        self.revenue_summary_label.setObjectName(
-            "statValue"
-        )
-
-        self.costs_summary_label = QLabel(
-            tr(
-                "sales.summary.costs",
-                amount=format_number(0),
-            )
-        )
-        self.costs_summary_label.setObjectName("statLabel")
-
-        self.profit_summary_label = QLabel(
-            tr(
-                "sales.summary.profit",
-                amount=format_number(0),
-            )
-        )
-        self.profit_summary_label.setObjectName(
-            "profitLabel"
-        )
-
-        profit_layout.addWidget(
-            self.revenue_summary_label
-        )
-        profit_layout.addWidget(
-            self.costs_summary_label
-        )
-        profit_layout.addWidget(
-            self.profit_summary_label
-        )
-        layout.addWidget(profit_panel)
-
-        layout.addWidget(
-            section_accent(tr("sales.section.history"))
-        )
+        history_layout.addLayout(hud_divider())
 
         self.history_table = QTableWidget()
         self.history_table.setColumnCount(6)
@@ -220,20 +244,37 @@ class SalesPage(QWidget):
             self.history_table,
             "historyTable",
         )
-        self.history_table.setMinimumHeight(220)
 
-        history_actions = QHBoxLayout()
-        history_actions.setSpacing(12)
         self.void_sale_button = _secondary_button(
             tr("sales.button.void")
         )
         self.void_sale_button.clicked.connect(
             self.void_selected_sale
         )
+
+        history_actions = QHBoxLayout()
+        history_actions.setSpacing(12)
         history_actions.addWidget(self.void_sale_button)
         history_actions.addStretch()
-        layout.addWidget(self.history_table)
-        layout.addLayout(history_actions)
+
+        history_layout.addWidget(self.history_table)
+        history_layout.addLayout(history_actions)
+        right_layout.addWidget(history_panel)
+        right_layout.addStretch()
+
+        splitter.addWidget(left_column)
+        splitter.addWidget(right_column)
+        splitter.setStretchFactor(0, 0)
+        splitter.setStretchFactor(1, 1)
+        splitter.setSizes([620, 420])
+        layout.addWidget(splitter, 1)
+
+        bind_page_split_persistence(
+            splitter,
+            self.db,
+            SETTING_SALES_PAGE_SPLIT,
+            default_sizes=[620, 420],
+        )
 
         layout.addStretch()
 
@@ -323,9 +364,10 @@ class SalesPage(QWidget):
                     code,
                 )
 
-            finalize_table_columns(
+            finalize_system_list_table(
                 self.inventory_table,
                 stretch_column=0,
+                max_visible_rows=5,
             )
 
         self.material_combo.blockSignals(False)
@@ -380,9 +422,10 @@ class SalesPage(QWidget):
                 QTableWidgetItem(sale["created_by"]),
             )
 
-        finalize_table_columns(
+        finalize_system_list_table(
             self.history_table,
             stretch_column=3,
+            max_visible_rows=10,
         )
 
     def update_profit_summary(self):
@@ -391,22 +434,13 @@ class SalesPage(QWidget):
         profit = revenue - costs
 
         self.revenue_summary_label.setText(
-            tr(
-                "sales.summary.revenue",
-                amount=format_number(revenue),
-            )
+            f"{format_number(revenue)} aUEC"
         )
         self.costs_summary_label.setText(
-            tr(
-                "sales.summary.costs",
-                amount=format_number(costs),
-            )
+            f"{format_number(costs)} aUEC"
         )
         self.profit_summary_label.setText(
-            tr(
-                "sales.summary.profit",
-                amount=format_number(profit),
-            )
+            f"{format_number(profit)} aUEC"
         )
 
     def update_line_total(self):

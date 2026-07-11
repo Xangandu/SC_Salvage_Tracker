@@ -341,19 +341,21 @@ QPushButton#navStorageBadge:pressed {
 }
 
 #navButton[dashboardWindowVisible="true"] {
-    background-color: rgba(61, 220, 132, 0.11);
+    border-left: 6px solid #3DDC84;
+    background: transparent;
 }
 
 #navButton[dashboardWindowVisible="false"] {
-    background-color: rgba(255, 96, 96, 0.10);
+    border-left: 6px solid #FF6060;
+    background: transparent;
 }
 
 #navButton[dashboardWindowVisible="true"]:hover {
-    background-color: rgba(61, 220, 132, 0.17);
+    background: #151D27;
 }
 
 #navButton[dashboardWindowVisible="false"]:hover {
-    background-color: rgba(255, 96, 96, 0.15);
+    background: #151D27;
 }
 
 
@@ -1844,6 +1846,42 @@ QLabel#hudMarker {
     color: #E07A2A;
     font-size: 16px;
     font-weight: bold;
+}
+
+QSplitter#pageSplit {
+    background: transparent;
+}
+
+QSplitter#pageSplit::handle:horizontal {
+    width: 14px;
+    margin: 16px 0;
+    background: qlineargradient(
+        x1: 0, y1: 0, x2: 1, y2: 0,
+        stop: 0 transparent,
+        stop: 0.40 transparent,
+        stop: 0.44 #263545,
+        stop: 0.48 #33485C,
+        stop: 0.50 #E07A2A,
+        stop: 0.52 #33485C,
+        stop: 0.56 #263545,
+        stop: 0.60 transparent,
+        stop: 1 transparent
+    );
+}
+
+QSplitter#pageSplit::handle:horizontal:hover {
+    background: qlineargradient(
+        x1: 0, y1: 0, x2: 1, y2: 0,
+        stop: 0 transparent,
+        stop: 0.40 transparent,
+        stop: 0.44 #33485C,
+        stop: 0.48 #4A6278,
+        stop: 0.50 #F09040,
+        stop: 0.52 #4A6278,
+        stop: 0.56 #33485C,
+        stop: 0.60 transparent,
+        stop: 1 transparent
+    );
 }
 
 QMainWindow#dashboardWindow {

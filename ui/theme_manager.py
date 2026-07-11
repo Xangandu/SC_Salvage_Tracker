@@ -552,19 +552,21 @@ QFrame#navEditionBadgeHost[edition="orga"] {
 }
 
 #navButton[dashboardWindowVisible="true"] {
-    background-color: rgba(34, 180, 98, 0.10);
+    border-left: 6px solid #3DDC84;
+    background: transparent;
 }
 
 #navButton[dashboardWindowVisible="false"] {
-    background-color: rgba(230, 72, 72, 0.09);
+    border-left: 6px solid #FF6060;
+    background: transparent;
 }
 
 #navButton[dashboardWindowVisible="true"]:hover {
-    background-color: rgba(34, 180, 98, 0.15);
+    background: #F0F4F8;
 }
 
 #navButton[dashboardWindowVisible="false"]:hover {
-    background-color: rgba(230, 72, 72, 0.13);
+    background: #F0F4F8;
 }
 
 QLabel#pageTitle {
@@ -958,19 +960,21 @@ QFrame#navEditionBadgeHost[edition="orga"] {
 }
 
 #navButton[dashboardWindowVisible="true"] {
-    background-color: rgba(61, 220, 132, 0.11);
+    border-left: 6px solid #3DDC84;
+    background: transparent;
 }
 
 #navButton[dashboardWindowVisible="false"] {
-    background-color: rgba(255, 96, 96, 0.10);
+    border-left: 6px solid #FF6060;
+    background: transparent;
 }
 
 #navButton[dashboardWindowVisible="true"]:hover {
-    background-color: rgba(61, 220, 132, 0.17);
+    background: #2A2A2A;
 }
 
 #navButton[dashboardWindowVisible="false"]:hover {
-    background-color: rgba(255, 96, 96, 0.15);
+    background: #2A2A2A;
 }
 
 QLabel#pageTitle {

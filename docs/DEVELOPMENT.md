@@ -49,7 +49,7 @@ Build-Edition für Installer: `config/build_edition.txt` + `installer/build_inst
 |-------|--------|
 | Installer bauen | [`installer/ANLEITUNG.md`](../installer/ANLEITUNG.md) |
 | GitHub Release | [`installer/ANLEITUNG.md`](../installer/ANLEITUNG.md) (Abschnitt *GitHub Release*) |
-| GitHub Release (Details) | [`installer/GITHUB_RELEASE_v0.16.7.md`](../installer/GITHUB_RELEASE_v0.16.7.md) |
+| GitHub Release (Details) | [`installer/GITHUB_RELEASE_v0.16.8.md`](../installer/GITHUB_RELEASE_v0.16.8.md) |
 | Editionen | [`Changelogs/EDITIONS.txt`](../Changelogs/EDITIONS.txt) |
 | Supporter-Keys erzeugen | `python scripts/generate_supporter_keys.py crew` (Keys **nicht** committen) |
 | PATCHNOTES per ChatGPT | `python scripts/generate_patchnotes_ai.py` — Key in `config/patchnotes_ai.local.json` |

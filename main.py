@@ -2,7 +2,9 @@ import sys
 
 import PySide6.QtSvg  # SVG-Plugin für Icon-Dateien
 from PySide6.QtWidgets import QApplication, QDialog, QMessageBox
-from PySide6.QtGui import QFontDatabase
+from PySide6.QtGui import QFontDatabase, QIcon
+
+from config.app_icon import resolve_app_icon_path
 
 from ui.splash_screen import run_startup_splash
 from ui.main_window import MainWindow
@@ -66,6 +68,9 @@ class SalvageTrackerApp:
 
     def __init__(self):
         self.app = QApplication(sys.argv)
+        icon_path = resolve_app_icon_path()
+        if icon_path is not None:
+            self.app.setWindowIcon(QIcon(str(icon_path)))
         install_wheel_guard(self.app)
         self.db = None
         self.main_window = None

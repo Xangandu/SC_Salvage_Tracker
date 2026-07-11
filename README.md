@@ -9,12 +9,19 @@ Crew-Auszahlungen.
 
 ## Highlights (Beta)
 
-- **Kontext-Dashboard** — Neues Dashboard zeigt den Status der Materialien und Sitzungen klar an, inklusive Verkaufsbereitschaft.
-- **Verkaufskorrekturen** — Verkaufszähler im Dashboard zeigt nun die tatsächliche Verkaufsanzahl, Stornierungen werden korrekt behandelt.
-- **Sitzungsoptimierung** — Ohne aktive Sitzung werden nicht relevante Informationen ausgeblendet, um die Übersichtlichkeit zu verbessern.
-- **UI-Verbesserungen** — Fenster können nun einfacher skaliert und verschoben werden, ohne versehentlich zu maximieren oder minimieren.
-- **Auszahlungsübersicht** — Verbesserte Darstellung der Crew-Auszahlungen mit aufklappbaren Zeilen für detaillierte Informationen.
+- **MobiGlas-Layouts** — Auszahlung, Verkäufe, Lager und Raffinerie mit KPI-Zeile und horizontalem Spalter (Variante B)
+- **Spalter-Persistenz** — Spaltenbreiten werden gespeichert und nach Neustart exakt wiederhergestellt
+- **SOLO-App-Icon** — Neues SCST-SOLO-Logo in EXE, Setup und Fenster
+- **Übersicht-Navigation** — Akzentstreifen (grün/rot) und verbesserter Schließen-Button
 
+
+## Highlights (Beta 0.16.8)
+
+- **Seiten-Layout Variante B** — KPI-Zeilen und horizontaler Spalter auf Auszahlung, Verkäufe, Lager und Raffinerie
+- **MobiGlas-Spalter** — Neues #pageSplit-Design in allen Themes; Position wird gespeichert
+- **SOLO-Icon** — Neues App-Logo in EXE, Setup-Assistent und Fenster
+- **Raffinerie-Historie** — Verlauf auf Seite Historie; Raffinerie fokussiert auf aktive Aufträge
+- **Übersicht-Nav** — Variante C mit 6px Akzentstreifen; X-Schließen korrigiert
 
 ## Highlights (Beta 0.16.7)
 

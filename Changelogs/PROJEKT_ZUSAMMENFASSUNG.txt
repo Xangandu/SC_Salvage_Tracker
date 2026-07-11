@@ -1,7 +1,7 @@
 SC SALVAGE TRACKER – PROJEKT-ZUSAMMENFASSUNG
 ==============================================
 
-Stand: Version 0.16.7 Beta | Build 2026.18 | Codename: POLISH AND PERFORMANCE
+Stand: Version 0.16.8 Beta | Build 2026.19 | Codename: MOBIGLAS LAYOUTS
 
 
 1. PROJEKTZIEL
@@ -52,6 +52,11 @@ Crew-Auszahlungen.
 
 3. WICHTIGE ÄNDERUNGEN NACH VERSION
 ------------------------------------
+
+v0.16.8 – MobiGlas Layouts (Seiten & Spalter)
+• Seiten Layout Variante B: KPI-Zeilen + horizontaler Spalter (Auszahlung, Verkäufe, Lager, Raffinerie)
+• MobiGlas-Spalter (#pageSplit) in allen Themes; Position wird gespeichert
+• Neues SOLO-App-Icon; Übersicht-Navigation Variante C mit Akzentstreifen
 
 v0.16.7 – Polish and Performance (UEX & Tabellen)
 • UEX-Verkaufspreise automatisch nach Standort (async, editierbar)

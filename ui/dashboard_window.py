@@ -165,25 +165,9 @@ class DashboardWindow(MobiglasFramelessMixin, QMainWindow):
         self,
         event
     ):
-        self._save_geometry()
-        self.dashboard_page.persist_layout()
-        self.dashboard_page.refresh_dashboard()
-
-        self.dashboard_page.mark_as_embedded()
-
-        parent_window = (
-            self.dashboard_page
-            .get_parent_window()
-        )
-
-        if parent_window:
-
-            parent_window.btn_dashboard.setText(
-                tr("nav.dashboard")
-            )
-            if hasattr(parent_window, "_sync_dashboard_nav_background"):
-                parent_window._sync_dashboard_nav_background()
-
-        super().closeEvent(
-            event
-        )
+        event.ignore()
+        parent_window = self.dashboard_page.get_parent_window()
+        if parent_window is not None:
+            parent_window.on_dashboard_window_close_requested()
+        else:
+            self.hide_dashboard(user_action=True)

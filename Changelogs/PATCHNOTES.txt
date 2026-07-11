@@ -1,6 +1,35 @@
 SC SALVAGE TRACKER – PATCHNOTES
 ================================
 
+VERSION 0.16.8 Beta | Build 2026.19 | Codename: MOBIGLAS LAYOUTS
+--------------------------------------------------------------------
+
+NEU — SOLO APP-ICON
+• Neues SCST-SOLO-Logo in EXE, Setup-Assistent und Fenster
+• Zentrale Auflösung über config/app_icon.py
+
+UI — SEITEN-LAYOUT VARIANTE B
+• Auszahlung: KPI-Zeile (ausstehend / ausgezahlt), horizontaler Spalter
+  (links: offene Verkäufe + Berechnung, rechts: Crew-Summen)
+• Verkäufe: KPI-Zeile (Erlös / Kosten / Gewinn), Lager links + Historie rechts
+• Lager: KPI-Zeile (Gesamtbestand / Einträge / Warnungen)
+• Raffinerie: KPI-Zeile, Material links + aktive Aufträge rechts
+• Raffinerie-Historie auf Seite Historie verlegt (nicht mehr auf Raffinerie)
+
+UI — MOBIGLAS-SPALTER (#pageSplit)
+• Neues Splitter-Design in allen Themes (Handle 14px, Abstand zu Spalten)
+• Spalter-Position wird gespeichert und nach Neustart wiederhergestellt
+  (Verkäufe, Auszahlung, Lager, Raffinerie)
+
+UI — ÜBERSICHT-NAVIGATION
+• Variante C: 6px Akzentstreifen links (grün = offen, rot = zu)
+• X-Schließen-Button in der Übersicht-Nav korrigiert
+
+FIX — VERKÄUFE
+• Doppelte Überschrift „Verfügbarer Lagerbestand“ entfernt
+• Seitenkopf: ◆ VERKÄUFE & LAGER
+
+
 VERSION 0.16.7 Beta | Build 2026.18 | Codename: POLISH AND PERFORMANCE
 --------------------------------------------------------------------
 
